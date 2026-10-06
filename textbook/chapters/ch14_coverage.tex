@@ -1,0 +1,184 @@
+\part{Inside the Simulator}
+
+\chapter{Topology and the Coverage Engine}
+\label{ch:coverage}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item every parameter of \code{Node}, \code{Sector} and \code{BaseStation}, with its unit, default and role;
+ \item what the coverage map computes, and which of its outputs the \emph{simulation} actually uses;
+ \item the algorithms for downlink, harvest/backscatter bookkeeping and uplink, step by step;
+ \item how multiple base stations interact (and where the model simplifies);
+ \item numerical conventions: sentinels, floors and the meaning of ``owner''.
+\end{itemize}
+\end{defbox}
+
+\section{The topology objects}
+\label{sec:topo}
+
+Three small dataclasses in \file{radiodevices.py} describe the geometry and radio hardware. Coordinates are in metres on a flat plane ($x$ east, $y$ north); heights are separate.
+
+\subsection{\texorpdfstring{\code{Node}}{Node}}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.4cm}>{\ttfamily}p{2.1cm}>{\raggedright}p{2.5cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\normalfont\bfseries Field & \normalfont\bfseries Default & \normalfont\bfseries Unit & \normalfont\bfseries Role\\
+\midrule
+id & required & -- & identifier used in all dictionaries and logs\\
+x, y & required & m & position\\
+height & 1.5 & m & $h_{UT}$ in UMa path loss\\
+antenna\_type & "omni" & -- & \texttt{"omni"} or \texttt{"3GPP"}\\
+antenna\_gain\_dbi & 0.0 & dBi & peak gain (omni: constant)\\
+azimuth\_deg, beamwidth\_deg & 0, 360 & deg (compass) & only for 3GPP node antennas\\
+efficiency & 1.0 & ratio & $\eta$: fraction of received power reflected\\
+sensitivity\_dbm & $-45$ & dBm & weakest downlink command the node notices\\
+subcarrier\_shift & 0 & integer & frequency-domain group for uplink\\
+node\_type & "passive" & -- & cosmetic (plot colour)\\
+radius, color, label & 2, "", True & plot & drawing only\\
+state & "listening" & -- & written by the \code{Controller} each ms; \emph{not} a constructor argument\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{\texorpdfstring{\code{Sector}}{Sector} and \texorpdfstring{\code{BaseStation}}{BaseStation}}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.4cm}>{\ttfamily}p{2.1cm}>{\raggedright}p{2.5cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\normalfont\bfseries Field & \normalfont\bfseries Default & \normalfont\bfseries Unit & \normalfont\bfseries Role\\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{Sector}}\\
+azimuth\_deg & required & deg (compass) & boresight\\
+beamwidth\_deg & required & deg & $\varphi_{3\mathrm{dB}}$ of the 3GPP pattern\\
+power & 43.0 & dBm & transmit power (the paper uses 30)\\
+antenna\_gain\_dbi & 17.0 & dBi & $G_{\max}$\\
+antenna\_type & "3GPP" & -- & or \texttt{"omni"} (0 dBi, ignores gain field)\\
+height & 25.0 & m & $h_{BS}$\\
+sensitivity\_dbm & $-100$ & dBm & weakest backscatter packet logged\\
+\midrule
+\multicolumn{4}{@{}l}{\textbf{BaseStation}}\\
+id, x, y & required & m & identity and position of the mast\\
+sectors & [] & list & any number of sectors\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{A subtle asymmetry.} An \texttt{"omni"} \emph{node} uses its \codew{antenna_gain_dbi}; an \texttt{"omni"} \emph{sector} is forced to $\SI{0}{dBi}$ (\codew{antenna_from_sector} ignores the gain field). Use \texttt{"3GPP"} with a wide beamwidth if you want a high-gain wide beam.
+
+\section{The CoverageMap}
+\label{sec:covmap}
+
+\code{CoverageMap} is a configuration object plus four calculators.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.7cm}>{\ttfamily}p{2.1cm}X@{}}
+\toprule
+\normalfont\bfseries Parameter & \normalfont\bfseries Default & \normalfont\bfseries Meaning\\
+\midrule
+base\_stations, nodes & \texttt{None} & the topology\\
+freq\_hz & 925e6 & carrier (demos: 924e6)\\
+pathloss\_model & "macro" & \texttt{"fspl"} or \texttt{"macro"}\\
+los & True & LOS or NLOS branch of UMa\\
+extra\_np\_per\_m & 0 & medium attenuation (power, Np/m)\\
+node\_energy\_mode & "wpt" & \texttt{"wpt"}, \texttt{"external"}, \texttt{"hybrid"}\\
+node\_ext\_power\_fn & \texttt{None} & callback $\text{node}\to$ watts\\
+combine\_mode & "max" & hybrid: \texttt{"max"} or sum\\
+bandwidth\_hz, noise\_figure\_db & 100e6, 6 & \emph{declared ``for SNR'' but never used in this class}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{The coverage grid (for pictures)}
+
+\codew{compute_coverage_map(xmin,xmax,ymin,ymax,step)} evaluates, on a regular grid, the received power from every sector of every base station (receiver antenna $\SI{0}{dBi}$, receiver height $\SI{1.5}{m}$) and stores the \emph{maximum} over sectors (\code{best_pw_dbm}), the \emph{sum} (\codew{total_pw_dbm}) and the name of the best sector (\code{owner}). \code{plot_rssi} draws it. The paper's Figure~1 is this picture. Crucially, \textbf{the simulation does not use the grid}; it is a diagnostic, which is why the demos' coverage maps are computed but never read at run time.
+
+\subsection{Downlink to the nodes}
+
+\codew{compute_bs_to_point(nodes)} is the workhorse. For each base station, sector and node:
+\begin{enumerate}
+ \item horizontal distance $d_{2D}$ from the mast to the node;
+ \item bearing from the mast to the node, angular error to the sector's boresight, sector gain $G_s(\varphi)$ (Chapter~\ref{ch:antennas});
+ \item bearing from the node back to the mast, angular error to the node's own boresight, node gain $G_n(\varphi')$;
+ \item received power $P=P_{\mathrm{tx}}\,G_s\,L(d)\,e^{-\alpha d}\,G_n$ with $h_{BS}$ from the sector and $h_{UT}$ from the node (Chapter~\ref{ch:pathloss});
+ \item bookkeeping: store each sector's power in \codew{per_node_powers}; keep the running maximum (\code{best_pw_w}, with the winning sector name as \code{owner}) and the sum (\codew{total_pw_dbm}).
+\end{enumerate}
+The calculation is vectorised over nodes with NumPy and looped over sectors.
+
+\begin{keyidea}[``Best'' means maximum, not sum]
+The power a node harvests is the \emph{strongest single sector's} power, not the sum of all carriers reaching it. Real carriers from several sectors at the same frequency would add (incoherently); Amber ignores them. This is conservative for energy but also means \emph{there is no inter-cell interference in the downlink}.
+\end{keyidea}
+
+\subsection{Harvest and backscatter power}
+
+\codew{calculate_node_power(nodes, downlink_results)} converts the best downlink power into each node's \codew{harvesting_power_dbm} and \codew{backscatter_power_dbm} following the table of Section~\ref{sec:amberharvest} (three energy modes). It is called \emph{once} during set-up, and thereafter by each node's controller \emph{every millisecond} with $\text{nodes}=[\text{itself}]$, because the harvest depends on the node's state name and on the solar trace.
+
+\subsection{Uplink to the base stations}
+
+\codew{compute_point_to_bs(nodes)} takes each node's \codew{backscatter_power_dbm} (\textbf{evaluated at set-up, with the node in its initial state}) as a transmit power and propagates it to every sector: node gain toward the mast, path loss, sector receive gain. The result \codew{per_sector_powers[sector][node]} is the RSSI that sector would observe. The aggregates (\code{owner}, \code{best_pw_dbm}, \codew{total_pw_dbm}) are per sector.
+
+\subsection{What this means for multiple base stations}
+
+Three consequences of the dictionaries' design:
+\begin{enumerate}
+ \item \textbf{Every base station can hear every node.} \codew{per_sector_powers} contains an entry for each (sector, node) pair; no entry is dropped for being weak. When a node transmits, \code{do_transmit} interrupts \emph{each} base station in its \codew{bs_processes}, using the strongest sector of that base station. Whether a packet is \emph{logged} is decided afterwards by each sector's sensitivity. A cell-edge node is thus heard by several base stations at once (macro-diversity), and the paper's \codew{nodes_multi_bs} statistic counts exactly this.
+ \item \textbf{Command reception ignores which base station spoke.} A node accepts a command if its \emph{best} downlink power over \emph{all} base stations exceeds its sensitivity, whichever base station issued the command.
+ \item \textbf{Static link budgets.} Nothing changes with time except the harvest; in particular the uplink RSSI is a constant for each (sector, node) pair.
+\end{enumerate}
+
+\section{Numerical conventions}
+\label{sec:numconv}
+
+\begin{itemize}
+ \item \textbf{Floor at $\SI{-120}{dBm}$}: \codew{watts_to_dbm} clamps at $10^{-15}$~W; a node with zero harvest has $\SI{-120}{dBm}$ and \codew{dbm_to_watts} returns $10^{-15}$, not zero.
+ \item \textbf{Sentinel $\SI{-999}{dBm}$}: used when a node has no recorded power (e.g.\ \codew{received_power = best_pw_dbm.get(id, -999.0)}); it ensures commands are rejected and uplinks vanish rather than crash.
+ \item \textbf{Tie-breaking}: the best sector is chosen by a strict ``$>$'', so ties go to the earlier-evaluated sector (first base station, lowest sector index).
+ \item \textbf{Sector names} are strings \codew{BS<id>_S<index>}. The node module finds a base station's sectors by prefix matching on \code{BS<id>_} and recovers the sector index by splitting on \code{_S}; use integer base-station ids and let sectors be numbered by list order.
+\end{itemize}
+
+\begin{reality}[Where the coverage engine differs from physics]
+(i) No inter-cell interference or carrier summation (``max'' not ``sum''); (ii) the uplink assumes the node reflects its \emph{initial-state} backscatter power at all times; (iii) the path loss near the mast has the artefacts of Chapter~\ref{ch:pathloss}; (iv) \codew{bandwidth_hz} and \codew{noise_figure_db} on the map are not used (noise is computed in the base station from its own arguments, Chapter~\ref{ch:bsengine}); (v) static geometry and no shadowing.
+\end{reality}
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.0cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Function (\file{propagation.py})\\
+\midrule
+Grid for pictures & \codew{compute_coverage_map}, \code{plot_rssi}\\
+Downlink to nodes & \codew{compute_bs_to_point}\\
+Harvest/backscatter & \codew{calculate_node_power}\\
+Uplink to sectors & \codew{compute_point_to_bs}\\
+Device drawing & \codew{_draw_radio_devices}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item Three dataclasses describe the hardware; units are metres, degrees (compass), dBm and dBi.
+ \item The coverage grid is for plotting; the simulation uses \codew{compute_bs_to_point}, \codew{calculate_node_power} and \codew{compute_point_to_bs}.
+ \item A node harvests the \emph{best sector's} power; every base station hears every node, gated by sector sensitivity.
+ \item The uplink is computed once and uses the node's initial-state backscatter power.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+For a node at $(60,80)$ and a base station at the origin with sectors at compass azimuths $0^\circ$ and $120^\circ$ ($65^\circ$, $G_{\max}=\SI{15}{dBi}$, $\SI{46}{dBm}$, $h_{BS}=\SI{25}{m}$), which sector is the owner? Give the angular errors and the downlink power with UMa LOS and a $\SI{0}{dBi}$ node.
+\end{exercise}
+\begin{exercise}
+Why does \codew{compute_point_to_bs} not need the base station's transmit power? What does it need from a previous call?
+\end{exercise}
+\begin{exercise}
+A node lies equidistant from two base stations with identical sectors and both can hear it. Describe, with reference to the data structures, what the node's transmission triggers in each base station.
+\end{exercise}
+\begin{exercise}
+Modify the harvest model (conceptually) so that a node harvests the \emph{sum} of all sectors' powers. Which function changes, and what data does it already have?
+\end{exercise}

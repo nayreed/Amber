@@ -1,0 +1,173 @@
+% =====================================================================
+%  Preamble for "Amber and 6G Ambient IoT: A Teaching Text"
+% =====================================================================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathpazo}                 % Palatino text and math
+\usepackage[scaled=0.92]{helvet}      % sans-serif for headings / labels
+\renewcommand{\ttdefault}{lmtt}       % Latin Modern Typewriter for code
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
+\usepackage{setspace}
+\setstretch{1.07}
+\emergencystretch=2em
+
+% ---- mathematics -------------------------------------------------------
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{siunitx}
+\sisetup{detect-all, per-mode=symbol, range-phrase={--},
+         group-minimum-digits=4, input-ignore={,}, input-decimal-markers={.}}
+\DeclareSIUnit{\dBm}{dBm}
+\DeclareSIUnit{\dB}{dB}
+\DeclareSIUnit{\dBi}{dBi}
+\DeclareSIUnit{\mAh}{mAh}
+\DeclareSIUnit{\ms}{ms}
+\DeclareMathOperator{\sinc}{sinc}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\Rs}{R_{\mathrm{s}}}          % series resistance
+\newcommand{\Rl}{R_{\mathrm{l}}}          % leakage resistance
+\newcommand{\Vhigh}{V_{\mathrm{high}}}
+\newcommand{\Vlow}{V_{\mathrm{low}}}
+\newcommand{\Vmax}{V_{\mathrm{max}}}
+\newcommand{\Vs}{V_{\mathrm{src}}}
+\newcommand{\Pdbm}{P_{\mathrm{dBm}}}
+
+% ---- tables, figures ---------------------------------------------------
+\usepackage{booktabs,tabularx,multirow,array,makecell,longtable}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage{caption,subcaption}
+\captionsetup{font=small,labelfont={bf,sf},format=hang,margin=0.5em}
+\usepackage{float}
+\usepackage{enumitem}
+\setlist{itemsep=2pt,topsep=4pt,parsep=0pt}
+
+% ---- palette (matches the Python figures) ------------------------------
+\definecolor{ablue}{HTML}{1F5FA8}
+\definecolor{aorange}{HTML}{E07B00}
+\definecolor{agreen}{HTML}{2A8F4A}
+\definecolor{ared}{HTML}{C9302C}
+\definecolor{apurple}{HTML}{7B4FA6}
+\definecolor{ateal}{HTML}{16808A}
+\definecolor{agrey}{HTML}{6B6B6B}
+\definecolor{agold}{HTML}{F2C14E}
+\definecolor{lightblue}{HTML}{EAF1FA}
+\definecolor{lightorange}{HTML}{FFF3E3}
+\definecolor{lightgreen}{HTML}{EAF6EE}
+\definecolor{lightred}{HTML}{FBEAEA}
+\definecolor{lightgrey}{HTML}{F3F3F3}
+
+% ---- TikZ --------------------------------------------------------------
+\usepackage{tikz}
+\usepackage[siunitx]{circuitikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,
+  decorations.pathreplacing,decorations.markings,automata,backgrounds,
+  patterns,matrix,chains}
+\tikzset{
+  >=Stealth,
+  box/.style={draw,rounded corners=2pt,align=center,inner sep=4pt,
+              font=\small\sffamily,fill=white},
+  mod/.style={box,fill=lightblue,draw=ablue,minimum height=0.9cm},
+  ext/.style={box,fill=lightgrey,draw=agrey},
+  st/.style={draw,rounded corners=3pt,align=center,inner sep=3pt,
+             font=\footnotesize\sffamily,minimum height=0.75cm},
+  lab/.style={font=\scriptsize\sffamily,inner sep=1.5pt},
+  every node/.style={font=\small}
+}
+
+% ---- algorithms / listings ---------------------------------------------
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keepspaces=true,breaklines=true,frame=single,rulecolor=\color{agrey!60},
+  backgroundcolor=\color{lightgrey},language=Python,showstringspaces=false,
+  keywordstyle=\color{ablue}\bfseries,commentstyle=\color{agrey}\itshape,
+  stringstyle=\color{agreen},xleftmargin=0.5em,xrightmargin=0.5em,
+  aboveskip=6pt,belowskip=6pt}
+
+% ---- teaching callouts -------------------------------------------------
+\usepackage[most]{tcolorbox}
+\tcbset{boxsep=3pt,left=6pt,right=6pt,top=4pt,bottom=4pt,
+        fonttitle=\bfseries\sffamily\small,arc=2pt,boxrule=0.6pt,
+        breakable,enhanced jigsaw}
+\newtcolorbox{keyidea}[1][Key idea]{colback=lightblue,colframe=ablue,
+  title={#1},attach boxed title to top left={xshift=8pt,yshift=-2mm},
+  boxed title style={colback=ablue,arc=2pt}}
+\newtcolorbox{defbox}[1][Definition]{colback=white,colframe=agrey,
+  title={#1},fonttitle=\bfseries\sffamily\small,colbacktitle=lightgrey,
+  coltitle=black}
+\newtcolorbox{example}[1][Worked example]{colback=lightgreen,colframe=agreen,
+  title={#1},attach boxed title to top left={xshift=8pt,yshift=-2mm},
+  boxed title style={colback=agreen,arc=2pt}}
+\newtcolorbox{reality}[1][Code reality check]{colback=lightorange,colframe=aorange,
+  title={#1},attach boxed title to top left={xshift=8pt,yshift=-2mm},
+  boxed title style={colback=aorange,arc=2pt}}
+\newtcolorbox{intuition}[1][Intuition]{colback=white,colframe=apurple,
+  title={#1},attach boxed title to top left={xshift=8pt,yshift=-2mm},
+  boxed title style={colback=apurple,arc=2pt}}
+\newtcolorbox{codemap}[1][Where this lives in the code]{colback=lightgrey,
+  colframe=agrey,title={#1},fonttitle=\bfseries\sffamily\small}
+\newtcolorbox{checkpoint}[1][Checkpoint]{colback=lightred,colframe=ared,
+  title={#1},attach boxed title to top left={xshift=8pt,yshift=-2mm},
+  boxed title style={colback=ared,arc=2pt}}
+
+% numbered exercises (solutions are collected in an appendix)
+\newcounter{exercise}[chapter]
+\renewcommand{\theexercise}{\thechapter.\arabic{exercise}}
+\newtcolorbox[use counter=exercise]{exercise}[1][]{colback=white,colframe=ablue!70,
+  title={Exercise~\theexercise}, fonttitle=\bfseries\sffamily\small,
+  colbacktitle=ablue!12,coltitle=black,#1}
+
+% ---- code identifiers --------------------------------------------------
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\file}[1]{\texttt{\detokenize{#1}}}
+\usepackage{seqsplit}
+\newcommand{\codew}[1]{\texttt{\expandafter\seqsplit\expandafter{\detokenize{#1}}}}  % breakable, for table cells
+
+% ---- headings ----------------------------------------------------------
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\sffamily\bfseries\Large\color{ablue}}
+  {\filleft\fontsize{54}{54}\selectfont\thechapter}
+  {4pt}{\filleft\Huge\color{black}}[\vspace{2pt}\titlerule]
+\titleformat{name=\chapter,numberless}[display]
+  {\sffamily\bfseries\Large\color{ablue}}{}{0pt}{\filleft\Huge\color{black}}[\titlerule]
+\titlespacing*{\chapter}{0pt}{-10pt}{26pt}
+\titleformat{\section}{\sffamily\bfseries\Large\color{ablue}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\sffamily\bfseries\large}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\sffamily\bfseries\normalsize}{\thesubsubsection}{0.7em}{}
+\titleformat{\paragraph}[runin]{\sffamily\bfseries\small}{}{0pt}{}
+\titleformat{\part}[display]
+  {\sffamily\bfseries\Huge\color{ablue}}{\filleft\partname~\thepart}{10pt}{\filleft}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\sffamily\small\nouppercase{\leftmark}}
+\fancyhead[RO]{\sffamily\small\nouppercase{\rightmark}}
+\fancyfoot[C]{\sffamily\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\sffamily\small\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+% ---- bibliography, links -----------------------------------------------
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks,pdfusetitle,bookmarksnumbered]{hyperref}
+\hypersetup{colorlinks=true,linkcolor=ablue,citecolor=agreen,urlcolor=ablue}
+\usepackage[nameinlink,capitalise]{cleveref}
+\usepackage{appendix}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+\usepackage{tocloft}
+\renewcommand{\cftchapfont}{\sffamily\bfseries}
+\renewcommand{\cftsecfont}{\sffamily}
+\renewcommand{\cftchappagefont}{\sffamily\bfseries}
+\renewcommand{\cftsecpagefont}{\sffamily}
+\hfuzz=2pt

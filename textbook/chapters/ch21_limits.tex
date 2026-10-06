@@ -1,0 +1,139 @@
+\chapter{Assumptions, Limits and Verified Caveats}
+\label{ch:limits}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item a catalogue of every modelling assumption and code behaviour discussed in the book, in one place, each with the evidence for it;
+ \item which ones can change a headline result and which are cosmetic;
+ \item a checklist of validity questions to ask of any Amber result;
+ \item where to go next.
+\end{itemize}
+\end{defbox}
+
+\paragraph{How to read this chapter.} Amber is version~0.1.0 of a research prototype, described by a two-page demo abstract. It is natural for such a tool to contain simplifications and rough edges, and the authors state its scope honestly. The point of cataloguing them is not criticism but \emph{calibration}: you should know which results you may trust. Each row below states the behaviour, the \textbf{evidence} (\emph{measured}: we ran an experiment; \emph{tested}: a targeted test of the code; \emph{read}: established by reading the source), and the \textbf{effect}. We did \emph{not} modify the Amber source in preparing this book.
+
+\section{Catalogue}
+
+\newcommand{\sev}[1]{\textbf{#1}}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}
+\renewcommand{\arraystretch}{1.12}
+
+\subsection{Channel and radio}
+\begin{longtable}{@{}>{\sffamily\bfseries}p{0.9cm}>{\raggedright}p{5.5cm}>{\raggedright}p{2.9cm}>{\raggedright\arraybackslash}p{5.2cm}@{}}
+\toprule
+\# & Behaviour & Evidence & Effect (severity)\\
+\midrule
+\endhead
+R1 & UMa LOS falls through to the post-breakpoint branch for $d_{2D}<\SI{10}{m}$: a $\SI{13.8}{dB}$ step at $\SI{10}{m}$ (Ch.~\ref{ch:pathloss}) & \emph{tested}: 44.4 vs 58.3 dB at 9.99/10 m & Nodes $<10$~m get $\sim14$~dB too much RF; produced $2\times$ throughput for 4 of 12 nodes in the custom demo (Ch.~\ref{ch:experiments}). \sev{High} near masts\\
+R2 & FSPL mode uses $d_{2D}$ not $d_{3D}$ & \emph{tested} & 14 dB error at 5 m, 0.2 dB at 100 m. \sev{Low}\\
+R3 & Horizontal antenna pattern only; no downtilt (Ch.~\ref{ch:antennas}) & \emph{read} & Overestimates gain for nodes close to the mast. \sev{Medium} near masts\\
+R4 & Deterministic static channel: no fading, shadowing, mobility & \emph{read} (by design) & Realistic variability absent; results are optimistic and smooth. \sev{Design scope}\\
+R5 & A node harvests the best sector only; no carrier summation or inter-cell interference & \emph{read} (Ch.~\ref{ch:coverage}) & Conservative for energy; no downlink interference. \sev{Low}--\sev{Medium}\\
+R6 & \codew{CoverageMap.bandwidth_hz}, \codew{noise_figure_db} unused & \emph{read} (grep) & Cosmetic; noise comes from the base station's own arguments. \sev{Low}\\
+R7 & Sensitivity thresholds are independent of the noise floor; with default 100 MHz the noise ($-88$ dBm) exceeds sector sensitivity ($-100$ dBm) & \emph{read}, \emph{tested} & Set both consistently. \sev{Medium}\\
+R8 & A lone packet above sensitivity is decoded regardless of SNR; noise enters only collisions & \emph{tested}: $-105$ dBm, SNR $-17$ dB decoded & Weak-link PER is not modelled. \sev{Medium}\\
+R9 & Command reception uses the best power over \emph{all} base stations, not the sender's & \emph{read} & Multi-BS command coverage is optimistic. \sev{Low}\\
+R10 & Subcarrier shifts are perfectly orthogonal; no carrier leakage or sideband loss (Ch.~\ref{ch:backscatter}) & \emph{read} & Self-interference---the central practical backscatter issue---is not simulated. \sev{Design scope}\\
+\bottomrule
+\end{longtable}
+
+\subsection{Energy and node behaviour}
+\begin{longtable}{@{}>{\sffamily\bfseries}p{0.9cm}>{\raggedright}p{5.5cm}>{\raggedright}p{2.9cm}>{\raggedright\arraybackslash}p{5.2cm}@{}}
+\toprule
+\# & Behaviour & Evidence & Effect (severity)\\
+\midrule
+\endhead
+E1 & No RF--DC efficiency curve, turn-on threshold or cold start (Ch.~\ref{ch:harvest}) & \emph{read} & Energy availability is optimistic at low RF power. \sev{High} for RF-limited studies\\
+E2 & Controller converts power to voltage with \codew{getattr(cap,"R_series",5e3)}, which always returns $5\,\mathrm{k}\Omega$ & \emph{tested} & Changing $R_s$ in \codew{CapacitorParams} silently mismatches the source voltage. \sev{Medium} (latent)\\
+E3 & Charge-and-discharge step credits $\Vs I\Delta t$ (source energy), not $V I\Delta t$ (delivered): over-credit by $\Vs/V$ & \emph{tested}, \emph{measured}: $\SI{1.948}{V}$ vs $\SI{1.695}{V}$ after 1 s; $-2.7\%$ packets when corrected & Harvest overstated while active. \sev{Medium}\\
+E4 & Packet is delivered at \emph{entry} to the transmit state; the energy is paid afterwards. $43$--$50\%$ of transmit states end in brown-out & \emph{measured} (3 nodes, 20 s) & Delivered counts are optimistic by up to $\sim2\times$ under tight energy budgets. \sev{High}\\
+E5 & \emph{wait\_slot} draws zero current & \emph{read} & Idle/wake-up-receiver cost ignored. \sev{Medium}\\
+E6 & Energy gates transmission, not reception; protocol state survives power-down & \emph{tested}: module with no capacitor accepts commands & Registration/slot state of ``dead'' nodes changes; real nodes would hear nothing. \sev{Medium}\\
+E7 & Shipped solar trace is $2999$ rows $=\SI{3}{s}$, looped; file named ``300 seconds''; shared by all nodes & \emph{measured} & Spurious periodicity possible; no spatial shading. \sev{Low}\\
+E8 & \codew{Capacitor.load_discharging} / cause \codew{capacitor_discharge} never used by the shipped controller & \emph{read} (grep) & Dead code path. \sev{Cosmetic}\\
+E9 & Demo loads ($\sim\SI{5}{mA}$) are $10^3$--$10^4\times$ above Release-19 $\sim\SI{1}{\micro W}$ targets & \emph{read} & Demos are not representative of ultra-low-power tags. \sev{Interpretation}\\
+\bottomrule
+\end{longtable}
+
+\subsection{MAC, SIC and software}
+\begin{longtable}{@{}>{\sffamily\bfseries}p{0.9cm}>{\raggedright}p{5.5cm}>{\raggedright}p{2.9cm}>{\raggedright\arraybackslash}p{5.2cm}@{}}
+\toprule
+\# & Behaviour & Evidence & Effect (severity)\\
+\midrule
+\endhead
+M1 & \codew{cancellation_factor} has no effect: SIC is perfect cancellation (Ch.~\ref{ch:sic}) & \emph{tested}: identical decode sets for several $\kappa$ from $0$ to $1$ & Imperfect SIC not simulated; SIC gain overstated. \sev{High} for SIC studies\\
+M2 & Collision = arrival within $\SI{5}{ms}$ (greedy, non-transitive), packets have no duration & \emph{tested}: $10,14,18$ ms $\Rightarrow$ third packet escapes & Collision statistics are model-dependent. \sev{Medium}\\
+M3 & Advertised RX slots cover \emph{two} frames; random pick over $2S$ $\Rightarrow$ $\approx\frac12$ participation per frame (Ch.~\ref{ch:bsengine}) & \emph{tested}: 8 advertised for a 4-slot frame; \emph{measured}: 44/70/82/88\% registered over rounds at $n=5$ & Slows discovery by $\sim2\times$ per round; must be budgeted. \sev{High} for MAC studies\\
+M4 & \codew{TxRecord.delivered} is True when handed to any BS process; $-150$ dBm packet is ``delivered'' & \emph{tested} & Not a delivery metric. \sev{Medium}\\
+M5 & \code{send_data} with a list \code{target} accepted by BS, ignored by default node handler & \emph{tested} & Multicast silently fails. \sev{Low}\\
+M6 & ACK is a direct call, always received; BS marks registered at send & \emph{read} & Real ACK loss absent. \sev{Medium}\\
+M7 & A terminated BS process makes a later node transmission raise \codew{RuntimeError} & \emph{tested} (crash reproduced) & Aborts the simulation. \sev{Medium} (usability)\\
+M8 & ``DER'' means error rate in demos, success ratio in \code{BSStats.der} & \emph{read}, \emph{tested} & Easy to misreport. \sev{Medium}\\
+M9 & Post-hoc \codew{detect_collisions} mislabels almost all packets on engine logs (zero-length intervals) & \emph{tested}: 1 vs 121 decoded; repaired: 120 & Only affects logs without \code{collided}. \sev{Medium}\\
+M10 & \codew{analyze_packets} appends text files to the working directory; rejects demo CSVs & \emph{read}, \emph{tested} & Side effects; unusable on demo output. \sev{Low}\\
+M11 & Randomness is unseeded by default (only the custom demo seeds) & \emph{read} & Run-to-run variation; replicate. \sev{Medium}\\
+\bottomrule
+\end{longtable}
+
+\section{Which caveats matter for which question?}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.8cm}X@{}}
+\toprule
+If your question concerns\ldots & Check first\ldots\\
+\midrule
+Absolute throughput / delivery & E4, E3, E1, R1, M4\\
+Registration / discovery speed & M3, M2, M6, E6\\
+SIC / collision resolution & M1, M2, R8, R10\\
+Energy-limited operation, duty cycle & E3, E4, E5, E2, E7\\
+Coverage and range & R1--R5, R7\\
+Relative protocol comparison under identical assumptions & usually robust; replicate (M11) and use paired seeds\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Ten validity questions for any simulation result}
+\label{sec:validityq}
+
+\begin{enumerate}
+ \item Is the result a \emph{comparison} under shared assumptions, or an \emph{absolute} number? (Prefer the former.)
+ \item How many seeds, and what is the spread?
+ \item Do the nodes at the edge of the scenario sit in a region where the channel model is valid ($d_{2D}\ge\SI{10}{m}$)?
+ \item Is the source of each node's energy what you think it is (RF, solar, max, sum)?
+ \item Is throughput limited by energy, by airtime or by collisions? Does a hand calculation agree?
+ \item Does ``delivered'' mean decoded at a base station? Counted before or after the energy was paid?
+ \item Are SIC and capture assumptions realistic for your receivers?
+ \item Did you change one factor at a time?
+ \item Could the effect you see come from the $5$~ms rule, the look-ahead or the node's start-up delay rather than the mechanism you study?
+ \item Would the conclusion survive a $\pm3$~dB change in the link budget and a $\pm30\%$ change in the harvest?
+\end{enumerate}
+
+\section{Where to go next}
+
+\begin{itemize}
+ \item \textbf{Standards:} 3GPP TR~38.848, TR~38.769, TS~38.191 \citep{3gpp38848,3gpp38769,3gpp38191}; the channel model TR~38.901 \citep{3gpp38901}.
+ \item \textbf{Overview:} L\'opez et al.\ \citep{lopez2025zero}; the backscatter survey of Huynh et al.\ \citep{huynh2018ambient}; the dual-tone downlink idea \citep{zhu2022ofdma}.
+ \item \textbf{Textbooks:} Dobkin on UHF RFID \citep{dobkin2012}; Tse and Viswanath for SIC and multiple access \citep{tse2005}; Banks et al.\ or Law for simulation methodology \citep{banks2010,law2015}.
+ \item \textbf{The simulator:} the repository, the generated API reference from the docstrings, and the SenSys demo abstract \citep{manafova2026amber}.
+ \item \textbf{Your own experiments:} Chapter~\ref{ch:extending}, with the scripts in \file{textbook/code}.
+\end{itemize}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item We catalogued $10$ channel/radio, $9$ energy/node and $11$ MAC/software behaviours, each with its evidence.
+ \item The most consequential for headline numbers: brown-out truncation (E4), perfect SIC (M1), the two-frame look-ahead (M3), the $<10$~m path-loss branch (R1) and the missing RF--DC curve (E1).
+ \item Relative comparisons under identical assumptions are the safest use of the simulator; always replicate.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Pick any \emph{High} item and propose a minimal code change that removes it. State what you would measure to show the change had the intended effect.
+\end{exercise}
+\begin{exercise}
+A paper reports ``Amber shows SIC raises throughput by $40\%$''. List the three caveats from this chapter you would check first, and the experiment you would run.
+\end{exercise}
+\begin{exercise}
+Using the validity questions, critique the claim ``the adaptive ALOHA policy gives node $4$ twice the throughput of node $1$ because it is better located''.
+\end{exercise}

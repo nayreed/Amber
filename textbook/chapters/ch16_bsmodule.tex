@@ -1,0 +1,160 @@
+\chapter{The Backscatter Module: Node-Side Protocol}
+\label{ch:bsmodule}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item the division of labour between \code{Controller} (energy and timing) and \codew{BackscatterModule} (protocol);
+ \item the full path of a command: sensitivity gate, logging, slot bookkeeping, protocol handler;
+ \item the four conditions a transmission must satisfy before it is allowed (\codew{controller_tx_ready}), and the exact slot-window arithmetic;
+ \item what \code{do_transmit} computes and writes into the base station, and what the \code{delivered} flag \emph{really} means;
+ \item how to override the protocol with two small methods.
+\end{itemize}
+\end{defbox}
+
+\section{Division of labour}
+
+The class docstring states it in one line: ``Controller handles energy/timing, BackscatterModule handles protocol.'' The module is \emph{passive}: it owns no SimPy process, only state and methods called by (i) the base station, to deliver commands, and (ii) the controller, to ask whether it may transmit and to perform the transmission.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.6cm}X@{}}
+\toprule
+\normalfont\bfseries Attribute & \normalfont\bfseries Meaning\\
+\midrule
+state & \texttt{"idle"}, \texttt{"wait\_ack"}, \texttt{"registered"}\\
+rx\_slots & list of $(\text{start},\text{end})$ ms tuples advertised by the last command\\
+chosen\_slot\_idx & index into \code{rx_slots} chosen by this node, or $-1$\\
+\codew{last_tx_command_time} & time of the last command that enables a reply, or $-1$\\
+tx\_records, rx\_records & logs of transmissions and received commands\\
+packets\_sent, packets\_delivered, acks\_received & counters\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Receiving a command}
+\label{sec:rxcommand}
+
+A command arrives as a synchronous call \codew{receive_command(cmd, bs_id, data)} made by the base station at the start of its TX slot. The method is a short \emph{pipeline}.
+\begin{enumerate}
+ \item \textbf{Sensitivity gate.} Look up the node's best downlink power (\codew{downlink_results["best_pw_dbm"][node.id]}, default $-999$) and compare with \codew{node.sensitivity_dbm}. If weaker, \emph{return}: the command is ignored and nothing is logged.
+ \item \textbf{Log.} Append an \codew{RxRecord(end_ms, cmd, from_bs)} if \code{keep_logs}.
+ \item \textbf{Slot bookkeeping.} Store \codew{data["rx_slots"]} in \codew{self.rx_slots}, replacing any previous list.
+ \item \textbf{Protocol handler.} Call \codew{handle_command(cmd, bs_id, data)}.
+\end{enumerate}
+Steps 1--3 are \emph{framework} behaviour common to every protocol; step 4 is the \emph{policy} you may override.
+
+\begin{keyidea}[Energy does not gate reception]
+Nothing in this pipeline looks at whether the node is awake: not the capacitor, not the controller's \code{is_active}, not the state name. We confirmed it by instantiating a module with \emph{no controller and no capacitor at all}: it accepted a \code{send_id} command, chose a slot and moved to \code{wait_ack}. A node whose capacitor is empty therefore still ``hears'' commands and updates its protocol state. Its \emph{transmission} is still gated by energy, because only a running controller in the \emph{wait\_slot} state can call \code{do_transmit}. In real hardware the hear/transmit asymmetry would be different: a node with no energy hears nothing at all.
+\end{keyidea}
+
+\section{The default handler}
+\label{sec:handler}
+
+\codew{handle_command} implements the registration-and-polling protocol of Chapter~\ref{ch:protocols}.
+
+\begin{description}[leftmargin=0.4cm,font=\sffamily\bfseries]
+ \item[\code{send_id}.] If already \emph{registered}: clear \codew{chosen_slot_idx} and \code{rx_slots} (so nothing is transmitted by accident) and return. Otherwise draw \codew{chosen_slot_idx} uniformly in $\{0,\dots,|\texttt{rx\_slots}|-1\}$ (or $-1$ if no slots were advertised), set \codew{state="wait_ack"} and \codew{last_tx_command_time=now}.
+ \item[\code{ack}.] If \codew{state=="wait_ack"}: set \codew{state="registered"} and increment \codew{acks_received}. In any other state: ignore.
+ \item[\code{send_data}.] Read \code{target} (default $-1$). If \code{target} is neither $-1$ nor this node's id: return. If registered: choose a slot (for a unicast target, index $|\texttt{rx\_slots}|-1$, which is the only slot because the base station truncates the list to one; for a broadcast, uniformly at random); set \codew{last_tx_command_time=now}.
+\end{description}
+
+\begin{reality}[List targets are accepted by the base station but ignored by the node]
+The base station's \codew{_deliver_command} supports a \emph{list} of target ids (``send to these nodes'') and sends the command to each listed node. But the default \codew{handle_command} compares \codew{target != self.node.id}, and a list is never equal to an integer, so \emph{every addressed node returns without choosing a slot}. We tested with \codew{target=[0,1]}: both nodes had \codew{chosen_slot_idx=-1} and \codew{last_tx_command_time=-1} afterwards; no reply is ever sent. If you need multicast, override \codew{handle_command} and test \codew{self.node.id in target}.
+\end{reality}
+
+\section{When may the node transmit?}
+\label{sec:txready}
+
+The controller, while in \emph{wait\_slot}, calls \codew{controller_tx_ready(sensor_data)} every millisecond. The method returns a dictionary describing what to send, or \code{None} for ``not now''. It applies \emph{four} checks in order:
+\begin{enumerate}
+ \item \textbf{A command has enabled a reply:} \codew{last_tx_command_time >= 0}.
+ \item \textbf{A valid slot was chosen:} $0\le\texttt{chosen\_slot\_idx}<|\texttt{rx\_slots}|$.
+ \item \textbf{Now is inside the chosen slot:} $\text{slot\_start}\le t<\text{slot\_end}$. The upper bound is \emph{strict}: at $t=\text{slot\_end}$ the base station's window (\codew{while now < end_time}) has already closed and would miss the packet.
+ \item \textbf{The slot is not stale:} $\text{slot\_start}\ge\text{last\_tx\_command\_time}$, i.e.\ the slot belongs to the command, not to an earlier cycle.
+\end{enumerate}
+If all pass, it returns \codew{build_tx_payload(sensor_data)}: for the default protocol a dictionary with keys \code{type} and \code{payload}---the node's id (type \code{id}) while in \emph{wait\_ack}, the sensor value (type \code{data}) when \emph{registered}---and \code{None} otherwise.
+
+\begin{example}[A node that is late for its slot]
+The base station sends \code{send_data} at $t=\SI{100}{ms}$; its RX windows are $[105,115)$ and $[115,125)$. Suppose a node chooses $[105,115)$ but its controller is in \emph{processing} until $t=\SI{112}{ms}$. At $t=112$ it enters \emph{wait\_slot}, \codew{controller_tx_ready} finds $105\le112<115$ and the node \emph{does} reply, at $\SI{112}{ms}$, late in the slot. If it had finished at $t=115$, it would have missed the slot for good: the stale slot is never reused, \codew{chosen_slot_idx} stays set, and the node must wait for a new command. This is why a command can hit a node \emph{without} producing a reply, and why base stations ``see'' fewer replies than commands.
+\end{example}
+
+\section{Transmitting}
+\label{sec:dotx}
+
+\codew{do_transmit(tx_info)} performs the uplink \emph{in zero simulated time}:
+\begin{enumerate}
+ \item For each base station process $B$ in \codew{bs_processes}: scan the pre-computed uplink table \codew{per_sector_powers} for sectors named \code{BS<id>_*} and pick the sector with the \emph{strongest} RSSI for this node.
+ \item Write into $B$ the \emph{scratch} fields: \codew{received_tag_id}, \codew{data_from_tag} (the payload), \code{rssi_dbm}, \codew{best_sector_idx}, \codew{subcarrier_shift}.
+ \item Interrupt $B$ with cause \codew{"receive_data"}. Since interrupts are urgent (Chapter~\ref{ch:des}), $B$ buffers this packet \emph{before} any other process runs, so the scratch fields cannot be overwritten.
+ \item Log a \codew{TxRecord(end_ms, payload_type, payload, slot_idx, delivered)} and update counters.
+ \item \textbf{Clear} the slot state (\codew{chosen_slot_idx=-1}, \code{rx_slots=[]}, \codew{last_tx_command_time=-1}). A node must receive a \emph{new} command before it can transmit again; this prevents repeated transmissions in the same slot.
+\end{enumerate}
+
+\begin{reality}[\code{delivered} does not mean ``decoded''; it barely means ``heard'']
+\codew{TxRecord.delivered} is \code{True} if the packet was \emph{handed to at least one base-station process}. We tested a node whose uplink RSSI was $\SI{-150}{dBm}$: its record said \codew{delivered=True}, yet the base station dropped the packet at the sensitivity gate and logged nothing. With the default tables every base station in \codew{bs_processes} has an entry for every node, so \code{delivered} is essentially \emph{always} true when the module is wired. All the shipped CSVs show \codew{delivered=True} for every transmission. To measure real delivery you must look at the \emph{base station's} \code{rx_packets} and their \code{collided} flag, as the demos do.
+\end{reality}
+
+\section{Customising the protocol}
+\label{sec:override}
+
+Two methods express a complete protocol:
+\begin{lstlisting}
+class MyNode(backscatter.BackscatterModule):
+    def handle_command(self, cmd, bs_id, data):
+        # called after sensitivity gate, logging, rx_slots stored
+        if cmd == "collect":
+            self.chosen_slot_idx = (random.randint(0, len(self.rx_slots)-1)
+                                    if self.rx_slots else -1)
+            self.state = "active"
+            self.last_tx_command_time = self.env.now
+
+    def build_tx_payload(self, sensor_data):
+        # called only when now is inside a valid, fresh slot
+        return {"type": "data", "payload": sensor_data} \
+               if self.state == "active" else None
+\end{lstlisting}
+This is the node half of the adaptive-ALOHA demo (Chapter~\ref{ch:extending}). Note the \emph{obligations} the base class leaves to you: set \codew{chosen_slot_idx} and \codew{last_tx_command_time} when you want to allow a reply, and return a dict from \codew{build_tx_payload}. Everything else---the slot validity checks and the uplink delivery---is inherited.
+
+\section{Logging}
+
+\codew{save_logs(clear=True)} writes tab-separated files \codew{node_<log_file>_tx.txt} and \codew{node_<log_file>_rx.txt} if a \code{log_file} stem was given, and then clears the lists. With \codew{keep_logs=False} no records are stored; the counters \codew{packets_sent}, \codew{packets_delivered}, \codew{acks_received} are always maintained.
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.0cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Code (\file{backscatter.py})\\
+\midrule
+Command pipeline & \codew{receive_command}\\
+Protocol policy (override) & \codew{handle_command}\\
+Transmit permission & \codew{controller_tx_ready}\\
+Payload policy (override) & \codew{build_tx_payload}\\
+Uplink delivery & \code{do_transmit}\\
+Records & \code{TxRecord}, \code{RxRecord}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item The module is passive protocol logic; the controller asks it whether to transmit, the base station tells it what to do.
+ \item Reception is gated by downlink power only; transmission additionally needs the controller to be in \emph{wait\_slot}, inside a fresh, valid slot.
+ \item \code{do_transmit} writes pre-computed RSSI into each base station and interrupts it; the slot state is cleared afterwards.
+ \item \code{delivered} means ``handed to a base station'', not ``decoded''; list targets are ignored by the default handler.
+ \item Two overridable methods, \codew{handle_command} and \codew{build_tx_payload}, suffice to implement a new protocol.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Trace a \code{send_id} command to a node with downlink power $\SI{-50}{dBm}$ and \codew{sensitivity_dbm=-45}. What happens and what is logged?
+\end{exercise}
+\begin{exercise}
+A node chooses slot $[205,213)$. At what times can \codew{controller_tx_ready} succeed? What if the command was sent at $t=206$?
+\end{exercise}
+\begin{exercise}
+Rewrite \codew{handle_command} so that \code{send_data} with a list target works. Which attribute must be set to allow the reply?
+\end{exercise}
+\begin{exercise}
+Design a node protocol in which a node transmits only if its capacitor voltage exceeds $\SI{1.6}{V}$. Where would you read the voltage, given that \codew{BackscatterModule} has no reference to the capacitor?
+\end{exercise}

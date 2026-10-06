@@ -1,0 +1,140 @@
+\chapter{Packet Analysis and Performance Metrics}
+\label{ch:analysis}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item the standard metrics---delivery error rate (DER), throughput, per-node and per-base-station statistics---and exactly how the demos and the analysis module define them;
+ \item the \emph{two} ways Amber classifies collisions (real-time and post-hoc) and why they can disagree;
+ \item a verified defect in the post-hoc path that makes almost every packet look collided;
+ \item practical guidance on which numbers to trust and how to report them.
+\end{itemize}
+\end{defbox}
+
+\section{Metrics}
+\label{sec:metrics}
+
+A simulator is only as useful as the questions its output can answer. For Ambient IoT networks the natural metrics are the following.
+
+\begin{defbox}[Delivery and throughput]
+Let $N_{\mathrm{sent}}$ be the number of packets nodes handed to the channel, $N_{\mathrm{dec}}$ the number decoded without collision loss at the base station, and $T$ the simulated time.
+\[
+ \mathrm{PDR}=\frac{N_{\mathrm{dec}}}{N_{\mathrm{sent}}},\qquad
+ \mathrm{DER}=1-\mathrm{PDR},\qquad
+ \text{throughput}=\frac{N_{\mathrm{dec}}}{T}\ [\text{packets/s}].
+\]
+\end{defbox}
+Other useful quantities: per-node success counts (fairness), the number of registered nodes versus time (discovery), collisions per frame, and energy-related ones such as the number of FSM cycles per charge cycle or the fraction of time a node is active.
+
+\subsection{How the demos compute them}
+
+Each demo prints
+\[
+ \texttt{total\_sent}=\sum_{\text{nodes}}\codew{packets_sent},\qquad
+ \texttt{decoded}=\bigl|\{(\text{node},\text{window start}):\ \neg\text{collided}\}\bigr|,
+\]
+\[
+ \texttt{DER}=1-\texttt{decoded}/\texttt{total\_sent},\qquad
+ \texttt{throughput}=\texttt{decoded}/(\texttt{SIM\_TIME\_MS}/1000).
+\]
+Note that the numerator counts \emph{unique} (node, window) pairs, and that ``sent'' counts all handed-over packets including those the base station later drops for being below its sensitivity (the denominator is not reduced by them). For the unicast demo in one run: $125$ sent, $125$ decoded, DER $=0\%$, $6.2$ packets/s.
+
+\subsection{Name clash: ``DER''}
+
+\begin{reality}[Two different quantities share the name ``DER'']
+In the demos DER is an \emph{error} rate: $1-\text{decoded}/\text{sent}$ (smaller is better; the plots label it ``Delivery Error Rate''). In \codew{packet_analysis.analyze_packets}, \code{BSStats.der} is $\text{received}/\text{transmitted}$, a \emph{success} ratio (larger is better), and ``transmitted'' there means ``rows in the base station's RX log'', i.e.\ packets \emph{logged} by the base station, not packets \emph{sent} by nodes. In our test run the same simulation gives demo-style DER $\approx2.4\%$ (121 decoded of 124 sent) but analysis-module \code{der}$=0.976$. Always state which you mean.
+\end{reality}
+
+\section{The \texttt{packet\_analysis} module}
+\label{sec:pamodule}
+
+Besides \code{apply_sic} and the noise helper used by the engine, \file{packet_analysis.py} provides a post-processing pipeline.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{4.0cm}X@{}}
+\toprule
+\normalfont\bfseries Function / class & \normalfont\bfseries Role\\
+\midrule
+load\_packet\_log(path) & read a tab-separated BS RX log; requires \codew{start_ms, end_ms, node_id, rssi_dbm, subcarrier_shift}\\
+\codew{detect_collisions(df,...)} & \emph{post-hoc} collision detection by time overlap, then SIC per overlap\\
+analyze\_packets(\dots) & per-BS and per-node statistics; writes optional text logs\\
+BSStats & \code{transmitted}, \code{received}, \code{errors}, \codew{collisions_total}, \code{der}\\
+NodeStats & \code{sent}, \codew{received_at_bs}, \codew{total_errors}, \code{heard_by_bs}\\
+CollisionEvent & kind $\in\{\text{total},\text{n\_way},\text{capture},\text{sic\_success}\}$, nodes, powers, SINRs, winners\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{How \code{analyze_packets} chooses its path.} If the log has a \code{collided} column (which the base station writes) the function \emph{trusts it}: received $=$ rows with \codew{collided==False}, errors $=$ rows with \codew{collided==True}. Only if the column is missing does it call \codew{detect_collisions} and re-derive the outcomes.
+
+\paragraph{Post-hoc detection.} For each subcarrier it builds start/end events for each packet interval, sweeps in time order, and whenever a packet starts while others are active, it forms a collision set and applies SIC (default $\gamma_{\mathrm{req}}=10$~dB here, versus $3$~dB in the engine) to label packets \code{decoded}, \code{captured}, \codew{sic_recovered} or \codew{collision_loss}. Collision events are classified \code{total} (two packets, none decoded), \code{n_way} ($>2$, none decoded), \code{capture} (one decoded) and \code{sic_success} (two or more).
+
+\paragraph{Side effects to know about.} By default \codew{analyze_packets} \emph{appends} a text report to \codew{terminal_out.txt} and collision lines to \codew{collision_out.txt} in the current directory on every call; pass \codew{write_terminal_log=None, write_collision_log=None} to disable. The demos' own CSV files (\codew{rx_packets.csv}) lack \code{start_ms}/\code{end_ms}, so \codew{load_packet_log} rejects them (``Missing required columns''): the analysis module expects logs written by the engine's \code{save_logs}/\code{stream_log}.
+
+\section{Real-time versus post-hoc classification}
+\label{sec:rtposthoc}
+
+We ran the same $\SI{20}{s}$ broadcast simulation (SIC off) and analysed its engine-written log in both ways.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Path & Received (decoded) & Errors & Collision events\\
+\midrule
+Real-time (\code{collided} column) & 121 & 3 & --\\
+Post-hoc, as logged & \textbf{1} & \textbf{123} & 122\\
+Post-hoc, zero-length intervals nudged by $\SI{1}{\micro s}$ & 120 & 4 & 4\\
+\bottomrule
+\end{tabular}
+\end{center}
+The real-time classification and the (repaired) post-hoc classification agree to within one packet; the unrepaired post-hoc path reports that $99\%$ of packets were lost.
+
+\begin{reality}[A latent defect in the post-hoc sweep]
+In the engine's log, a packet's \code{start_ms} is the start of the RX \emph{window} and \code{end_ms} is its \emph{arrival} time. A node that happens to be ready when the window opens transmits in the very first millisecond, so \codew{start_ms == end_ms}: $100$ of the $124$ packets in our run have zero-length intervals. The sweep sorts events by \codew{(time, is_start)}, i.e.\ \emph{end} events before \emph{start} events at the same time. For a zero-length packet the \emph{end} is therefore processed first (removing nothing, marking the packet \code{decoded}) and the \emph{start} afterwards, which inserts the packet into the \code{active} set \emph{permanently}. Every later packet then ``collides'' with this ghost, producing the cascade of $n$-way collisions ($122$ events in our run). The one-line remedy (end events after start events for equal times, or a minimum duration) restores agreement. It does not affect the demos, which count via the engine's real-time flags, but it makes \codew{analyze_packets} unreliable on logs lacking the \code{collided} column. Remember also that, for engine logs, the overlap intervals are not airtime: they are ``window start to arrival'', so even a repaired post-hoc detector approximates collision by an interval-overlap rule different from the engine's $\SI{5}{ms}$ rule.
+\end{reality}
+
+\section{Practical guidance}
+
+\begin{enumerate}
+ \item \textbf{Prefer the engine's counters} (\code{total_rx}, \codew{total_collided}, \codew{rx_count_by_node}) and \code{collided} flags for headline results; they are cheap, constant-memory and come from the classification actually used by the simulation.
+ \item \textbf{Report what you divide by.} ``Sent'' includes packets later dropped below sensitivity; if you want the PDR of \emph{audible} packets, count rows in \code{rx_packets} instead.
+ \item \textbf{Report distributions.} Replicate and show box plots or confidence intervals (Chapter~\ref{ch:des}); a single unseeded run is one sample.
+ \item \textbf{Separate energy from radio losses.} A silent node is not a lost packet. Count \emph{opportunities} (polls to a node that was in \emph{wait\_slot}) if you want a radio-only PDR.
+ \item \textbf{Mind the logging overhead.} For long runs use \codew{keep_logs=False} and \code{stream_log}.
+\end{enumerate}
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.0cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Code\\
+\midrule
+Demo metrics & \codew{run_simulation()} in each demo; \codew{save_packets}\\
+Always-on counters & \codew{BSBehavior.total_rx}, \codew{total_collided}, \code{total_tx}, \codew{rx_count_by_node}\\
+Offline statistics & \codew{analyze_packets} (\file{packet_analysis.py})\\
+Offline collisions & \codew{detect_collisions}, \codew{_analyze_collision_outcome}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item DER (error) $=1-\text{decoded}/\text{sent}$ in the demos; \code{BSStats.der} is a success ratio over logged receptions. Do not mix them.
+ \item Prefer the engine's real-time \code{collided} flags; the post-hoc detector is unreliable on engine logs because of zero-length intervals (we measured $1$ vs $121$ decoded).
+ \item \codew{analyze_packets} writes text files by default and does not read the demos' CSV files.
+ \item Report distributions, and separate energy-induced silence from channel-induced loss.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+A run reports $\texttt{total\_sent}=130$, $\texttt{decoded}=117$ over $20.001$~s. Compute DER, PDR and throughput. If $6$ of the missing $13$ packets were dropped below sensitivity, what is the PDR of audible packets?
+\end{exercise}
+\begin{exercise}
+Explain why \codew{start_ms == end_ms} for a packet that arrives in the first millisecond of its window, and sketch the event order of the sweep for two such packets in consecutive windows.
+\end{exercise}
+\begin{exercise}
+Design a metric that separates ``lost to energy'' from ``lost to collisions'' using only data the base station can log. Which additional information from the simulator (not available in a real network) would you use as ground truth?
+\end{exercise}

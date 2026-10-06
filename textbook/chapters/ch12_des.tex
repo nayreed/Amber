@@ -1,0 +1,209 @@
+\part{Simulation Methodology and Architecture}
+
+\chapter{Discrete-Event Simulation and SimPy}
+\label{ch:des}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item what a simulation model is, and the difference between time-stepped and event-driven simulation;
+ \item the SimPy concepts Amber uses: processes as generators, timeouts, and \emph{interrupts} as message passing;
+ \item the rule that decides the order of events at the same instant, verified by experiment;
+ \item why Amber pre-computes the radio channel, the measured cost per node and millisecond, and what limits scalability;
+ \item how to think about randomness, replication, verification and validation.
+\end{itemize}
+\end{defbox}
+
+\section{Models, state and time}
+\label{sec:desmodel}
+
+A simulation is an \emph{executable abstraction}. Its anatomy is always the same: a set of \emph{state variables} (a
+capacitor voltage, a node's protocol state, a buffer of packets), a notion of \emph{time}, and \emph{rules} that change the state as time advances. The central design question is how time advances.
+
+\paragraph{Time-stepped simulation.}
+Advance the clock by a fixed $\Delta t$; at each step update every entity. This is simple and natural for
+continuous dynamics such as a capacitor ($C\,\dot V=\dots$ integrated with step $\Delta t$). Its cost is proportional to
+(simulated time)/$\Delta t$ whether or not anything happens.
+
+\paragraph{Event-driven (discrete-event) simulation.}
+Keep a \emph{future-event list} ordered by time. Repeatedly remove the earliest event, set the clock to its time, execute
+it (which may schedule new events) and continue \citep{banks2010,law2015}. Nothing is computed between events, so a mostly idle system is cheap and an event's time can be arbitrary (not on a grid).
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}p{3.0cm}XX@{}}
+\toprule
+ & Time-stepped & Event-driven\\
+\midrule
+Clock advances by & fixed $\Delta t$ & time of the next event\\
+Natural for & continuous dynamics & sparse, asynchronous activity\\
+Cost & $\propto T/\Delta t$ & $\propto$ number of events\\
+Ordering at ties & implicit (loop order) & explicit rules\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{keyidea}[Amber is a hybrid]
+The \emph{base station} is event-driven: it sleeps until a slot ends or a node interrupts it. The \emph{node} is
+time-stepped: every node's controller schedules an event exactly $\SI{1}{ms}$ ahead, forever, because the capacitor must be integrated at a fixed step and thresholds must be checked
+continuously. Consequently one controller wake-up per node per millisecond is the \emph{floor} of the simulator's cost: idle milliseconds cannot be skipped.
+\end{keyidea}
+
+\section{SimPy in ten minutes}
+\label{sec:simpy}
+
+Amber is built on SimPy \citep{simpy}, a process-based discrete-event framework for Python. Its ideas fit on one page.
+\begin{itemize}
+ \item An \code{Environment} holds the clock (\code{env.now}) and the future-event list.
+ \item A \emph{process} is a Python \emph{generator function}. It runs until it hits a \code{yield}, which hands an \emph{event} to the scheduler; the process is
+   suspended until that event occurs.
+ \item \codew{yield env.timeout(d)} means ``wake me up $d$ time units from now''. Amber's time unit is the millisecond.
+ \item \codew{env.process(gen)} starts a process; \codew{env.run(until=T)} runs the clock to $T$.
+ \item \codew{proc.interrupt(cause)} \emph{throws} a \codew{simpy.Interrupt} exception into the target process at its current \code{yield}. The target can catch it, read \code{cause} (any object, in Amber a string), and carry on. This is how processes send each other messages.
+\end{itemize}
+A complete toy example: a charger adds one unit per millisecond; a supervisor interrupts it after $5$~ms.
+\begin{lstlisting}
+import simpy
+
+def charger(env, cap):
+    while True:
+        try:
+            yield env.timeout(1)          # wait 1 ms
+            cap["q"] += 1                 # then add charge
+        except simpy.Interrupt as it:     # a message arrives
+            print(f"t={env.now}: charger interrupted ({it.cause})")
+            return
+
+def supervisor(env, proc):
+    yield env.timeout(5)
+    proc.interrupt("enough")              # send a message
+
+env = simpy.Environment(); cap = {"q": 0}
+p = env.process(charger(env, cap))
+env.process(supervisor(env, p))
+env.run(until=20)
+print("final charge:", cap["q"])
+\end{lstlisting}
+Running it prints
+\begin{verbatim}
+t=5: charger interrupted (enough)
+final charge: 4
+\end{verbatim}
+Notice that the charge is $4$, not $5$. At $t=5$ both the charger's own timeout and the supervisor's wake-up are due, yet the interrupt \emph{pre-empts}
+the charger's increment. This is not an accident, as we show next.
+
+\subsection{Order of events at the same instant}
+\label{sec:tiebreak}
+
+SimPy keeps events ordered by (time, priority, insertion counter). Ordinary events have priority \code{NORMAL} ($1$); \emph{interrupts are scheduled with priority
+\code{URGENT} ($0$)}. We verified experimentally that an interrupt issued at time $t$ is handled \emph{at time $t$}, immediately after the issuing process yields and
+before any other ordinary event at $t$. Three consequences are central to Amber:
+\begin{enumerate}
+ \item When the controller interrupts the capacitor, the capacitor's voltage update happens \emph{within the same millisecond}, before anything else at that instant; the controller's next
+   reading (one millisecond later) sees the updated value.
+ \item When a node's \code{do_transmit} interrupts the base station, the base station buffers that packet \emph{before} any other node's controller runs. The base station's ``scratch'' attributes
+   (\codew{received_tag_id}, \codew{data_from_tag}, \dots) therefore act as a safe one-element mailbox, even if two nodes transmit in the same millisecond.
+ \item Among \emph{ordinary} events at one instant the order is the order of scheduling, which is the order in which processes were created. Results can in principle depend on that order; Amber's controllers all wake at the same instants, so the order in which nodes are created is the order in which they run.
+\end{enumerate}
+
+\section{How Amber uses SimPy}
+\label{sec:amberusessimpy}
+
+Three kinds of process run concurrently.
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{2.8cm}>{\raggedright}p{3.4cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\normalfont\bfseries Process & \normalfont\bfseries Wakes on & \normalfont\bfseries Does\\
+\midrule
+Controller & timeout of $\SI{1}{ms}$, always & recompute harvest power; apply thresholds; advance the node FSM; interrupt its capacitor\\
+Capacitor & interrupt from its controller (idle timeout of $\SI{10}{ms}$ otherwise) & apply one $\Delta t$ step selected by the interrupt's cause\\
+BSBehavior & timeout at the end of each TX/RX slot; interrupt \codew{"receive_data"} from nodes & run the schedule; buffer packets during RX; resolve collisions at the end of the window\\
+EnvEnergySource & timeout of $\SI{1}{ms}$ & move to the next row of the solar trace\\
+\bottomrule
+\end{tabularx}
+\end{center}
+Inter-process communication uses two idioms: \textbf{interrupts with a string cause} as a signal (\codew{"capacitor_charging"}, \codew{"receive_data"}), and \textbf{shared attributes} as the payload
+(\codew{capacitor.current}, \codew{capacitor.voltage_source}, \code{bs.rssi_dbm}). The base station additionally calls node methods \emph{directly} (\codew{receive_command}); that call is synchronous and instantaneous.
+
+\section{Precomputation and scalability}
+\label{sec:scalability}
+
+The paper states that ``since nodes and base stations are stationary, coverage maps and link budgets are pre-computed once before execution to minimize runtime overhead.'' With static geometry the downlink power $P_{\mathrm{dl}}$ of every node and the uplink
+power to every sector are constants. Computing them once costs $O(N\cdot B\cdot S_B)$ (nodes $\times$ base stations $\times$ sectors) and is vectorised with NumPy. In our measurement the pre-computation for $300$ nodes took $\SI{3.4}{ms}$.
+
+What remains at run time is the per-millisecond controller step. We measured the wall-clock cost of Amber with a fixed number of nodes over $\SI{5}{s}$ of simulated time (hybrid nodes, idle base station) on a $4$-core cloud container:
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+Nodes & Pre-computation & Run time ($5$ s sim.) & $\si{\micro s}$ per node-ms\\
+\midrule
+ 10 & \SI{0.9}{ms} & \SI{0.57}{s} & 11.5\\
+ 30 & \SI{0.8}{ms} & \SI{1.87}{s} & 12.5\\
+100 & \SI{1.4}{ms} & \SI{6.29}{s} & 12.6\\
+300 & \SI{3.4}{ms} & \SI{21.3}{s} & 14.2\\
+\bottomrule
+\end{tabular}
+\end{center}
+The cost is \emph{linear} in the number of nodes at about $\SIrange{12}{14}{\micro s}$ per node-millisecond, so a $60$~s run with $1000$ nodes takes roughly $1000\times60\,000\times13\,\si{\micro s}\approx13$~minutes. This supports the paper's claim of ``efficient simulation of hundreds of nodes''
+(about four times slower than real time for $300$ nodes in our measurement; your machine will differ).
+
+\begin{reality}[Memory grows with time unless you ask it not to]
+Every capacitor appends a \codew{(time, voltage)} tuple to \codew{voltage_history} \emph{every millisecond} while \codew{keep_logs=True} (the default), and the base station and backscatter modules store every packet. For long runs pass \codew{keep_logs=False}
+(controller, capacitor, backscatter, base station) and use the base station's \code{stream_log} option, which writes packets to disk as they arrive; counters (\code{total_rx}, \codew{total_collided}, \dots) are always maintained at constant memory.
+\end{reality}
+
+\section{Randomness and replication}
+\label{sec:random}
+
+Several mechanisms in Amber are random: the start-up delay of each controller ($0$--$\SI{2}{s}$, uniform), the sensed value, the slot chosen by a node, and node placement in experiments. They all use Python's global \code{random} module,
+\emph{unseeded by default}. Only the custom-protocol demo calls \code{random.seed}. Therefore two runs of, say, the broadcast demo differ slightly (we measured $122$ and $121$ packets sent in two runs; over ten seeds the mean is $124.4$ with standard deviation $1.6$).
+Good practice, followed by the paper's experiment:
+\begin{itemize}
+ \item treat a single run as one sample; \emph{replicate} ($10$ runs per density in the paper) and report distributions (box plots) or means with confidence intervals;
+ \item \codew{random.seed(s)} for reproducibility of any one run;
+ \item vary only one factor at a time when attributing an effect (our SIC ablation, Section~\ref{sec:sicexperiment}).
+\end{itemize}
+
+\section{Verification, validation and what Amber has had}
+\label{sec:vv}
+
+\begin{description}[leftmargin=0.4cm,font=\sffamily\bfseries]
+ \item[Verification] asks \emph{``Did we build the model right?''} (code implements the intended equations). Throughout this book we verified Amber against closed-form results: the exact RC solution (agreement to $2\times10^{-4}$~V),
+   hand-computed link budgets (exact to two decimals), SIC arithmetic, and ALOHA-based expectations for registration.
+ \item[Validation] asks \emph{``Did we build the right model?''} (it represents reality well enough for its purpose), usually by comparison with measurements. The paper is a demo abstract and presents no hardware comparison; the radio models are standard (Friis, 3GPP UMa) but
+   the harvester, capacitor and node loads are idealisations. Treat Amber's \emph{relative} comparisons (protocol A versus B under identical assumptions) as more trustworthy than its \emph{absolute} numbers.
+\end{description}
+\begin{keyidea}
+A simulator is a \emph{microscope for mechanisms}, not a crystal ball. Use it to see \emph{why} a protocol behaves as it does (energy gating, collision structure, capture), then confirm key numbers experimentally.
+\end{keyidea}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item Time-stepped simulation suits continuous dynamics; event-driven suits sparse events; Amber combines both: an event-driven base station and $\SI{1}{ms}$ time-stepped nodes.
+ \item In SimPy a process is a generator, \code{timeout} suspends it and \codew{interrupt(cause)} sends it a message; interrupts are \emph{urgent}, so they are handled at the same instant before ordinary events.
+ \item Static geometry lets Amber pre-compute all link budgets; run time is linear in the number of nodes at $\approx13\,\si{\micro s}$ per node-ms.
+ \item Randomness is unseeded by default; replicate and report distributions.
+ \item Amber is verified against analytic cases in this book but not validated against hardware in the paper.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Modify the toy example so that the supervisor interrupts at $t=5.5$ (use floating-point time). What is the final charge, and why?
+\end{exercise}
+\begin{exercise}
+Explain why an event-driven simulator cannot skip idle milliseconds in Amber, and how you would restructure the node model so that it could. What accuracy would you lose?
+\end{exercise}
+\begin{exercise}
+Using $13\,\si{\micro s}$ per node-ms, estimate the run time for $500$ nodes over $\SI{120}{s}$. How many replications of a $100$-node, $\SI{20}{s}$ experiment fit in one hour?
+\end{exercise}
+\begin{exercise}
+Two nodes transmit in the same millisecond. Describe, step by step, how SimPy's ordering rules ensure that the base station buffers \emph{both} packets rather than overwriting the first.
+\end{exercise}
+\begin{exercise}
+Why would you not report a protocol's performance from a single unseeded run? Design a minimal replication plan for the node-density experiment of the paper.
+\end{exercise}

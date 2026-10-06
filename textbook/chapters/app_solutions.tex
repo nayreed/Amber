@@ -1,0 +1,138 @@
+\chapter{Solutions to the Exercises}
+\label{app:solutions}
+
+\newcommand{\sol}[1]{\par\smallskip\noindent\textbf{\sffamily\color{ablue}#1}\enspace}
+Numeric answers were computed with the script \file{textbook/code/exercise_checks.py}, which uses Amber's own functions wherever they apply. Conceptual answers are brief; they indicate the reasoning expected.
+
+\section*{Chapter 1}
+\sol{1.1} $E=2430$ J; $t=2430/20\,\mu\mathrm W=1.215\times10^{8}$ s $=3.85$ years. For $15$ years the average load must be $2430/(15\cdot3.156\times10^{7})=5.1\,\mu$W, a factor $3.9$ lower.
+\sol{1.2} $2\times10^6/(4\cdot365)\approx1370$ per day. This underestimates the labour: devices fail early, are hard to reach (travel and access dominate the cost), must be located and identified, and real cell life is shortened by self-discharge and temperature.
+\sol{1.3} Device~B (storage, backscatter, no signal generation). With an oscillator and a small power amplifier it can generate its own carrier: Device~C.
+\sol{1.4} Without storage there is no energy when the carrier is absent, and with no carrier there is nothing to reflect, so no uplink is possible. Consequences: replies must be scheduled by the reader (slots) while the carrier is on; no carrier sensing, hence reader-controlled random access; commands must be short and protocols robust to nodes that are asleep.
+
+\section*{Chapter 2}
+\sol{2.1} Nodes: position, antenna gain, sensitivity, power-split ratio. Base stations: sectors with azimuth, beamwidth, height, gain, transmit power, sensitivity, antenna pattern. Links: downlink (power and carrier) and uplink (backscatter), computed once.
+\sol{2.2} (i) A stronger energy source; (ii) a different random start-up delay or capacitor. The demo implements (i): Node~2 is hybrid, its solar term ($\approx\SI{1.4}{mW}$) exceeds its RF term ($\approx\SI{0.09}{mW}$) and the max-rule selects it.
+\sol{2.3} Only if it reaches \emph{wait\_slot} while $t<\text{slot end}$: processing ends at most $5$~ms later, so it can still reply provided the remaining processing time is shorter than the time left in the (chosen) slot.
+
+\section*{Chapter 3}
+\sol{3.1} (a) $1.995$ W; (b) $-26.99$ dBm; (c) $1.995\times10^{-13}$ W ($0.2$ pW).
+\sol{3.2} $10\log_{10}(10^{-7}+10^{-7.3})=-68.24$ dBm. Four equal interferers: $-73+6.02=-66.98$ dBm.
+\sol{3.3} $-174+60+8=-106$ dBm; $-174+80+6=-88$ dBm; they differ by $18$ dB.
+\sol{3.4} (a) $30+17-80+1=-32$ dBm $=0.63\,\mu$W; (b) yes, $13$ dB above $-45$ dBm; (c) $-32-3.01+1-80+17=-97.0$ dBm.
+\sol{3.5} $N=-174+6+10\log B$; need $N=S-\gamma=-103$ dBm, so $10\log B=65$ and $B=3.16$ MHz.
+
+\section*{Chapter 4}
+\sol{4.1} $17-12(40/65)^2=12.46$ dBi; $17-12(90/65)^2=-6.0$ dBi; at $150^\circ$ the attenuation exceeds $30$ dB, so $17-30=-13$ dBi.
+\sol{4.2} The floor is reached at $\varphi_{3\mathrm{dB}}\sqrt{30/12}=1.58\,\varphi_{3\mathrm{dB}}$: (a) $47.4^\circ$; (b) $189.7^\circ>180^\circ$: never; the attenuation at $180^\circ$ is $12\cdot(180/120)^2=27$ dB.
+\sol{4.3} Math angles: $90^\circ,45^\circ,315^\circ,180^\circ$. A sector at compass $10^\circ$ is at math $80^\circ$; for a node at math $350^\circ$ the error is $|(350-80+180)\bmod360-180|=90^\circ$.
+\sol{4.4} The node's compass bearing $60^\circ$ is math $30^\circ$. Errors: sector~0, $60^\circ$; sector~120, $60^\circ$; sector~240, $180^\circ$. Gains $4.78$, $4.78$, $-15$ dBi. The first two tie; Amber's strict ``$>$'' keeps the first: sector~0 is the owner.
+\sol{4.5} $D\approx41\,253/(90\cdot15)=30.6$, i.e.\ $14.9$ dBi.
+
+\section*{Chapter 5}
+\sol{5.1} See the text. At $\SI{50}{m}$: $65.7$ dB at $\SI{924}{MHz}$, $77.3$ dB at $\SI{3.5}{GHz}$; the difference $20\log(3500/924)=11.6$ dB arises because the receive aperture $\lambda^2G/4\pi$ shrinks with frequency.
+\sol{5.2} $d'_{BP}=4\cdot29\cdot1\cdot2\times10^9/3\times10^8=773$ m; the node at $200$ m is \emph{before} the breakpoint.
+\sol{5.3} $d_{3D}=300.9$: $28+40\log300.9+20\log0.924-9\log(147.8^2+23.5^2)=28+99.14-0.69-39.15=87.30$ dB, matching the table.
+\sol{5.4} $4.343\cdot0.01\cdot100=4.34$ dB per hop; $8.69$ dB over the round trip.
+\sol{5.5} In this regime the path loss rises by $5.93$ dB from $50$ to $100$ m. The downlink falls by $5.93$ dB, the uplink by $2\times5.93=11.86$ dB.
+
+\section*{Chapter 6}
+\sol{6.1} Chain: $P_{\mathrm{tag}}=P_tG_tG_aL(d_1)$, $P_{\mathrm{bs}}=\eta P_{\mathrm{tag}}$, $P_r=P_{\mathrm{bs}}G_aG_rL(d_2)$. Doubling both distances changes each $L$ by $-6.02$ dB: $P_r$ falls by $12.04$ dB; the downlink falls by $6.02$ dB.
+\sol{6.2} $\lambda=0.328$ m, $\mathrm{PL}_{FS}(4\ \mathrm m)=43.71$ dB. Tag captures $36+9+2-43.71=+3.29$ dBm ($2.1$ mW); reflects $\eta=0.3$ ($-5.23$ dB): $-1.94$ dBm; reader receives $-1.94+2+9-43.71=-34.65$ dBm.
+\sol{6.3} $(0.8/\pi)^2=0.065$, i.e.\ $-11.9$ dB, so $\eta\approx0.065$ (before other losses).
+\sol{6.4} The harvest falls by $10\log(1-\eta)$: $-5.23$ dB ($\eta=0.7$), $-0.97$ dB ($\eta=0.2$); for $\eta=1$ the harvest is $0$ (Amber floors it at $-120$ dBm).
+\sol{6.5} Nodes with the same shift occupy the same frequency, so replies that overlap in time collide; different shifts are orthogonal in frequency and cannot. This resembles frequency-division multiple access (or a subcarrier group in OFDMA).
+
+\section*{Chapter 7}
+\sol{7.1} Using the mean voltage: $2.66^2/5000=1.415$ mW ($1.51$ dBm). The code computes $P$ per sample and the \emph{mean of $V^2$} is $1.433$ mW ($1.56$ dBm); the difference is $\sigma^2/R=12.5\,\mu$W ($0.9\%$).
+\sol{7.2} Max: $\sqrt{1.4\,\mathrm{mW}\cdot5\,\mathrm{k\Omega}}=2.65$ V. Sum: $\sqrt{2.4\,\mathrm{mW}\cdot5\,\mathrm{k\Omega}}=3.46$ V.
+\sol{7.3} $-5.23$ dB ($\eta=0.7$); $-0.97$ dB ($\eta=0.2$).
+\sol{7.4} $V_\infty=\Vs\cdot0.952\ge1.7\Rightarrow\Vs\ge1.785$ V; $P=\Vs^2/\Rs\ge637\,\mu$W $=-1.96$ dBm.
+\sol{7.5} Insert $P_h\leftarrow\eta_{\mathrm{rf\text{-}dc}}(P_{\mathrm{dl}})P_{\mathrm{dl}}$ in \codew{calculate_node_power}, before the controller converts power to voltage. In the paper's scenario $P_{\mathrm{dl}}$ is $-12$ dBm at $20$ m but below $-20$ dBm beyond $\approx70$ m; those nodes would harvest nothing from RF and, with $\eta_{\mathrm{rf\text{-}dc}}=0.3$, even nodes at $20$ m would deliver $19\,\mu$W ($\Vs\approx0.31$ V): the dependence on the external source becomes stronger.
+
+\section*{Chapter 8}
+\sol{8.1} $\tau=(4.762\,\mathrm{k\Omega})(200\,\mu\mathrm F)=0.952$ s; $V_\infty=2.368$ V; $t=\tau\ln[2.368/(2.368-1.7)]=1.21$ s.
+\sol{8.2} $V_\infty=(\Vs-1.5)\cdot0.952<1.3\Rightarrow\Vs<2.865$ V.
+\sol{8.3} $\Delta E=\tfrac12(200\,\mu\mathrm F)(2.89-1.69)=120\,\mu$J. Doubling needs $C=400\,\mu$F. Lowering $\Vlow$ to $1.1$ V gives $168\,\mu$J ($+40\%$); doubling by $\Vlow$ alone would need $\Vlow=0.7$ V, impractical.
+\sol{8.4} Solve $V_{\mathrm{th}}=V_\infty+(V_0-V_\infty)\e^{-t/\tau}$ for $t$. For Node~1: $V_\infty=1.971\cdot0.9524=1.877$, $t=1.4286\ln(1.877/0.177)=3.37$ s.
+\sol{8.5} $D=200\,\mu\mathrm W/4\,\mathrm{mW}=5\%$; $T_c=180/200=0.9$ s; $T_a=180\,\mu\mathrm J/3.8\,\mathrm{mW}=47$ ms; one burst per $0.947$ s, i.e.\ $1.06$ bursts/s.
+\sol{8.6} $\mathrm d[V(\Vs-V)]/\mathrm dV=\Vs-2V=0$ at $V=\Vs/2$; the maximum is $\Vs^2/4\Rs=P_h/4$; the delivered power is never above $25\%$ of $P_h$.
+
+\section*{Chapter 9}
+\sol{9.1} See Appendix~\ref{app:fsa}. A pure-ALOHA packet is vulnerable to a start in either of two packet-times around it, a slotted packet only to the same slot.
+\sol{9.2} $E_0=4.40$, $E_1=5.87$, $E_c=5.73$, $\eta=0.367$. The optimum is $S=n=20$: $\eta=(19/20)^{19}=0.377$.
+\sol{9.3} $\hat n=5+2.39\cdot5=17.0$; lower bound $5+2\cdot5=15$; use $S\approx17$.
+\sol{9.4} $S=30$: $P_{\mathrm{succ}}=0.374$, $\eta=0.374$, $299\,\mu$J; $S=45$: $0.521$, $0.347$, $215\,\mu$J; $S=60$: $0.614$, $0.307$, $182\,\mu$J; $S=90$: $0.723$, $0.241$, $155\,\mu$J. If idle slots cost only airtime, choose $S$ around $2n$--$3n$ as a compromise: energy falls steeply up to $\approx2n$ and slowly after, while efficiency keeps falling.
+\sol{9.5} $20$ nodes per shift: $(1-1/10)^{19}=0.135$; with $K=1$ and $60$ nodes: $0.9^{59}=0.0020$.
+
+\section*{Chapter 10}
+\sol{10.1} $\gamma_1=7.93$ dB, $\gamma_2=17.98$ dB (after removing the first). Capture alone decodes the first only.
+\sol{10.2} $\gamma=-3.04$ dB $<3$ dB: nothing is decoded and SIC stops at the first step.
+\sol{10.3} $\rho\ge1+\gamma_{\mathrm{req}}=3.0$ ($4.76$ dB) per step; three steps: $\rho^3=27$, i.e.\ $14.3$ dB.
+\sol{10.4} First packet $i=3$: group $\{3,7\}$ (since $|3-11|=8>5$); then $i=11$: group $\{11,15\}$. Two groups of two. Transitive clustering would chain $3\sim7\sim11\sim15$ into one group of four.
+\sol{10.5} $\varepsilon=0.05$: $\gamma=(3.79,\,3.19,\,1.71)$ dB $\to$ first two decoded, third lost. $\varepsilon=0.1$: $\gamma=(3.79,\,1.96)$ dB $\to$ only the first. $\varepsilon=0$: all three. Amber's implementation always behaves as $\varepsilon=0$.
+
+\section*{Chapter 11}
+\sol{11.1} $p_a=1$: round-1 registered fraction $0.19$; $p_a=\tfrac12$: $0.22$ (fewer collisions among participants), but $90\%$ is reached after $5$ rounds versus $6$: it lags by one round.
+\sol{11.2} Round $=100\cdot15=1500$ ms. Each node is polled every $1.5$ s but can answer once per $2$ s: about $1.5/2=75\%$ of polls answered.
+\sol{11.3} Unicast never wastes node energy on collisions: energy per delivered packet is $E_{\mathrm{tx}}$ rather than $E_{\mathrm{tx}}/P_{\mathrm{succ}}$ (e.g.\ $299\,\mu$J vs $112\,\mu$J). Commands cost base-station airtime, not node energy.
+\sol{11.4} (i) Time since the last reply (compare with the node's recharge time); (ii) an energy flag or voltage bucket piggy-backed on data (a few bits); (iii) response to a cheap ping slot (a transmission); (iv) RSSI history: a node that answered at a good RSSI recently is probably asleep, not out of range.
+
+\section*{Chapter 12}
+\sol{12.1} The charger's increments at $t=1,\dots,5$ all precede the interrupt at $5.5$: final charge $5$.
+\sol{12.2} Every controller reschedules itself $1$ ms ahead, so the future-event list is never empty between ms ticks. To skip idle time, advance each capacitor analytically (Eq.~\eqref{eq:vsol}) between the \emph{events that change its inputs} (load changes, state transitions, $\Vlow/\Vhigh$ crossings); one would lose nothing in the linear regime but the harvest depends on a $1$ ms trace, so the benefit is limited to RF-only or piecewise-constant sources.
+\sol{12.3} $500\cdot120\,000\cdot13\,\mu\mathrm s=780$ s. A $100$-node $20$ s run takes $26$ s, so about $138$ replications per hour on one core.
+\sol{12.4} A's controller runs, calls \code{do_transmit}: it writes the scratch fields and interrupts the base station (urgent). The controller yields; the urgent interrupt is processed immediately, so the base station buffers A. Only then does B's controller (a normal event) run and overwrite the scratch fields and interrupt. We verified this with three same-millisecond transmissions: all were buffered intact.
+\sol{12.5} Each run is one sample of random placements, delays and slot choices. Plan: densities $\{5,10,20,40,60,80,100\}$, $10$--$30$ seeds each, one factor varied, report median and inter-quartile range per density (box plots), same seeds across compared configurations.
+
+\section*{Chapter 13}
+\sol{13.1} Sequence: BS \code{_do_tx} $\to$ \codew{receive_command} $\to$ \codew{handle_command} (node state); each ms \code{Controller} $\to$ \codew{controller_tx_ready}; if ready $\to$ \code{do_transmit} $\to$ BS interrupt (buffer); end of window: BS \codew{_process_rx_buffer}.
+\sol{13.2} Provide \code{voltage}, \codew{voltage_source}, \code{current}, \codew{internal_time}, an \code{action} process accepting \codew{capacitor_charging}, \codew{capacitor_full}, \codew{capacitor_charge_and_discharge}. Voltage-dependent leakage and ESR live inside your step functions; also reconsider the controller's hard-coded $\Rs$.
+\sol{13.3} The uplink uses \codew{backscatter_power_dbm}, written by \codew{calculate_node_power}. If missing, \code{getattr} falls back to $-999$ dBm, so every RSSI would be at or below the floor and no packet would pass sector sensitivity.
+\sol{13.4} Objects: $2$ \code{BaseStation} ($6$ \code{Sector}), $50$ \code{Node}, $50$ each of \code{Capacitor}, \codew{BackscatterModule}, \code{Controller}, $2$ \code{BSBehavior}, $\ge1$ \code{CoverageMap}, optionally an \codew{EnvEnergySource}. Processes: $50+50+2+1=103$.
+
+\section*{Chapter 14}
+\sol{14.1} Bearing $53.1^\circ$; errors $36.9^\circ$ (sector~0) and $83.1^\circ$ (sector~120); gains $11.14$ and $-4.63$ dBi; sector~0 is the owner. $\mathrm{PL}(100\,\mathrm m)=71.57$ dB, so $P_{\mathrm{dl}}=46+11.14-71.57=-14.43$ dBm.
+\sol{14.2} It propagates the node's \codew{backscatter_power_dbm}, which already contains the base-station power, gains and path loss of the downlink; that attribute comes from \codew{calculate_node_power}.
+\sol{14.3} \code{do_transmit} loops over both base-station processes: for each it selects the best sector for the node, writes the scratch fields and interrupts. Each base station buffers the packet in its current RX window (if any), resolves its own collisions, and applies its sector's sensitivity; the packet may be logged by both.
+\sol{14.4} Change \codew{calculate_node_power}: sum the sectors' powers from \codew{downlink_results["per_node_powers"][node_id]} (in watts) instead of reading \code{best_pw_w}. The data is already in the dictionary.
+
+\section*{Chapter 15}
+\sol{15.1} $83.1\,\mu\mathrm C\times1.7=141\,\mu$J and $\times1.3=108\,\mu$J: the energy cost varies by $\pm13\%$ with the voltage (for fixed charge, $E\propto V$).
+\sol{15.2} Allowed drop $0.05$ V: $t=C\Delta V/I=3$ ms ($20\%$ of the burst). A complete burst needs $V\ge\Vlow+0.25=1.55$ V at entry.
+\sol{15.3} In \emph{wait\_slot} refuse to call \codew{controller_tx_ready} unless $V\ge\Vlow+I_{\mathrm{tx}}T_{\mathrm{tx}}/C$ (plus margin). Delivered counts fall (by up to $\approx$half in the broadcast demo) but become energy-causal.
+\sol{15.4} Delays de-synchronise nodes. With zero delay and identical parameters all nodes would activate and discharge in lock-step, causing synchronous contention spikes and correlated unavailability.
+
+\section*{Chapter 16}
+\sol{16.1} $-50<-45$ dBm: the sensitivity gate returns at once; no log, no slot stored, no state change.
+\sol{16.2} For integer ms: $205\le t\le212$. If the command was sent at $t=206$, $\text{slot\_start}=205<206$: the stale-slot check always fails (such a slot cannot occur in normal operation).
+\sol{16.3} Replace the test by: \codew{if isinstance(target,list) and self.node.id not in target: return}; then proceed to set \codew{chosen_slot_idx} and \codew{last_tx_command_time}. Note that the base station truncates \code{rx_slots} to one entry for any target $\ne-1$, so all listed nodes would share one slot; send separate commands or extend \codew{_deliver_command}.
+\sol{16.4} Pass the capacitor object to your subclass constructor, keep it as an attribute, and test \codew{self.cap.voltage} in \codew{controller_tx_ready} (returning \code{None} below $1.6$ V), or give the controller the check.
+
+\section*{Chapter 17}
+\sol{17.1} Frame start $45$; node~1's command at $60$ (TX $60$--$65$). Scanning: RX windows $(65,75)$, $(80,90)$, $(95,105)$, \ldots; the first, $(65,75)$, is kept.
+\sol{17.2} The probability is $S/2S=\tfrac12$; the expected number of the $12$ ready nodes that transmit is $6$.
+\sol{17.3} Phase~1: while \codew{len(bs.nodes_registered) < 0.9*N}, yield [tx send\_id, $8$ rx, tx ack]; phase~2: loop over registered ids yielding [tx poll(i), rx]; the infinite loop keeps the process alive (a finite one needs a long final RX window).
+\sol{17.4} \code{start_ms} is the \emph{window} start; use \code{end_ms} (the arrival time), the instant the model treats as the packet (it has no duration).
+
+\section*{Chapter 18}
+\sol{18.1} DER $=10\%$; PDR $=90\%$; throughput $117/20.001=5.85$ pkt/s; audible PDR $117/124=94.4\%$.
+\sol{18.2} A packet arriving at the window's first ms has $\text{start}=\text{end}$. The sweep orders ``end'' before ``start'' at equal times, so for packets $p_1$ at $100$ and $p_2$ at $125$ the order is $\text{end}_{p_1},\text{start}_{p_1},\text{end}_{p_2},\text{start}_{p_2}$: after $\text{start}_{p_1}$ the set \code{active} contains $p_1$ for ever; at $\text{start}_{p_2}$ it is non-empty, so $p_2$ ``collides'' with the ghost.
+\sol{18.3} Count \emph{opportunities}: polls to nodes that, according to the simulator's ground truth, were in \emph{wait\_slot} at poll time. Losses among opportunities are radio losses; the rest are energy losses. The ground truth (controller state) is not observable in a real network.
+
+\section*{Chapter 19}
+\sol{19.1} All nodes are on boresight ($\varphi=0$), so the beamwidth does not change any gain ($15$ dBi) and the budget table is unchanged.
+\sol{19.2} Using $P_{\mathrm{in}}\approx P_hx(1-x)$ at $V\approx1.5$ V: Node~0 $\approx0.30$ mW, Node~1 $\approx0.14$ mW; ratio $\approx2.1$ versus the measured $46/18=2.6$. The theorem's most violated assumption is a \emph{constant} $P_{\mathrm{in}}$; it varies with $V$, the active-mode step over-credits it, and truncated bursts distort the counts.
+\sol{19.3} Operating point ($n=3.9$, $S=8.4$): $0.32$; $S=n$: $0.42$; $S=2n$: $0.34$. The demo sits close to the $2n$ rule, with a small $n$.
+\sol{19.4} Run the demo with positions from $[5,40]$ and $[10,40]$ using the same angles and seeds ($10$ each), compare total throughput and the spread of per-node counts.
+
+\section*{Chapter 20}
+\sol{20.1} In \codew{handle_command}: compute the margin $=\text{best\_pw\_dbm}-\text{node.sensitivity\_dbm}$ and return if it is below $3$. Physically, a weak command is unreliable for an envelope detector, and by reciprocity a weak downlink predicts a weak uplink; it avoids wasting energy at the cell edge.
+\sol{20.2} Exponential back-off cannot exceed the energy bound ($\approx34$ pkt/s in this scenario); expect a gain of at most a few percent, as for fixed penalties.
+\sol{20.3} \codew{bs.nodes_registered}, \codew{bs.decoded_this_frame}, \codew{bs.nodes_pending_ack}.
+\sol{20.4} Pass the capacitor to the module's constructor, store it, and test its voltage in \codew{controller_tx_ready}.
+
+\section*{Chapter 21}
+\sol{21.1} Example (M1): in \code{apply_sic} add \codew{sum(residual_w[j] for j in decoded)} to the interference of the remaining candidates. Show, for $\kappa=0.9$, that the second packet of Figure~\ref{fig:sicsteps} is no longer decoded; run the ablation of Table~\ref{tab:sicablation} with the fix.
+\sol{21.2} Check M1 (perfect SIC), M2 (the $5$~ms collision definition) and E4/M4 (delivered counts). Experiment: re-run the ablation with imperfect cancellation, paired seeds, several $\kappa$.
+\sol{21.3} Node~4 is $6.3$ m from the mast, inside the $<10$ m path-loss branch (R1): its RF power ($8$ mW) exceeds the solar source, so in hybrid mode it recharges faster. Location matters through \emph{energy}, via a modelling artefact, not through a better radio link or a better protocol. Test by moving all nodes beyond $10$ m.

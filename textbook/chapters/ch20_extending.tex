@@ -1,0 +1,191 @@
+\chapter{Extending Amber: Writing Your Own Protocol}
+\label{ch:extending}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item how the adaptive-ALOHA demo implements a complete user protocol with two small pieces of code and no engine changes;
+ \item how to write and evaluate a new base-station policy, through a measured case study of \emph{energy-aware polling};
+ \item a checklist for building experiments, and a gallery of the commonest mistakes with their symptoms;
+ \item where the model invites extension.
+\end{itemize}
+\end{defbox}
+
+\section{Anatomy of a user protocol: adaptive ALOHA}
+\label{sec:anatomy}
+
+The shipped \codew{custom_protocol} demo is the template for everything in this chapter. Its docstring states the contract: ``Nothing in Amber's engine is edited.'' It consists of a \emph{node half} and a \emph{base-station half}.
+
+\subsection{Node half}
+We met it in Chapter~\ref{ch:bsmodule}: subclass \codew{BackscatterModule} and override two methods.
+\begin{lstlisting}
+class AdaptiveAlohaNode(backscatter.BackscatterModule):
+    def handle_command(self, cmd, bs_id, data):
+        if cmd == "collect":              # my protocol's one command
+            self.chosen_slot_idx = (random.randint(0, len(self.rx_slots) - 1)
+                                    if self.rx_slots else -1)
+            self.state = "active"
+            self.last_tx_command_time = self.env.now
+
+    def build_tx_payload(self, sensor_data):
+        return ({"type": "data", "payload": sensor_data}
+                if self.state == "active" else None)
+\end{lstlisting}
+The protocol vocabulary is whatever strings you choose for \code{cmd} (here ``\code{collect}''). There is no registration phase: the first \code{collect} activates a node. The framework supplies the sensitivity gate, the slot validity checks and the uplink.
+
+\subsection{Base-station half}
+The policy is a generator that yields one frame at a time and adapts between frames.
+\begin{lstlisting}
+def adaptive_aloha_policy(bs):
+    n_slots, prev_collided, load_ema = START_SLOTS, 0, 0.0
+    while True:
+        yield [("tx", 5, "collect", {"cmd": "collect", "target": -1})] + \
+              [("rx", 8, "slot") for _ in range(n_slots)]
+        # execution resumes here after the whole frame has played out
+        heard = len(bs.decoded_this_frame)
+        collided = bs.total_collided - prev_collided
+        prev_collided = bs.total_collided
+        load_ema = 0.75 * load_ema + 0.25 * (heard + collided)
+        target = min(MAX_SLOTS, max(MIN_SLOTS, round(2 * load_ema)))
+        if n_slots < target:       n_slots += 1
+        elif n_slots > target + 1: n_slots -= 1
+\end{lstlisting}
+Read it as a controller. The \emph{measurement} is the number of contenders $m=\text{heard}+\text{collided}$ in the last frame; it is smoothed with an exponential moving average ($\alpha=0.25$) to avoid chasing noise; the \emph{set-point} is $S^\star=2\ell$ (Section~\ref{sec:energytwist}), clamped to $[2,32]$; the \emph{actuator} moves $S$ by at most one per frame, with a one-slot dead band above the target (so $S$ does not oscillate around the target). \textbf{Command and slots are yielded in the same frame}, a requirement of the look-ahead (Chapter~\ref{ch:bsengine}).
+
+\subsection{Wiring}
+\begin{lstlisting}
+nodes_modules = [AdaptiveAlohaNode(env=env, node=n, bs_processes=[],
+                                   uplink_results=ul, downlink_results=dl)
+                 for n in nodes]
+bs_behavior = bsengine.BSBehavior(env=env, base_station=bs,
+                                  policy=adaptive_aloha_policy,
+                                  backscatter_modules=nodes_modules,
+                                  enable_sic=True)
+for m in nodes_modules: m.bs_processes = [bs_behavior]
+\end{lstlisting}
+Everything else (capacitors, controllers, coverage maps) is identical to the other demos (Chapter~\ref{ch:architecture}).
+
+\section{Case study: does energy-aware polling help?}
+\label{sec:pollcase}
+
+\paragraph{The hypothesis.}
+In Chapter~\ref{ch:protocols} we argued that a collision-free polling network is \emph{energy-limited}: the base station polls faster than nodes can recharge, so most polls fall on sleeping nodes ($\approx91\%$ in the three-node unicast demo). A natural optimisation is to \emph{avoid polling nodes that just failed to answer}: they are probably recharging. If throughput were limited by airtime, this should help substantially; if it is limited by harvested energy, it cannot help much. This is a clean test of the claim.
+
+\paragraph{The policies.} Both are written as base-station policies on the unmodified engine. A frame is one poll: \texttt{("tx", 5, "poll", \{"cmd": "send\_data", "target": i\})} followed by \texttt{("rx", 10, "slot", \{"expect": i\})}, i.e.\ $\SI{15}{ms}$ per poll, so the airtime budget is $\lfloor20\,001/15\rfloor=1333$ polls in $\SI{20}{s}$ for \emph{both} policies.
+\begin{lstlisting}
+def policy(bs):                       # skip_silent (penalty = P polls)
+    skip = {i: 0 for i in range(N)}; i = 0
+    while True:
+        if skip[i] > 0:               # recently silent: leave it alone
+            skip[i] -= 1; i = (i + 1) % N; continue
+        yield [("tx", 5, "poll", {"cmd": "send_data", "target": i}),
+               ("rx", 10, "slot", {"expect": i})]
+        if i not in bs.decoded_this_frame:     # no answer -> penalise
+            skip[i] = P
+        i = (i + 1) % N
+\end{lstlisting}
+\emph{Round-robin} is the same without the \code{skip} logic. Scenario: $N=12$ registered nodes, hybrid energy mode with the solar trace, placed uniformly at random in an annulus $r\in[10,40]$~m (to stay clear of the $<\SI{10}{m}$ artefact), $\eta=0.7$, the demo electrical parameters, $\SI{20}{s}$ horizon, SIC on; $10$ seeds per policy (script \file{textbook/code/polling_experiment.py}).
+
+\begin{table}[t]
+\centering
+\small
+\caption{Round-robin versus skip-silent polling, $N=12$ nodes, $\SI{20}{s}$, mean over $10$ seeds. Paired differences use the same seeds.}
+\label{tab:polling}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Policy & Decoded & Polls & Decoded/poll & Throughput & Gain vs RR\\
+\midrule
+round-robin & $667.2$ & $1333$ & $0.501$ & $33.4$ pkt/s & --\\
+skip, penalty $2$ & $684.7$ & $1333$ & $0.514$ & $34.2$ pkt/s & $+2.6\%$ ($t=11.6$)\\
+skip, penalty $4$ & $683.6$ & $1333$ & $0.513$ & $34.2$ pkt/s & $+2.5\%$ ($t=8.1$)\\
+skip, penalty $8$ & $680.6$ & $1333$ & $0.511$ & $34.0$ pkt/s & $+2.0\%$ ($t=5.4$)\\
+skip, penalty $16$ & $679.5$ & $1333$ & $0.510$ & $34.0$ pkt/s & $+1.8\%$ ($t=4.2$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Result.}
+Skipping silent nodes helps, but only by $\approx2$--$3\%$: small, yet statistically solid ($t$ between $4$ and $12$ in the paired comparison). Half of all polls are answered even by round-robin, and the smartest policy we tried answers $51.4\%$. Each node decodes about $55$--$60$ packets in $\SI{20}{s}$ ($\approx2.8$ per second) whatever the policy; the total $\approx34$~pkt/s is \emph{half of the airtime capacity of} $1333/20=66.7$ polls/s.
+
+\paragraph{Interpretation.}
+The hypothesis was right in the way that matters: the policy cannot beat the energy bound, because the number of packets a node can send is set by how fast its capacitor refills, not by which polling order the base station uses. All the policy decides is \emph{which node spends its next burst now}; avoiding sleepers saves airtime but airtime was not scarce. Think of the nodes as taps filling buckets at fixed rates: re-ordering how you visit the taps does not increase the water you collect per hour. To move the needle one must change the \emph{energy side}: better harvesting, a larger $C$ or lower $\Vlow$ (longer bursts), lower per-packet energy, or a transmission cap that respects the duty-cycle theorem. This is exactly the sort of conclusion a simulator that couples energy and protocol is built to expose.
+
+\begin{reality}[Interpret small effects with care]
+We changed one thing; the policies share seeds, so the paired comparison removes most of the placement variance. Nevertheless the node population is homogeneous (identical sources), the poll order is rigid, and the model's energy accounting has the caveats of Chapter~\ref{ch:capacitor} (over-credited harvesting while active, brown-out truncation). The qualitative conclusion---\emph{energy dominates}---is robust to these; the $2.6\%$ is specific to this configuration.
+\end{reality}
+
+\section{A checklist for new experiments}
+\label{sec:checklist}
+
+\begin{enumerate}
+ \item \textbf{State the question} and the metric (Chapter~\ref{ch:analysis}); decide what you will compare against.
+ \item \textbf{Fix the scenario} (geometry, power, energy mode, electrical parameters) in one config; keep nodes $\ge\SI{10}{m}$ from masts.
+ \item \textbf{Make runs reproducible}: seed Python's \code{random}; log the seed.
+ \item \textbf{Wire the eight steps} of Chapter~\ref{ch:architecture}; set \codew{bs_processes}.
+ \item \textbf{Warm up}: nodes need $\approx2$--$4$~s to charge and the start-up delay is up to $2$~s; start protocol measurements after that or account for it.
+ \item \textbf{Keep the base-station process alive} (long final window).
+ \item \textbf{Replicate}: $\ge10$ seeds, report mean and spread; use \emph{paired} seeds when comparing designs.
+ \item \textbf{Change one factor at a time}; the shipped demos change six.
+ \item \textbf{Sanity-check with theory}: a link-budget table, an RC charge time, an ALOHA estimate. If the simulator disagrees, find out why before trusting it.
+ \item \textbf{Record the caveats} of Chapter~\ref{ch:limits} that apply to your result.
+\end{enumerate}
+
+\section{A gallery of mistakes}
+\label{sec:mistakes}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.1cm}>{\raggedright}X>{\raggedright\arraybackslash}p{4.3cm}@{}}
+\toprule
+\textbf{Symptom} & \textbf{Likely cause} & \textbf{Fix}\\
+\midrule
+Nodes ``transmit'' (TX records exist) but the base station logs nothing & \codew{bs_processes} never set (Step~7) & \codew{m.bs_processes=[beh]} for every module\\
+\codew{RuntimeError: ... has terminated and cannot be interrupted} & base-station process ended (\code{loop=False}, exhausted policy) while nodes hold slots & end with a long idle RX window\\
+\codew{AttributeError: harvesting_power_dbm} & controller built before \codew{calculate_node_power} & call it before creating controllers\\
+Nodes never activate & $V_\infty<\Vhigh$ (RF only, too far, or too little power) & compute Eq.~\eqref{eq:tauvinf}; add an external source\\
+Registration stalls at $\approx$half per round & two-frame look-ahead & expect factor $\tfrac12$; use more rounds or slots\\
+\code{send_data} to a list gets no replies & default handler ignores list targets & override \codew{handle_command}\\
+Changing \code{R_series} changes nothing & controller uses a hard-coded $\SI{5}{k\ohm}$ lookup & set both places, or patch the lookup\\
+Different results on each run & unseeded randomness & \codew{random.seed(...)}\\
+Memory grows without bound & \codew{keep_logs=True} & \codew{keep_logs=False}, \code{stream_log}\\
+Odd extra throughput for nodes near the mast & $<\SI{10}{m}$ path-loss branch & keep nodes $\ge\SI{10}{m}$\\
+\codew{analyze_packets} says 1 of 124 packets decoded & zero-length-interval defect in post-hoc detection & use the engine's \code{collided} flags\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Where the model invites extension}
+
+The architecture makes the following research directions natural; each is a replacement of one module behind the contracts of Section~\ref{sec:contracts}.
+\begin{itemize}
+ \item \textbf{A realistic harvester}: an RF--DC efficiency curve with a turn-on threshold and cold-start (replace the conversion in \codew{calculate_node_power}).
+ \item \textbf{Imperfect SIC}: add the decoded packets' residual to the interference sum (Chapter~\ref{ch:sic}).
+ \item \textbf{Energy-causal transmissions}: refuse to start a burst the capacitor cannot finish, or count truncated bursts as failures (Chapter~\ref{ch:controller}).
+ \item \textbf{Fading and shadowing}: replace the constant link budget with a per-packet random draw (this requires giving up the one-time pre-computation).
+ \item \textbf{Mobility}: recompute channel entries as nodes move, or per slot.
+ \item \textbf{Wake-up receivers} and non-zero idle current in \emph{wait\_slot}.
+ \item \textbf{Smarter protocols}: energy-state reporting, schedule prediction from the node's recharge time, multi-carrier or multi-reader cooperation.
+\end{itemize}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item A complete protocol is a node subclass (two methods) plus a base-station policy generator.
+ \item The energy-aware polling case study improved decoded packets by only $\approx2$--$3\%$ because throughput is bounded by harvested energy.
+ \item A short checklist and a table of symptoms and causes will save hours.
+ \item The module contracts of Chapter~\ref{ch:architecture} define where extensions plug in.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Implement a node protocol in which the node replies only if it received the command with at least $\SI{3}{dB}$ margin over its sensitivity, and justify the rule physically.
+\end{exercise}
+\begin{exercise}
+Modify the polling policy so that the penalty grows exponentially with consecutive silent polls (exponential back-off). Predict, using the duty-cycle theorem, whether this can exceed the $\approx34$~pkt/s bound.
+\end{exercise}
+\begin{exercise}
+Write a base-station policy that alternates a discovery frame and a polling round and stops discovering once all $N$ nodes are registered. List the \code{BSBehavior} attributes you read.
+\end{exercise}
+\begin{exercise}
+Add a rule so that a node starts a transmission only if $V\ge\Vlow+\Delta V_{\mathrm{burst}}$. How would you obtain the voltage in the node protocol given the contracts?
+\end{exercise}

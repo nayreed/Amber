@@ -1,0 +1,224 @@
+\chapter{The Base-Station Engine}
+\label{ch:bsengine}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item the schedule language and the two ways to drive a base station: a static \emph{schedule} or a \emph{policy} generator;
+ \item what happens in a TX window and in an RX window, including the half-duplex rule;
+ \item the \emph{RX-slot look-ahead} that lets commands advertise future reply windows, and its two-frame horizon (with measured consequences);
+ \item how acknowledgements and registration state are maintained;
+ \item logging, counters, and the failure mode when a base-station process ends too early.
+\end{itemize}
+\end{defbox}
+
+\section{Role and constructor}
+\label{sec:bsctor}
+
+\code{BSBehavior} is one base station's \emph{behaviour}. The geometry and radio parameters live in the \code{BaseStation} dataclass; \code{BSBehavior} adds time: it runs a schedule, commands nodes, listens for replies, resolves collisions, and counts. It is a SimPy process.
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.5cm}>{\ttfamily}p{1.9cm}X@{}}
+\toprule
+\normalfont\bfseries Argument & \normalfont\bfseries Default & \normalfont\bfseries Meaning\\
+\midrule
+schedule & None & list of entries (below); static frame repeated\\
+policy & None & callable returning a generator of frames; \emph{overrides} \code{schedule}\\
+backscatter\_modules & None & the nodes it commands (needed for \codew{receive_command})\\
+loop & True & repeat the schedule\\
+required\_sinr\_db & 3.0 & $\gamma_{\mathrm{req}}$ (Chapter~\ref{ch:sic})\\
+enable\_sic & True & SIC vs capture-only\\
+cancellation\_factor & 0.9 & \emph{inert} (Chapter~\ref{ch:sic})\\
+noise\_figure\_db, bandwidth\_hz & 6.0, 100e6 & thermal noise $N$ (Chapter~\ref{ch:decibels})\\
+keep\_logs, stream\_log & True, None & in-memory lists, or stream to disk\\
+on\_rx, on\_tx & None & callbacks per decoded packet / sent command\\
+log\_file & None & stem for \code{save_logs}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{The schedule language}
+\label{sec:schedlang}
+
+A schedule is a list of entries \codew{(mode, duration_ms, slot_id[, payload])}:
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.2cm}X@{}}
+\toprule
+\normalfont\bfseries Entry & \normalfont\bfseries Meaning\\
+\midrule
+("rx", 10, "listen") & listen $\SI{10}{ms}$ for any node\\
+("rx", 10, "poll\_0", \{"expect": 0\}) & listen, expecting node 0 (sets the \code{matched} flag only)\\
+("tx", 5, "cmd", \{"cmd":"send\_id", "target":-1\}) & broadcast a command\\
+("tx", 5, "ack", \{"cmd":"ack"\}) & send ACKs to all pending nodes\\
+("tx", 5, "cmd", \{"cmd":"send\_data", "target":3\}) & unicast to node 3\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The entries are executed in order, each lasting its duration; with \code{loop=True} the list repeats forever. The sum of durations is the \emph{frame duration}. The demos' schedules are:
+\begin{itemize}
+ \item \textbf{broadcast}: \codew{[tx send_data(-1) 5 ms] + [rx 10 ms]} $\times\ 2$ \quad (frame $\SI{25}{ms}$);
+ \item \textbf{unicast}: \codew{[tx send_data(i) 5 ms, rx 10 ms]} for $i=0,1,2$ \quad (frame $\SI{45}{ms}$);
+ \item \textbf{custom}: a policy yielding $[\text{tx collect}]+[\text{rx }8\,\text{ms}]\times S$ with $S$ adapting.
+\end{itemize}
+
+\section{TX and RX windows}
+\label{sec:txrx}
+
+\paragraph{TX window (\code{_do_tx}).} At its \emph{start} the base station delivers the command: for \code{cmd=="ack"} it calls \codew{_send_pending_acks}; otherwise \codew{_deliver_command} (below). It then sleeps for the duration \emph{ignoring any interrupt} --- ``half-duplex: can't receive while transmitting'' --- and finally logs a \code{TxPacket} and calls \code{on_tx}. A node that backscatters during a TX window is simply not heard. Because the carrier is separate and always on, this is not a physical full-duplex limitation but a modelling choice: the schedule time-multiplexes commands and replies.
+
+\paragraph{RX window (\code{_do_rx}).} At its start the buffer is cleared and the \code{expect} filter noted. The base station then sleeps; every \codew{"receive_data"} interrupt appends the packet to the buffer (time, node, payload, RSSI, sector, subcarrier) and resumes the sleep for the \emph{remaining} time. At the end it processes the buffer with Algorithm~\ref{alg:rxbuffer}. Decoded packets are added to \codew{decoded_this_frame}, queued for ACK if new, and passed to \code{on_rx}.
+
+\section{Telling nodes when to answer: the RX-slot look-ahead}
+\label{sec:lookahead}
+
+A node can answer only in a window the base station has \emph{authorised} (Chapter~\ref{ch:bsmodule}). The base station therefore attaches to each command the list of \emph{upcoming RX windows}, found by scanning its own schedule (\codew{_get_next_rx_slots}). Algorithm~\ref{alg:lookahead} states the rule.
+
+\begin{algorithm}[t]
+\caption{RX-slot look-ahead (\code{BSBehavior._get_next_rx_slots})}
+\label{alg:lookahead}
+\begin{algorithmic}[1]
+\Require current schedule position $i_0$, frame start $T_f$, frame duration $F$, schedule length $m$, time $t_{\min}$ (end of the command)
+\State $\mathrm{slots}\gets[\,]$; \quad $i\gets i_0$; \quad $\mathrm{offset}\gets0$
+\For{$k=1,\dots,2m$} \Comment{scan up to two full frames}
+   \State $i\gets(i+1)\bmod m$; \quad \textbf{if} $i=0$ \textbf{then} $\mathrm{offset}\gets\mathrm{offset}+1$
+   \State $\mathrm{start}\gets T_f+\mathrm{offset}\cdot F+\sum_{j<i}d_j$; \quad $\mathrm{end}\gets\mathrm{start}+d_i$
+   \If{mode$_i=$ \texttt{rx} \textbf{and} $\mathrm{start}\ge t_{\min}$} append $(\mathrm{start},\mathrm{end})$ \EndIf
+\EndFor
+\State \Return slots
+\end{algorithmic}
+\end{algorithm}
+
+Two details deserve emphasis.
+\begin{itemize}
+ \item For a \emph{unicast} command (\codew{target != -1}) the list is truncated to its \emph{first} element: ``reply in the very next RX window''.
+ \item For a \emph{broadcast} the list contains \emph{every} RX window found in the scan, and each registered node picks one at random.
+\end{itemize}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=0.098cm,y=1cm]
+ % frame 1 at t=0..45 (tx 5 + 4 rx of 10), frame 2 at 45..90
+ \foreach \f in {0,1}{
+   \pgfmathsetmacro{\o}{45*\f}
+   \fill[aorange!70] (\o,0) rectangle (\o+5,0.9);
+   \node[lab] at (\o+2.5,0.45) {TX};
+   \foreach \k in {1,2,3,4}{
+     \pgfmathsetmacro{\s}{\o+5+10*(\k-1)}
+     \ifnum\f=0
+       \fill[ateal!65] (\s,0) rectangle (\s+10,0.9);
+     \else
+       \fill[ateal!25] (\s,0) rectangle (\s+10,0.9);
+     \fi
+     \draw[white] (\s,0) rectangle (\s+10,0.9);
+     \node[lab] at (\s+5,0.45) {RX\k};
+   }
+ }
+ \draw[->] (0,-0.4) -- (92,-0.4) node[right,lab] {$t$ (ms)};
+ \foreach \t in {0,45,90}{\draw (\t,-0.3) -- (\t,-0.5); \node[lab,below] at (\t,-0.5) {\t};}
+ % brace for advertised
+ \draw[decorate,decoration={brace,amplitude=4pt}] (5,1.05) -- node[above=4pt,lab]{real slots of this frame (4)} (44.9,1.05);
+ \draw[decorate,decoration={brace,amplitude=4pt}] (50,1.05) -- node[above=4pt,lab,text=agrey]{slots of the ``next frame'' (4) --- advertised too} (89.9,1.05);
+ \node[lab,align=center,anchor=north] at (45,-1.5) {a command sent at $t=0$ advertises \textbf{8} slots: $(5,15),(15,25),\dots,(80,90)$};
+\end{tikzpicture}
+\caption[RX-slot look-ahead: a command at $t=0$ advertises eight windows for a four-window frame]{The look-ahead from a command at $t=0$ with a frame of one $\SI{5}{ms}$ TX window and four $\SI{10}{ms}$ RX windows. The scan covers two frames, so the command advertises eight RX windows, only four of which belong to the current frame. We measured exactly this: \code{rx_slots} had length $8$, starting with $(5,15)$ and ending with $(80,90)$.}
+\label{fig:lookahead}
+\end{figure}
+
+\subsection{Consequence: half of the contenders sit the frame out}
+\label{sec:halffr}
+
+A node picks \codew{random.randint(0, len(rx_slots)-1)}: uniformly among \emph{all} advertised windows, i.e.\ among $2S$ for a frame of $S$ windows. With probability $\tfrac12$ it picks a window in the \emph{next} frame. In a periodic schedule the next frame starts with the \emph{same} command, which re-draws the node's slot before that window arrives, so the earlier pick is never used. The practical effect is that \textbf{each ready node participates in only about half of the frames}.
+
+This is consistent with everything we measured. In the registration experiment (Chapter~\ref{ch:protocols}) five nodes registered at $44\%$, $70\%$, $82\%$, $88\%$ after rounds $1$--$4$, close to $1-0.5^k$. In the custom-protocol demo the largest slot index ever used was $11$ while the frame size ranged between $7$ and $20$ (an index $\ge S$ never transmits).
+
+\begin{reality}[A look-ahead designed for static schedules, used with adaptive ones]
+For a \emph{static} periodic schedule the ``next frame'' windows are real, and the scan of two frames ``handles edge cases'' (a code comment). For an \emph{adaptive} policy the next frame may have a different size, and for the \emph{last} frame of a finite policy it does not exist. Three practical rules follow:
+\begin{enumerate}
+ \item account for the factor $\tfrac12$ when you size frames (the custom demo's rule $S\approx2\ell$, where $\ell$ counts \emph{participating} contenders, implicitly does);
+ \item put the command and its RX windows in the \emph{same} frame (the \code{_run_policy} docstring says so), or the look-ahead will not see them;
+ \item never let the base-station process terminate while nodes may still hold future slots (Section~\ref{sec:terminate}).
+\end{enumerate}
+\end{reality}
+
+\section{Policy mode}
+\label{sec:policy}
+
+Instead of a static list you can supply \code{policy}, a function of the \code{BSBehavior} returning a generator of \emph{frames}; a frame is a list of schedule entries. \code{_run_policy} executes each yielded frame exactly as if it were the schedule (including look-ahead within that frame), then \emph{resumes the generator}, which can read the engine's state before deciding on the next frame:
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+State available to a policy & Use\\
+\midrule
+\codew{decoded_this_frame} & node ids decoded in the last frame\\
+\codew{total_collided}, \code{total_rx}, \code{total_tx} & cumulative counters\\
+\codew{nodes_pending_ack}, \codew{nodes_registered} & registration bookkeeping\\
+\code{env.now} & current time\\
+\bottomrule
+\end{tabular}
+\end{center}
+Because the generator is \emph{lazy}, each frame is decided only after the previous one has finished; that is what makes the protocol adaptive (the adaptive-ALOHA demo of Chapter~\ref{ch:extending}).
+
+\section{Acknowledgements and registration state}
+\label{sec:acks}
+
+When a non-colliding packet from a new node is decoded, its id is appended to \codew{nodes_pending_ack}. At the next \texttt{("tx", ..., \{"cmd": "ack"\})} entry, \codew{_send_pending_acks} (i) calls \texttt{receive\_command("ack", ...)} on the matching node module, (ii) removes the node from \emph{pending} and (iii) adds it to \codew{nodes_registered}. The engine marks a node registered \emph{when it sends the ACK}, whether or not the node accepted it. Normally the node, which just transmitted, passes the sensitivity gate and registers too; if it did not (for instance the downlink dropped below its sensitivity), the base station believes the node is registered while the node is still in \emph{wait\_ack}. Such state divergence cannot happen in a perfect simulator but is exactly what real ACK loss produces.
+
+\section{Counters and logs}
+\label{sec:bslogs}
+
+\begin{itemize}
+ \item \textbf{Always-on counters} (constant memory): \code{total_rx} (every logged reception, collided or not), \codew{total_collided}, \code{total_tx}, \codew{rx_count_by_node} (decoded packets per node).
+ \item \textbf{Lists} \code{rx_packets}, \code{tx_packets} when \codew{keep_logs=True}.
+ \item \textbf{Streaming}: \codew{stream_log="path"} writes \code{path_rx.txt} and \code{path_tx.txt} (tab-separated) as packets arrive, so memory stays flat; call \codew{close_stream()} after the run.
+ \item \textbf{Batch}: \code{save_logs()} writes \codew{bs_<log_file>_rx.txt}, \code{_tx.txt} using pandas.
+\end{itemize}
+An \code{RxPacket} carries \code{start_ms} (the start of the RX \emph{window}), \code{end_ms} (the \emph{arrival time} of the packet), the slot id, node, payload, RSSI, sector, the \code{expect}/\code{matched} flags, the subcarrier and the \code{collided} flag. Note that \code{start_ms} is the window start, not the packet start: the demos' CSVs \code{time_ms} column is this window start.
+
+\section{When the base station stops}
+\label{sec:terminate}
+
+If the schedule has \code{loop=False}, or a policy generator is exhausted, the SimPy process \emph{terminates} (\code{mode} becomes \texttt{"idle"}). SimPy refuses to interrupt a terminated process. A node that later backscatters (it may still hold a slot from the final look-ahead) then triggers a \texttt{RuntimeError: ... has terminated and cannot be interrupted}, which aborts the \emph{whole} simulation. We hit exactly this while building the registration experiment, and avoided it by ending the policy with a long final idle window (\codew{[("rx", 10_000, "tail")]}) so that the process stays alive.
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.0cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Code (\file{bsengine.py})\\
+\midrule
+Main loop and frames & \codew{BSBehavior.run}, \code{_run_policy}\\
+TX window & \code{_do_tx}, \codew{_deliver_command}\\
+RX window & \code{_do_rx}, \code{_buffer_rx}, \codew{_process_rx_buffer}\\
+Look-ahead, Algorithm~\ref{alg:lookahead} & \codew{_get_next_rx_slots}\\
+ACKs & \codew{_send_pending_acks}\\
+Packet records & \code{RxPacket}, \code{TxPacket}\\
+Logging & \code{save_logs}, \codew{close_stream}, \code{stream_log}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item A base station runs a schedule (or policy) of TX and RX windows; commands are delivered synchronously at the start of a TX window, replies are buffered during RX windows and resolved at their end.
+ \item Commands advertise upcoming RX windows by scanning \emph{two frames} ahead; unicast keeps only the first. A uniformly random pick among $2S$ windows means each ready node takes part in about half of the frames.
+ \item Policies are lazy generators of frames that can read \codew{decoded_this_frame} and counters.
+ \item ACKs mark a node registered at the base station when sent, regardless of node reception.
+ \item A terminated base-station process crashes the simulation if a node later transmits; keep it alive.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+For the unicast demo's schedule (frame $=\SI{45}{ms}$), list the first three advertised slots for the command to node~1 sent at $t=\SI{60}{ms}$, where the current frame started at $t=\SI{45}{ms}$. Which one is kept?
+\end{exercise}
+\begin{exercise}
+A broadcast frame has $S=6$ RX windows. What is the probability that a ready node transmits in the \emph{current} frame? What is the expected number of the $n=12$ ready nodes that transmit?
+\end{exercise}
+\begin{exercise}
+Write a policy generator that alternates between a discovery frame (\code{send_id} + $8$ slots + ACK) until $90\%$ of $N$ expected nodes are registered, then switches to unicast polling of registered nodes. What must the final frame contain to avoid the termination crash?
+\end{exercise}
+\begin{exercise}
+Why is \codew{RxPacket.start_ms} unsuitable as the packet's start time when interpreting overlaps? What would you use instead?
+\end{exercise}

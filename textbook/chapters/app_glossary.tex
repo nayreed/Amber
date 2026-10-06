@@ -1,0 +1,55 @@
+\chapter{Glossary}
+\label{app:glossary}
+
+\begin{description}[leftmargin=0.5cm,style=nextline,font=\sffamily\bfseries\color{ablue},itemsep=3pt]
+ \item[ACK] Acknowledgement. In Amber a direct call that moves a node from \emph{wait\_ack} to \emph{registered}.
+ \item[Ambient IoT] 3GPP's concept of battery-free or energy-harvesting IoT devices that communicate by backscatter; studied in Releases 18--20.
+ \item[Backscatter] Communication by modulating the reflection of an external carrier (Chapter~\ref{ch:backscatter}).
+ \item[Brown-out] Voltage falling below the operating threshold during activity; in Amber the node switches off when $V\le\Vlow$.
+ \item[Capture effect] Decoding the strongest of several overlapping packets because it exceeds the others by the SINR threshold.
+ \item[Carrier (tone)] The unmodulated sinusoid radiated by the base station; powers and illuminates nodes.
+ \item[Cold start] The problem that a rectifier produces no usable DC below a minimum input power.
+ \item[Collision window] Amber's $5$~ms rule: packets on the same subcarrier arriving within $5$~ms of each other are treated as colliding.
+ \item[Coverage map] A grid of best-sector received power, used for plots; not used by the simulation itself.
+ \item[Device A / B / C] 3GPP Ambient IoT device categories: no storage and backscatter; storage and backscatter; storage and active RF.
+ \item[DER] Delivery error rate: $1-\text{decoded}/\text{sent}$ in the demos (but a success ratio in \code{BSStats.der}).
+ \item[dBi] Antenna gain in decibels relative to an isotropic radiator.
+ \item[dBm] Power in decibels relative to one milliwatt.
+ \item[Discrete-event simulation] Simulation advancing time from event to event.
+ \item[Duty cycle] Fraction of time a node is active; $D=P_{\mathrm{in}}/P_{\mathrm{act}}$ in the long run.
+ \item[Duck typing] Interfaces defined by the attributes and methods an object has, not by its class.
+ \item[Energy window] $\tfrac12C(\Vhigh^2-\Vlow^2)$: energy usable between the two thresholds.
+ \item[Envelope detector] A diode and low-pass filter that recovers the amplitude of a received signal; a passive receiver for OOK.
+ \item[ESR] Equivalent series resistance of a capacitor (not modelled separately in Amber).
+ \item[FSA] Framed slotted ALOHA: the reader announces a frame of $S$ slots; each node picks one at random.
+ \item[Friis equation] $P_r=P_tG_tG_r(\lambda/4\pi d)^2$.
+ \item[FSPL] Free-space path loss.
+ \item[Hybrid mode] Harvest from both RF and an external source; Amber's default combination is \emph{max}.
+ \item[Hysteresis] Two different thresholds for switching on and off.
+ \item[Interrupt] A SimPy message that throws an exception into a process; scheduled urgently.
+ \item[Intermittent computing] Computation that survives frequent power failures.
+ \item[Link budget] The accounting of gains and losses from transmitter to receiver.
+ \item[LOS / NLOS] Line of sight / non line of sight.
+ \item[Look-ahead] The base station's scan of its schedule to advertise upcoming RX windows (two frames in Amber).
+ \item[Monostatic / bistatic] Carrier source and receiver co-located / separate.
+ \item[Neper] Natural-log unit of attenuation; $\SI{8.686}{dB}$ per neper for amplitudes.
+ \item[Noise figure] Ratio by which a receiver degrades the SNR.
+ \item[OOK] On--off keying.
+ \item[Owner (sector)] The sector delivering the highest power at a point.
+ \item[Policy] A generator of frames driving a base station adaptively.
+ \item[PRDCH] Physical reader-to-device channel (3GPP); in Amber's paper a dual-tone OFDM-based structure.
+ \item[Power split ratio $\eta$] Fraction of received power reflected rather than harvested (\codew{Node.efficiency}).
+ \item[RSSI] Received signal strength indicator; here the received power in dBm.
+ \item[Rectenna] Rectifying antenna: antenna plus rectifier converting RF to DC.
+ \item[SIC] Successive interference cancellation.
+ \item[SINR] Signal-to-interference-plus-noise ratio.
+ \item[Sector] One directional antenna panel of a base station.
+ \item[Sensitivity] Weakest signal a receiver can use; a configured threshold in Amber.
+ \item[SimPy] Python process-based discrete-event simulation library.
+ \item[Slot] One RX window advertised by a command.
+ \item[Subcarrier shift] Frequency offset (integer label in Amber) at which a node reflects its reply.
+ \item[Thermal noise] Noise power $k_BTBF$.
+ \item[UMa] Urban macro scenario of 3GPP TR 38.901.
+ \item[Unicast / broadcast] A command addressed to one node / to all.
+ \item[WPT] Wireless power transfer: harvesting from the base station's carrier.
+\end{description}

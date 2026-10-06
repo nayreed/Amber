@@ -1,0 +1,227 @@
+\chapter{Energy Sources and RF Harvesting}
+\label{ch:harvest}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item which ambient energy sources can power a node, and roughly how much each delivers;
+ \item how a rectenna turns RF into DC and why its efficiency depends strongly on input power;
+ \item Amber's harvesting model: how received power becomes an \emph{equivalent source voltage} behind a series resistor, and what that implies about how much energy reaches the capacitor;
+ \item the three \emph{power modes}---wireless power transfer, external, hybrid---and the difference between combining them by \emph{max} and by \emph{sum};
+ \item how an external energy trace is replayed, and a surprise about the shipped trace.
+\end{itemize}
+\end{defbox}
+
+\section{Where can the energy come from?}
+\label{sec:sources}
+
+``Ambient'' in Ambient IoT refers to the environment as the supplier of energy
+and, sometimes, of the carrier. The main candidates differ by orders of magnitude.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}p{3.4cm}>{\raggedright}p{3.8cm}X@{}}
+\toprule
+Source & Typical power density & Remarks\\
+\midrule
+Outdoor sunlight & $\sim\SI{10}{mW/cm^2}$ and more & Very high, intermittent (day/night, shade)\\
+Indoor light & $\sim\SI{10}{}$--$\SI{100}{\micro W/cm^2}$ & Moderate; depends on lighting\\
+Thermal gradients & tens of $\si{\micro W/cm^2}$ & Needs a temperature difference\\
+Vibration & $\sim\SI{100}{\micro W/cm^3}$ & Machinery, vehicles\\
+Ambient RF & $\ll\SI{1}{\micro W/cm^2}$ & Very low except near a transmitter\\
+\emph{Dedicated} RF (carrier) & depends on distance & Controlled; what Amber's base stations provide\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\noindent\emph{Order-of-magnitude values commonly quoted in the energy-harvesting literature; actual numbers vary widely with conditions.}
+
+Ambient RF alone is too weak to be dependable, so 3GPP Ambient IoT relies on
+the network itself to \emph{beam} energy at the devices: the base station's carrier
+is both the power source and the illumination for backscatter. A node can
+additionally use a second source---typically light---so that it can wake up even
+where the RF field is weak. Amber lets you model exactly that combination.
+
+\section{The RF harvesting chain}
+\label{sec:rectenna}
+
+A \emph{rectenna} (rectifying antenna) consists of
+\begin{enumerate}
+ \item the antenna, which captures the RF power $P_{\mathrm{dl}}$;
+ \item an impedance-matching network;
+ \item a rectifier---diodes or transistors configured as a voltage multiplier---that converts the oscillating RF voltage into DC;
+ \item a smoothing capacitor and a power-management stage that feed the storage element.
+\end{enumerate}
+The \emph{RF-to-DC conversion efficiency} $\eta_{\mathrm{rf\text{-}dc}}=P_{\mathrm{dc}}/P_{\mathrm{rf}}$
+depends strongly on the input power, because a diode barely conducts until the
+RF voltage exceeds its threshold. At very low input power (below roughly
+$\SI{-20}{dBm}$ for commonly used devices) the efficiency collapses, and many
+rectifiers cannot output anything usable at all---the \emph{cold-start}
+problem. At moderate power the efficiency peaks (tens of percent) and at high
+power the diode breaks down. A rectenna therefore has a \emph{minimum input power}
+below which the harvested energy is effectively zero, however long you wait.
+This is why, in a real deployment, the \emph{forward link} often limits range.
+
+\begin{reality}[Amber has no rectifier curve]
+In Amber every watt of received RF power reaches the harvester: effectively
+$\eta_{\mathrm{rf\text{-}dc}}=1$ at all input levels, with no turn-on threshold,
+no saturation and no cold start. The code comment simply converts received
+power to DC power. If you need a realistic harvester, the hook is the single
+conversion in \codew{CoverageMap.calculate_node_power} (Exercise~\ref{ex:rectifier}).
+\end{reality}
+
+\section{Amber's harvesting model}
+\label{sec:amberharvest}
+
+\subsection{From power to an equivalent source}
+
+The capacitor model of Chapter~\ref{ch:capacitor} is driven by a
+\emph{voltage} source in series with a resistor $\Rs$. The controller therefore
+turns the harvested power $P_h$ (a number in dBm stored in \codew{node.harvesting_power_dbm})
+into an equivalent open-circuit voltage by
+\begin{equation}
+ \Vs=\sqrt{P_h\,\Rs},\qquad\text{i.e. } P_h=\frac{\Vs^{2}}{\Rs}.
+\label{eq:vsrc}
+\end{equation}
+This is the usual $P=V^2/R$ read backwards. Physically it says: ``a source of
+internal resistance $\Rs$ and open-circuit voltage $\Vs$ would \emph{dissipate} $P_h$
+if short-circuited into a resistance equal to its own''. It is a modelling device, not a
+circuit that exists on a board; but its consequences are physical and worth
+understanding.
+
+\begin{intuition}[How much of $P_h$ actually reaches the capacitor?]
+When the capacitor sits at voltage $V$, the current is $(\Vs-V)/\Rs$ and the power
+\emph{delivered into the capacitor} is $V(\Vs-V)/\Rs$. With $x=V/\Vs$,
+\[
+ P_{\mathrm{into\ C}}(x)=P_h\,x(1-x),
+\]
+which is a parabola with maximum $P_h/4$ at $x=\tfrac12$ (the familiar
+\emph{maximum-power-transfer} theorem). So the \emph{effective} harvesting efficiency of
+the model is at most $25\%$ and falls to zero as the capacitor approaches $\Vs$.
+For Node~0 at $V=\SI{1.5}{V}$, $x=0.60$ and the capacitor receives
+$0.24\,P_h\approx\SI{0.30}{mW}$ of the $\SI{1.24}{mW}$ nominally harvested; the
+rest is dissipated in $\Rs$. The charge-only update of the simulator reproduces this behaviour exactly
+(Chapter~\ref{ch:capacitor}).
+\end{intuition}
+
+\subsection{Three power modes}
+
+The harvest power of each node is recomputed from the pre-computed downlink power
+by \codew{CoverageMap.calculate_node_power}, according to \codew{node_energy_mode}.
+Let $P_{\mathrm{dl}}$ be the best downlink power (in watts) at the node, $\eta$ its
+\code{efficiency}, $P_{\mathrm{ext}}$ the instantaneous power of the external source,
+and $\mathbb{1}_{\mathrm{tx}}$ be $1$ while the node is in its \emph{transmitting} state and $0$ otherwise.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}l>{\raggedright}X>{\raggedright\arraybackslash}X@{}}
+\toprule
+\normalfont\bfseries Mode & \normalfont\bfseries Harvested power $P_h$ & \normalfont\bfseries Backscatter power\\
+\midrule
+"wpt" & $P_{\mathrm{dl}}\,\big(1-\eta\,\mathbb{1}_{\mathrm{tx}}\big)$ & $\eta P_{\mathrm{dl}}$\\
+"external" & $P_{\mathrm{ext}}$ (RF is \emph{not} harvested) & $\eta P_{\mathrm{dl}}$\\
+"hybrid" & $\max\big(P_{\mathrm{wpt}},P_{\mathrm{ext}}\big)$ if \codew{combine_mode="max"} (default), else $P_{\mathrm{wpt}}+P_{\mathrm{ext}}$ & $\eta P_{\mathrm{dl}}$\\
+\bottomrule
+\end{tabularx}
+\end{center}
+where $P_{\mathrm{wpt}}=P_{\mathrm{dl}}(1-\eta\,\mathbb{1}_{\mathrm{tx}})$. Three points deserve emphasis.
+\begin{enumerate}
+ \item The backscatter power is $\eta P_{\mathrm{dl}}$ in \emph{every} mode: a node powered by solar light still
+   needs the base station's carrier to reflect.
+ \item ``Hybrid'' does \emph{not} mean ``sum''. With the default \codew{combine_mode="max"}
+   the node simply uses whichever source is stronger at that instant.
+ \item The base station carriers are not summed either: the node harvests the
+   \emph{best} sector's power only (\code{best_pw_w}), a conservative simplification when several
+   carriers overlap.
+\end{enumerate}
+
+\begin{example}[Why the hybrid node of the demos lives on sunlight]
+In the broadcast demos Node~2, $\SI{100}{m}$ from the base station, receives
+$P_{\mathrm{dl}}=\SI{-10.57}{dBm}=\SI{87.7}{\micro W}$, giving $\Vs=\sqrt{87.7\times10^{-6}\cdot5000}=\SI{0.662}{V}$ from RF. The steady-state voltage
+(Chapter~\ref{ch:capacitor}) is $\Vs\Rl/(\Rl+\Rs)=\SI{0.63}{V}\ll\Vhigh$, so from RF alone Node~2 would
+\emph{never} start. The solar trace has mean power $\SI{1.43}{mW}$ ($\Vs\approx\SI{2.66}{V}$),
+$16\times$ larger. Because \codew{combine_mode="max"} picks the larger term, \emph{the RF contribution is
+irrelevant}; Node~2's harvesting is solar-only, which is why it activates fastest
+and sends the most packets (Figure~\ref{fig:sawtooth}). With \codew{combine_mode="sum"} the two would add in power:
+$\sqrt{(87.7+1433)\,\si{\micro W}\cdot5000}=\SI{2.76}{V}$.
+\end{example}
+
+\section{The external source}
+\label{sec:envsource}
+
+\codew{EnvEnergySource} is a SimPy actor that \emph{replays a recorded trace}.
+It reads an Excel file, takes one column (default \code{V_IM}) of voltages, and at
+every simulation millisecond sets
+\[
+ P_{\mathrm{ext}}(t_k)=\frac{V_k^{2}}{R},\qquad R=\code{resistance}\ (\SI{1}{\ohm}\ \text{default; the demos pass }R_s=\SI{5}{k\ohm}).
+\]
+After the last row it loops. The object exposes the current value as
+\code{ext_power}; the coverage map reads it through the callback
+\codew{node_ext_power_fn}, which in the demos is
+\codew{lambda node: energy_source.ext_power}. Because the callback ignores its
+argument, \emph{all nodes see the same external power at the same instant}: there is no
+spatial variation (shading) of the solar source.
+
+When \code{resistance} equals the controller's $\Rs$, the round trip
+$V\to P=V^2/R\to\sqrt{P\Rs}$ returns the recorded voltage unchanged. In the demos the trace's \code{V_IM}
+column is thus directly the equivalent source voltage of the solar harvester.
+
+\begin{reality}[The ``300-second'' trace is three seconds long]
+The file \file{threehundred_seconds_stable.xlsx} contains $2999$ rows with a time
+step of $\SI{1}{ms}$ (the last time stamp is $\SI{2.998}{s}$). Since
+\codew{EnvEnergySource} consumes one row per millisecond and loops, the
+trace is \emph{three seconds long}, repeated. Its statistics are: $V_{IM}$ between
+$1.78$ and $\SI{3.01}{V}$, mean $\SI{2.66}{V}$, standard deviation $\SI{0.25}{V}$, i.e.\ a
+nearly constant $\approx\SI{1.4}{mW}$ source ($\SI{1.56}{dBm}$). For simulations of tens of
+seconds the periodicity of the trace could show up as spurious structure.
+\end{reality}
+
+\section{When is harvesting updated?}
+
+Harvest power is recomputed \emph{every millisecond for every node} inside the
+controller loop (Chapter~\ref{ch:controller}). For a pure WPT node this matters
+only when its state toggles into or out of \emph{transmitting} (the $1-\eta$
+factor); for a node with an external source it also tracks the trace. The comment
+in the controller source explains the economy: if no coverage map or downlink
+results are supplied, ``wpt is static, no need to recalculate every ms''.
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.0cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Code\\
+\midrule
+Harvest/backscatter bookkeeping & \codew{CoverageMap.calculate_node_power} (\file{propagation.py})\\
+Hybrid combination & \codew{combine_mode} (\code{"max"} default)\\
+Power to source voltage, Eq.~\eqref{eq:vsrc} & \codew{Controller.run}: \codew{(power_w * R_series) ** 0.5}\\
+Solar trace & \codew{EnvEnergySource} (\file{energy.py})\\
+Callback & \codew{CoverageMap.node_ext_power_fn}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item Sunlight dwarfs ambient RF by orders of magnitude; 3GPP therefore beams a dedicated carrier at the devices.
+ \item Real rectennas have a minimum input power and a power-dependent efficiency; Amber omits both.
+ \item Amber converts harvested power to a Th\'evenin-style source $\Vs=\sqrt{P_h\Rs}$; at most $P_h/4$ ever reaches the capacitor.
+ \item Modes: wpt, external, hybrid (max or sum). Backscatter always uses the base-station carrier.
+ \item The shipped trace is $3$~s long, shared by all nodes, and effectively a $\SI{2.7}{V}$ source.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+The solar trace has mean voltage $\SI{2.66}{V}$ and $R=\SI{5}{k\ohm}$. Compute the external power in mW and dBm. (Careful: use the mean of $V^2$ or of $V$? How big is the difference given $\sigma=\SI{0.25}{V}$?)
+\end{exercise}
+\begin{exercise}
+In hybrid mode, $P_{\mathrm{wpt}}=\SI{1}{mW}$ and $P_{\mathrm{ext}}=\SI{1.4}{mW}$. Compute the equivalent source voltage ($\Rs=\SI{5}{k\ohm}$) for \codew{combine_mode="max"} and for \code{"sum"}.
+\end{exercise}
+\begin{exercise}
+A WPT node with $\eta=0.7$ receives $\SI{1}{mW}$. By how many dB does its harvested power drop while it is transmitting? What if $\eta=0.2$?
+\end{exercise}
+\begin{exercise}
+For which received downlink power $P_{\mathrm{dl}}$ can a WPT-only node eventually reach $\Vhigh=\SI{1.7}{V}$ with $\Rs=\SI{5}{k\ohm}$ and $\Rl=\SI{100}{k\ohm}$? Express your answer in $\si{\micro W}$ and dBm. (Hint: you need the steady-state formula of Chapter~\ref{ch:capacitor}.)
+\end{exercise}
+\begin{exercise}\label{ex:rectifier}
+Suppose you want to include an RF-to-DC efficiency $\eta_{\mathrm{rf\text{-}dc}}(P_{\mathrm{in}})$ that is zero below $\SI{-20}{dBm}$ and $0.3$ above. Where in the pipeline $P_{\mathrm{dl}}\to\Vs$ would you insert it, and how would this change the paper's scenario of Section~\ref{sec:twoway}?
+\end{exercise}

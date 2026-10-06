@@ -1,0 +1,65 @@
+\chapter{Reproducing the Results}
+\label{app:howto}
+
+Everything quantitative in this book can be regenerated. The scripts live in \file{textbook/code} next to the book sources; they use the unmodified \code{amber} package and the shipped demo files.
+
+\section{Setting up}
+\begin{lstlisting}[language=bash]
+git clone https://github.com/mrnmir/Amber.git && cd Amber
+pip install -e .            # numpy, pandas, simpy, matplotlib, openpyxl
+python demo_experiments/broadcast/broadcast_demo.py
+\end{lstlisting}
+The four demos write CSV files into their \file{output} folders (overwriting the committed ones); to avoid this, run them from a copy of the folder as we did.
+
+\section{Scripts}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{5.6cm}X@{}}
+\toprule
+\normalfont\bfseries Script & \normalfont\bfseries What it produces\\
+\midrule
+make\_figures.py & all data-driven figures (path loss, antenna, budgets, capacitor, saw-tooth, FSM zoom, ALOHA, coverage, registration, \dots)\\
+registration\_experiment.py & Fig.~\ref{fig:registration}: registration versus density, SIC on/off (about $2$ min on $4$ cores)\\
+sic\_ablation.py & Table~\ref{tab:sicablation}: one-factor ablation of the broadcast demos\\
+polling\_experiment.py & Table~\ref{tab:polling}: round-robin versus skip-silent polling\\
+energy\_accounting\_test.py & the $\approx2.7\%$ effect of the active-mode energy credit\\
+scalability\_benchmark.py & run time versus node count (Chapter~\ref{ch:des})\\
+exercise\_checks.py & numeric answers of Appendix~\ref{app:solutions}\\
+normalize\_code\_macros.py & LaTeX hygiene helper used while writing\\
+\bottomrule
+\end{tabularx}
+\end{center}
+Typical invocation (from \file{textbook/code}):
+\begin{lstlisting}[language=bash]
+python make_figures.py                         # regenerate figures
+python registration_experiment.py 10 results/registration_results.json
+python sic_ablation.py 10 results/sic_ablation.json
+python polling_experiment.py 10 results/polling.json
+\end{lstlisting}
+
+\section{Building the book}
+\begin{lstlisting}[language=bash]
+cd textbook
+latexmk -pdf main.tex        # needs a TeX Live with tikz, circuitikz, tcolorbox, siunitx, algorithmicx, natbib
+\end{lstlisting}
+
+\section{What is deterministic}
+
+The custom-protocol demo seeds Python's \code{random} (\code{SEED=7}) and reproduces its committed output exactly; our ablations use explicit seeds per run, so their numbers reproduce; the three-node demos are unseeded, so single runs differ by a few packets (use the ten-seed means).
+
+\section{Repository map}
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Path & Content\\
+\midrule
+\file{amber/} & the eight modules (Chapter~\ref{ch:architecture})\\
+\file{demo_experiments/} & four demos, their output and the solar trace\\
+\file{docs/}, \file{mkdocs.yml} & API reference generated from docstrings\\
+\file{textbook/} & this book: \file{main.tex}, \file{chapters/}, \file{figures/}, \file{code/}\\
+\bottomrule
+\end{tabular}
+\end{center}

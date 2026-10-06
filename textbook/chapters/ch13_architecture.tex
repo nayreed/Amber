@@ -1,0 +1,187 @@
+\chapter{The Architecture of Amber}
+\label{ch:architecture}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item the runtime object graph of an Amber scenario and who calls whom;
+ \item the ``interface contracts'' between modules (duck typing), and the extension points that let you swap a capacitor, a protocol or a policy;
+ \item the data dictionaries that carry pre-computed channel state;
+ \item the eight-step recipe that every demo follows to wire a scenario;
+ \item what happens in a single simulated millisecond.
+\end{itemize}
+\end{defbox}
+
+\section{Objects at run time}
+\label{sec:objects}
+
+Figure~\ref{fig:modulemap} showed the \emph{import} structure. A running scenario has a different shape: for every node a trio of cooperating objects, and shared channel state.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,>=Stealth]
+ % shared
+ \node[mod,minimum width=3.3cm] (cov) at (7.4,5.8) {\code{CoverageMap}\\\scriptsize pre-computes channel; updates harvest power};
+ \node[ext,minimum width=2.6cm] (src) at (12.2,5.8) {\code{EnvEnergySource}\\\scriptsize \code{ext_power}};
+ \node[ext,minimum width=3.4cm] (dl) at (2.4,5.8) {\code{downlink_results}\\\code{uplink_results} (dicts)};
+ % per node
+ \draw[rounded corners=4pt,agreen,fill=lightgreen] (3.4,-0.2) rectangle (11.4,4.2);
+ \node[lab,anchor=north west] at (3.5,4.15) {\textbf{one per node}};
+ \node[mod,minimum width=2.4cm] (node) at (4.8,3.0) {\code{Node}\\\scriptsize data record};
+ \node[mod,minimum width=2.6cm] (ctl) at (7.6,3.0) {\code{Controller}\\\scriptsize FSM, $\Vhigh$/$\Vlow$};
+ \node[mod,minimum width=2.4cm] (cap) at (10.2,3.0) {\code{Capacitor}};
+ \node[mod,minimum width=3.4cm] (bsm) at (7.6,0.7) {\code{BackscatterModule}\\\scriptsize protocol};
+ % base station
+ \node[mod,minimum width=3.0cm,fill=lightorange,draw=aorange] (bsb) at (1.0,0.7) {\code{BSBehavior}\\\scriptsize schedule / policy};
+ \node[ext] (bsd) at (1.0,-1.2) {\code{BaseStation}\\\scriptsize sectors};
+ % arrows
+ \draw[->] (dl) -- node[lab,left]{read} ++(0,-1.2) -| (bsm.north west);
+ \draw[->] (cov) -- node[lab,above]{writes \codew{harvesting_power_dbm}} (node.north east |- cov.south);
+ \draw[->,dashed] (src) -- node[lab,above]{} (cov);
+ \draw[->] (ctl) -- node[lab,above]{\codew{interrupt(cause)}} (cap);
+ \draw[->] (ctl) -- node[lab,right]{\codew{controller_tx_ready}} (bsm);
+ \draw[->] (bsm.west) -- node[lab,above]{\codew{interrupt("receive_data")}} (bsb.east);
+ \draw[->] (bsb.north) .. controls +(0,1.8) and +(-1.5,0) .. node[lab,above left,pos=0.55]{\codew{receive_command}} (bsm.north west);
+ \draw[->] (bsb) -- (bsd);
+ \draw[->] (node) -- (ctl);
+\end{tikzpicture}
+\caption{Runtime object graph. Solid arrows are calls or attribute reads; the arrows labelled \code{interrupt} are SimPy messages. The coverage map is shared by all nodes; the \code{Capacitor}, \code{Controller} and \code{BackscatterModule} are instantiated once per node; a \code{BSBehavior} exists per base station.}
+\label{fig:objgraph}
+\end{figure}
+
+\paragraph{Who owns time?}
+Each of \code{Controller}, \code{Capacitor}, \code{BSBehavior} and \codew{EnvEnergySource} registers one SimPy process in its constructor (\codew{self.action = env.process(self.run())}). The \code{Node}, \code{Sector}, \code{BaseStation} are plain \emph{data records} (Python dataclasses); the \code{CoverageMap} is a calculator, not a process. The \codew{BackscatterModule} has \emph{no process of its own}: it is passive logic that other processes call.
+
+\section{Interface contracts}
+\label{sec:contracts}
+
+Amber uses \emph{duck typing}: modules interact through a handful of attributes and methods rather than formal base classes. Knowing the contracts is knowing how to replace a module.
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}p{3.0cm}>{\raggedright}X>{\raggedright\arraybackslash}p{2.3cm}@{}}
+\toprule
+Consumer & Needs from\ldots & Provided by default\\
+\midrule
+Controller & \emph{capacitor}: \codew{action.interrupt(cause)} for causes \codew{capacitor_charging}, \codew{capacitor_full}, \codew{capacitor_charge_and_discharge}; writable \code{current} (A) and \codew{voltage_source} (V); readable \code{voltage}, \codew{internal_time} (s) & \code{Capacitor}\\
+Controller & \emph{backscatter}: \code{state}; \codew{controller_tx_ready(data)} returning a dict or \code{None}; \codew{do_transmit(tx_info)} & \codew{BackscatterModule}\\
+Controller & \emph{node}: \code{id}, writable \code{state}, \codew{harvesting_power_dbm} (set by the coverage map) & \code{Node}\\
+BackscatterModule & \emph{base-station process}: attributes \codew{received_tag_id}, \codew{data_from_tag}, \codew{rssi_dbm}, \codew{best_sector_idx}, \codew{subcarrier_shift}, and \codew{action.interrupt("receive_data")} & \code{BSBehavior}\\
+BSBehavior & \emph{modules}: \codew{node.id}, \codew{receive_command(cmd,bs_id,data)} & \codew{BackscatterModule}\\
+CoverageMap & \emph{nodes}: \code{id}, \code{x}, \code{y}, \code{height}, \code{efficiency}, \code{antenna_*}, \code{state}; \emph{base stations}: \code{id}, \code{x}, \code{y}, \code{sectors} & dataclasses\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Extension points.} Three seams are designed for user code:
+\begin{enumerate}
+ \item \textbf{Node protocol:} subclass \codew{BackscatterModule} and override \codew{handle_command} (what to do on a command) and \codew{build_tx_payload} (what to send in your slot). Everything else---the sensitivity gate, logging, slot validation, uplink delivery---stays.
+ \item \textbf{Base-station behaviour:} either give \code{BSBehavior} a static \code{schedule} list, or a \code{policy} generator that yields one frame at a time and can adapt to \codew{decoded_this_frame}, \codew{total_collided}, etc.
+ \item \textbf{Energy models:} supply any object with the capacitor contract, a different \codew{node_ext_power_fn}, or another trace to \codew{EnvEnergySource}.
+\end{enumerate}
+Chapter~\ref{ch:extending} demonstrates (1) and (2) with the adaptive-ALOHA demo.
+
+\section{Data dictionaries}
+\label{sec:dicts}
+
+Channel state is passed around as plain dictionaries produced once by the \code{CoverageMap}.
+
+\paragraph{Downlink results} (\codew{compute_bs_to_point(nodes)}), keyed by node id:
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{3.5cm}X@{}}
+\toprule
+\normalfont\bfseries Key & \normalfont\bfseries Content\\
+\midrule
+owner & name of the best serving sector, e.g.\ \code{"BS0_S0"}\\
+best\_pw\_dbm, best\_pw\_w & strongest received power over all base stations and sectors\\
+total\_pw\_dbm & power summed over all sectors (interference-like measure)\\
+per\_node\_powers & $\{\text{node id}:\{\text{sector name}:\text{dBm}\}\}$, every sector\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Uplink results} (\codew{compute_point_to_bs(nodes)}), keyed by sector name:
+\codew{per_sector_powers[sector][node_id]} (dBm; the power that sector would receive from that node), plus per-sector \code{owner} (the strongest node), \code{best_pw_dbm}, \code{best_pw_w}, \codew{total_pw_dbm}.
+
+\paragraph{Per-node attributes written by the coverage map}: \codew{harvesting_power_dbm} and \codew{backscatter_power_dbm}. These are \emph{not} fields of the \code{Node} dataclass; they are attached dynamically, so a controller will fail at its first step with an \codew{AttributeError} unless \codew{calculate_node_power} has been called for its node beforehand (as every demo does at set-up).
+
+\section{The wiring recipe}
+\label{sec:recipe}
+
+All four demos, and the paper's experiment, follow the same eight steps. Learn them once.
+
+\begin{enumerate}[label=\textbf{Step \arabic*.},leftmargin=1.6cm]
+ \item \textbf{Define the topology.} Create \code{Node}s (position, height, antenna, sensitivity, efficiency, subcarrier shift) and \code{BaseStation}s with \code{Sector}s (azimuth, beamwidth, power, gain, sensitivity).
+ \item \textbf{Create the environment and energy source.} \codew{env = simpy.Environment()}; optionally an \codew{EnvEnergySource} reading the solar trace with \codew{resistance=R_SERIES}.
+ \item \textbf{Build one \code{CoverageMap} per energy mode.} \codew{node_energy_mode} is per map, so WPT-only and hybrid nodes use different maps (the demos do so).
+ \item \textbf{Pre-compute the channel.} \codew{dl = cov.compute_bs_to_point(nodes)}; \codew{cov.calculate_node_power(nodes, dl)}; \codew{ul = cov.compute_point_to_bs(nodes)}. (Order matters: the uplink needs the backscatter power that \codew{calculate_node_power} writes.)
+ \item \textbf{Instantiate the per-node trio.} \codew{Capacitor(env, id, params, initial_voltage)}; \codew{BackscatterModule(env, node, bs_processes=[], uplink_results=ul, downlink_results=dl)}; \codew{Controller(env, capacitor_ctrl, node, backscatter, params, coverage_map=cov, downlink_results=dl)}.
+ \item \textbf{Instantiate the base station behaviour.} \codew{BSBehavior(env, base_station, schedule=... or policy=..., backscatter_modules=[...], enable_sic=...)}.
+ \item \textbf{Close the loop.} Set every module's \codew{bs_processes = [bs_behavior]} (the module needs the process to interrupt, the process needs the modules to command; neither exists when the other is built). For demos that skip discovery: \codew{bsm.state = "registered"} and \codew{bs.nodes_registered = [...]}.
+ \item \textbf{Run and read counters.} \codew{env.run(until=T_ms)}; then use \codew{bs.rx_packets}, \codew{bsm.tx_records}, \code{bs.total_rx}, \codew{bs.total_collided}, \dots
+\end{enumerate}
+Forgetting Step~7 produces the quietest of failures: a node whose \codew{bs_processes} is empty ``transmits'' (it logs a TX record with \codew{delivered=False}) but no base station ever hears it.
+
+\section{One simulated millisecond}
+\label{sec:onems}
+
+Figure~\ref{fig:objgraph} shows who talks to whom; this table shows the \emph{order} within a single millisecond for one node (Chapter~\ref{ch:controller} gives the details of each step).
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}rlX@{}}
+\toprule
+\# & Actor & Action\\
+\midrule
+1 & Controller wakes & publishes its state name on the node (\code{node.state})\\
+2 & Controller & \codew{coverage_map.calculate_node_power([node], downlink_results)}: new $P_h$ (depends on \code{node.state} and the solar trace)\\
+3 & Controller & $\Vs=\sqrt{P_h R_s}$ written to \codew{capacitor.voltage_source}\\
+4 & Controller & reads $V$ (the value left by the \emph{previous} millisecond's update); applies the hysteresis rule; runs \codew{working_mode()}, one FSM step, which sets \codew{capacitor.current} and calls \codew{capacitor.action.interrupt(cause)}\\
+5 & Controller & in state \emph{wait\_slot}: \codew{controller_tx_ready}; if ready, \code{do_transmit}, which sets the base station's scratch fields and interrupts it\\
+6 & Controller & \codew{yield env.timeout(1)}: suspends\\
+7 & Capacitor (urgent, same ms) & applies one $\Delta t$ step and appends to its history\\
+8 & Base station (urgent, same ms) & if in an RX window, buffers the packet\\
+\bottomrule
+\end{tabularx}
+\end{center}
+Steps~7 and~8 are SimPy \emph{urgent} events: they run at the same simulated instant, but only after the controller has yielded, and in the order in which the interrupts were issued.
+At the \emph{end} of each RX window the base station processes its buffer (Algorithm~\ref{alg:rxbuffer}); at the \emph{start} of each TX window it calls the target modules' \codew{receive_command}, a synchronous call.
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{4.4cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Where\\
+\midrule
+Per-node trio & constructed in every demo's \codew{run_simulation()}\\
+Node protocol seam & \codew{BackscatterModule.handle_command}, \codew{.build_tx_payload}\\
+BS policy seam & \codew{BSBehavior(policy=...)}, \code{_run_policy}\\
+Channel dictionaries & \codew{CoverageMap.compute_*}\\
+Time-owning objects & \code{Controller}, \code{Capacitor}, \code{BSBehavior}, \codew{EnvEnergySource}\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item Four classes own SimPy processes; \codew{BackscatterModule} and \code{CoverageMap} are passive helpers; \code{Node}, \code{Sector}, \code{BaseStation} are data.
+ \item Modules interact by duck-typed contracts: a capacitor must accept three interrupt causes and expose \code{voltage}, \code{current}, \codew{voltage_source}; a protocol module must provide \code{state}, \codew{controller_tx_ready}, \code{do_transmit}.
+ \item Channel state lives in two dictionaries computed once; harvest and backscatter power are per-node attributes attached by the coverage map.
+ \item Every scenario follows the same eight wiring steps; the commonest mistake is not attaching \codew{bs_processes}.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Sketch the sequence diagram (UML style) of a unicast poll between \code{BSBehavior}, \codew{BackscatterModule}, \code{Controller} and \code{BSBehavior}'s buffer, using the objects of Figure~\ref{fig:objgraph}.
+\end{exercise}
+\begin{exercise}
+You want to replace the capacitor by a supercapacitor with an equivalent series resistance and a voltage-dependent leakage. Which attributes and interrupt causes must your class provide? What else would need to change?
+\end{exercise}
+\begin{exercise}
+Why must the uplink computation follow \codew{calculate_node_power}? What would the base station receive if it were computed first?
+\end{exercise}
+\begin{exercise}
+List the objects you would create for a scenario of two base stations of three sectors and $50$ nodes, and count the SimPy processes that exist.
+\end{exercise}

@@ -1,0 +1,93 @@
+\chapter{The Paper, Annotated}
+\label{app:paper}
+
+This appendix reads the SenSys demo abstract \citep{manafova2026amber} \emph{statement by statement}, linking each claim to the chapter that explains it, the code that implements it, and our verdict from reading and running the code. Quotations are from the paper. Verdict symbols: \textbf{\textcolor{agreen}{$\checkmark$}}~consistent with the code; \textbf{\textcolor{aorange}{$\sim$}}~consistent with caveats; \textbf{\textcolor{agrey}{$\circ$}}~an abstraction (described, not simulated at that level).
+
+\section{Abstract and introduction}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.9cm}>{\raggedright}p{2.3cm}>{\raggedright}X>{\centering\arraybackslash}p{0.8cm}@{}}
+\toprule
+\textbf{Claim} & \textbf{Book} & \textbf{Code / comment} & \textbf{OK?}\\
+\midrule
+``open-source discrete-event simulator for 6G Ambient IoT'' & Ch.~\ref{ch:intro}, \ref{ch:des} & Python/SimPy, BSD-3 licence & $\checkmark$\\
+``integrates energy harvesting, capacitor storage dynamics, and backscatter communication'' & Ch.~\ref{ch:harvest}, \ref{ch:capacitor}, \ref{ch:backscatter} & \code{CoverageMap}, \code{Capacitor}, \codew{BackscatterModule}; no RF--DC curve (E1) & $\sim$\\
+3GPP Ambient IoT devices harvest RF and ``communicate via backscatter communication'' & Ch.~\ref{ch:intro}, \ref{ch:backscatter} & \emph{Device~A/B/C}; Amber's node $\approx$ storage-equipped backscatter device & $\checkmark$\\
+``most existing simulators stop at the signal level and do not support Ambient IoT nodes'' (Sionna, ray tracing) & Ch.~\ref{ch:intro} & motivation, not code & --\\
+``Network simulators \ldots typically assume always-available power, while energy harvesting studies typically omit protocol-level communication'' & Ch.~\ref{ch:intro} & motivation & --\\
+``first open-source simulator that integrates RF energy harvesting, capacitor storage dynamics, and backscatter communication'' & Ch.~\ref{ch:intro} & the authors' claim ``to our knowledge''; we do not assess priority & --\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Section II: Amber overview}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.9cm}>{\raggedright}p{2.3cm}>{\raggedright}X>{\centering\arraybackslash}p{0.8cm}@{}}
+\toprule
+\textbf{Claim} & \textbf{Book} & \textbf{Code / comment} & \textbf{OK?}\\
+\midrule
+``system-level simulator designed for large-scale 6G Ambient IoT networks'' & Ch.~\ref{ch:overview} & ms-resolution, hundreds of nodes (measured: $300$ nodes $\approx4\times$ real time) & $\checkmark$\\
+\emph{Physically grounded}: ``voltage- and current-based capacitor models \ldots series resistance, leakage current, and simultaneous charge/discharge'' & Ch.~\ref{ch:capacitor} & \code{Capacitor}: four step types; exact RC for charge-only; active-mode over-credit (E3) & $\sim$\\
+``free-space path loss (FSPL) or the 3GPP TR 38.901 UMa scenario, together with 3GPP-compliant sectored antenna patterns'' & Ch.~\ref{ch:antennas}, \ref{ch:pathloss} & horizontal pattern only (R3); UMa $<10$~m branch (R1); FSPL uses $d_{2D}$ (R2) & $\sim$\\
+``Link budgets \ldots Friis \ldots configurable antenna gains, carrier frequency, and medium attenuation'' & Ch.~\ref{ch:decibels}, \ref{ch:pathloss} & \codew{compute_rx_power_watts}, \codew{extra_np_per_m} & $\checkmark$\\
+\emph{Modularity}: ``each module as an independent class with defined interfaces'' & Ch.~\ref{ch:architecture} & duck-typed contracts; two override seams & $\checkmark$\\
+\emph{Energy awareness}: ``All simulated events are conditioned on the node's instantaneous energy state'' & Ch.~\ref{ch:controller}, \ref{ch:bsmodule} & transmissions are; \emph{receptions} are not (E6) & $\sim$\\
+``tracks capacitor voltage at millisecond resolution \ldots charging and active duty-cycling modes based on configurable voltage thresholds'' & Ch.~\ref{ch:capacitor}, \ref{ch:controller} & \codew{Controller.run}, $\Vhigh/\Vlow$ & $\checkmark$\\
+``Current consumption is modeled separately for each operational state (listening, sensing, processing, transmitting)'' & Ch.~\ref{ch:controller} & \code{CurrentsA}, \code{DurationsMs}; \emph{wait\_slot} is a fifth, zero-load state (E5) & $\checkmark$\\
+\emph{Scalability}: ``Built on SimPy \ldots 1\,ms temporal resolution, using interrupt-driven communication'' & Ch.~\ref{ch:des} & verified; interrupts are \emph{urgent} & $\checkmark$\\
+``coverage maps and link budgets are pre-computed once \ldots enabling efficient simulation of hundreds of nodes'' & Ch.~\ref{ch:des}, \ref{ch:coverage} & precompute $\sim$ms; run $\approx13\,\si{\micro s}$/node-ms & $\checkmark$\\
+``three entity types: nodes, base stations, and the communication links'' & Ch.~\ref{ch:overview} & dataclasses + dicts; links are tables, not objects & $\checkmark$\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Section II (continued): the physical layer and devices}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.9cm}>{\raggedright}p{2.3cm}>{\raggedright}X>{\centering\arraybackslash}p{0.8cm}@{}}
+\toprule
+\textbf{Claim} & \textbf{Book} & \textbf{Code / comment} & \textbf{OK?}\\
+\midrule
+``Physical-layer communication is based by default on the PRDCH structure \ldots dual-tone principle: an external unmodulated carrier occupies a dedicated OFDM subcarrier, enabling both energy harvesting and backscatter reflection, while a single data-bearing subcarrier carries downlink information'' & Ch.~\ref{ch:backscatter} & carrier is implicit/always on; commands are function calls gated by RSSI; no waveform & $\circ$\\
+Nodes ``characterized by position, antenna gain, receiver sensitivity, and a power split ratio'' & Ch.~\ref{ch:backscatter}, \ref{ch:coverage} & \code{Node}: \code{x,y}, \codew{antenna_gain_dbi}, \codew{sensitivity_dbm}, \code{efficiency} & $\checkmark$\\
+``above $V_{high}$, the node cycles through listening, sensing, processing, and transmitting states; below $V_{low}$, it enters a charge-only state'' & Ch.~\ref{ch:capacitor}, \ref{ch:controller} & hysteresis exactly as described & $\checkmark$\\
+``harvesting energy via wireless power transfer, an external source such as solar, or a hybrid of both'' & Ch.~\ref{ch:harvest} & modes \code{wpt}/\code{external}/\code{hybrid}; hybrid defaults to \emph{max} & $\checkmark$\\
+``Base stations consist of multiple sectors, each with configurable azimuth, beamwidth, height, antenna gain, transmit power, receiver sensitivity, and 3GPP-compliant antenna patterns'' & Ch.~\ref{ch:coverage} & \code{Sector} fields & $\checkmark$\\
+``Communication links are computed bidirectionally, downlink for wireless power transfer and carrier provision, uplink for backscattered data'' & Ch.~\ref{ch:coverage} & \codew{compute_bs_to_point}, \codew{compute_point_to_bs} & $\checkmark$\\
+``subcarrier shifting as a collision mitigation strategy \ldots Distinct subcarrier offsets provide frequency-domain separation, and SIC resolves collisions among nodes sharing the same offset'' & Ch.~\ref{ch:backscatter}, \ref{ch:sic} & integer label, orthogonal; SIC perfect (M1) & $\sim$\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Section III: the experiment}
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright}p{4.9cm}>{\raggedright}p{2.3cm}>{\raggedright}X>{\centering\arraybackslash}p{0.8cm}@{}}
+\toprule
+\textbf{Claim} & \textbf{Book} & \textbf{Code / comment} & \textbf{OK?}\\
+\midrule
+``three base stations and up to 100 passive nodes, each assigned one of three subcarrier shifts, \ldots $500\,\mathrm m\times500\,\mathrm m$'' & Ch.~\ref{ch:protocols}, \ref{ch:experiments} & not in the repository; our one-BS re-creation & --\\
+``Base stations transmit at $\SI{30}{dBm}$ with $\SI{17}{dBi}$ sectorized antennas at $\SI{924}{MHz}$, nodes \ldots $\SI{1}{dBi}$ omni \ldots hybrid power mode'' & Ch.~\ref{ch:backscatter} & used in our re-creation; at these powers RF alone cannot energise nodes ($V_\infty\le0.65$~V) so hybrid mode is essential & $\checkmark$\\
+``a discovery phase, where nodes register by responding with their identifiers in random slots, followed by a data collection phase, where the base station periodically requests sensor readings from each registered node individually by its identifier'' & Ch.~\ref{ch:protocols} & \code{send_id}/\code{ack}/\codew{send_data(target)} & $\checkmark$\\
+``increasing the number of nodes from 5 to 100 \ldots within 100\,m \ldots 10 runs'' & Ch.~\ref{ch:protocols} & reproduced qualitatively (Fig.~\ref{fig:registration}) & $\sim$\\
+``registration percentage decreases as the node density increases, leading to a higher collision probability during random access'' & Ch.~\ref{ch:aloha}, \ref{ch:protocols} & confirmed; our analysis adds the $\tfrac12$-participation effect (M3) & $\checkmark$\\
+``No collisions occur during data collection since nodes are queried individually'' & Ch.~\ref{ch:protocols} & verified by construction in the unicast demo & $\checkmark$\\
+``single unicast polling protocol operating in full-duplex mode'' & Ch.~\ref{ch:backscatter}, \ref{ch:bsengine} & carrier continuous; the \emph{schedule} still time-multiplexes TX/RX windows & $\sim$\\
+``By reconfiguring the simulator, we can test different protocols, scheduling strategies, or network topologies'' & Ch.~\ref{ch:extending} & node subclass + BS policy & $\checkmark$\\
+Fig.~1: RSSI coverage map with fixed BSs, random nodes & Ch.~\ref{ch:antennas} & \codew{compute_coverage_map}, \code{plot_rssi}; our own example in Fig.~\ref{fig:covmap} & $\checkmark$\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{What the abstract does not say}
+
+For anyone wishing to \emph{reproduce} its Figure~2 the following are unspecified: the number of reply slots and slot length in the discovery phase, the number of discovery rounds, how subcarrier shifts are assigned (here: nodes $i\bmod 3$ in our re-creation), the capacitor and threshold values, the load currents, the exact node placement distribution (uniform in a disc, or by area), and the SIC and capture parameters. Our re-creation made explicit choices for each and reproduces the \emph{mechanism}, not the absolute numbers.

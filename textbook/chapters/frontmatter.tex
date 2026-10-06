@@ -1,0 +1,232 @@
+% ---------------------------------------------------------------------
+%  Title page
+% ---------------------------------------------------------------------
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{center}
+\vspace*{0.6cm}
+{\sffamily\color{agrey}\small A TEACHING TEXT\par}
+\vspace{0.5cm}
+{\sffamily\bfseries\fontsize{34}{38}\selectfont\color{ablue} Amber and\\[2pt] 6G Ambient IoT\par}
+\vspace{0.5cm}
+{\sffamily\Large From backscatter physics and energy harvesting\\
+to protocols and a discrete-event simulator\par}
+
+\vspace{1.0cm}
+\begin{tikzpicture}[scale=1.2,every node/.style={font=\sffamily\scriptsize}]
+  % ground line
+  \draw[agrey!50] (-0.8,0) -- (9.6,0);
+  % base-station mast
+  \draw[line width=1.6pt,ablue] (0,0) -- (0,2.1);
+  \fill[ablue] (-0.22,2.1) rectangle (0.22,2.65);
+  \node[below] at (0,0) {base station};
+  % carrier arcs towards the tag
+  \foreach \r/\o in {0.9/0.95,1.5/0.75,2.1/0.55,2.7/0.38}{
+    \draw[ablue,opacity=\o,line width=1.2pt]
+      ([shift={(-24:\r)}]0.25,2.38) arc (-24:24:\r);}
+  % passive node on a post
+  \draw[line width=1pt,agrey] (4.7,0) -- (4.7,1.45);
+  \draw[line width=1.1pt,fill=lightgreen] (4.25,1.45) rectangle (5.15,2.15);
+  \draw[line width=1.1pt] (4.7,2.15) -- (4.7,2.75);
+  \draw[line width=1.1pt] (4.45,2.75) -- (4.95,2.75);
+  \node[below] at (4.7,0) {passive node};
+  % backscatter arcs going back
+  \foreach \r/\o in {0.5/0.95,0.95/0.7,1.4/0.45}{
+    \draw[aorange,opacity=\o,line width=1.2pt]
+      ([shift={(156:\r)}]4.55,2.5) arc (156:204:\r);}
+  % capacitor saw-tooth
+  \draw[->,agrey] (6.4,0.2) -- (6.4,2.5) node[above] {$V_C$};
+  \draw[->,agrey] (6.4,0.2) -- (9.4,0.2) node[right] {$t$};
+  \draw[ablue,line width=1.1pt] (6.4,0.2) .. controls (6.8,1.4) .. (7.2,1.95)
+     -- (7.3,1.1) .. controls (7.7,1.7) .. (8.0,1.95)
+     -- (8.1,1.1) .. controls (8.5,1.7) .. (8.8,1.95)
+     -- (8.9,1.1);
+  \draw[dashed,agrey] (6.4,1.95) -- (9.4,1.95) node[right] {$V_{\mathrm{high}}$};
+  \draw[dashed,agrey] (6.4,1.1) -- (9.4,1.1) node[right] {$V_{\mathrm{low}}$};
+\end{tikzpicture}
+
+\vfill
+{\sffamily\large
+A study guide to the SenSys 2026 demo abstract\\[3pt]
+\emph{``Demo Abstract: Amber: 6G Ambient IoT Simulator''}\\[2pt]
+M.\ Manafova, T.\ Voigt and L.\ Mottola\\[10pt]
+and to the open-source Amber simulator, version~0.1.0\par}
+\vspace{0.6cm}
+{\sffamily\small\color{agrey}
+This is an independent teaching text. It was not written by the Amber authors.\\
+Statements about the code were checked against the source; the behaviours that matter were also tested by running it.\par}
+\vspace{0.4cm}
+\end{center}
+\end{titlepage}
+
+\frontmatter
+
+% ---------------------------------------------------------------------
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\markboth{Preface}{Preface}
+
+\paragraph{The problem this book solves.}
+A device that has no battery, harvests a few microwatts from radio waves, and
+answers a base station by \emph{reflecting} the base station's own signal is
+easy to describe in one sentence and surprisingly hard to reason about. Its
+ability to talk depends on its stored energy; its stored energy depends on
+the radio channel; the radio channel depends on distance, antennas and on
+\emph{what the device itself is doing} at that moment; and the protocol that
+sits on top must cope with hundreds of such devices that wake up and fall
+asleep at unpredictable times. No single textbook chapter covers all of this.
+The \emph{Amber} simulator was built to let researchers explore exactly this
+tangle, and its authors describe it in a two-page SenSys demo abstract.
+
+\paragraph{What this book does.}
+We use Amber as a vehicle for teaching the \emph{whole} subject. For every
+part of the simulator we first explain the \emph{theory} it abstracts---the
+physics of antennas, path loss, backscatter, rectifiers and capacitors, the
+mathematics of random access and interference cancellation, the machinery of
+discrete-event simulation---and only then show \emph{how Amber models it},
+where the model is exact, where it is a deliberate simplification, and where
+the code does something different from what the textbook says. You will not
+find page after page of source listings: the aim is that after reading you
+could re-derive every equation inside Amber and write a simulator like it
+yourself.
+
+\paragraph{How the book is organised.}
+\begin{description}[leftmargin=1.2cm,style=nextline,font=\sffamily\bfseries\color{ablue}]
+ \item[Part I (Chapters 1--2).] The idea of Ambient IoT, 3GPP's view of it,
+   and a one-chapter tour of Amber so that you always know where a topic fits.
+ \item[Part II (Chapters 3--8).] The physics: decibels and noise, antennas,
+   path loss, backscatter communication, RF energy harvesting, and energy
+   storage in a capacitor with threshold-driven intermittent operation.
+ \item[Part III (Chapters 9--11).] Sharing the medium: ALOHA and its framed
+   variants, capture, interference and successive interference cancellation,
+   and how these combine into registration and polling protocols.
+ \item[Part IV (Chapters 12--13).] Simulation methodology (discrete-event
+   simulation with SimPy) and the architecture of Amber.
+ \item[Part V (Chapters 14--18).] A module-by-module deep dive: topology and
+   coverage, the node controller, the backscatter module, the base-station
+   engine, and packet analysis.
+ \item[Part VI (Chapters 19--20).] Experiments: the four shipped demos, our
+   re-creation of the paper's node-density experiment, and how to build your
+   own protocol on top of Amber.
+ \item[Part VII (Chapter 21).] A critical assessment: assumptions, limits and
+   a catalogue of subtle behaviours that anyone using the code should know.
+ \item[Appendices.] Derivations, a formula and parameter sheet, an annotated
+   reading of the paper, exercise solutions and a glossary.
+\end{description}
+
+\paragraph{Conventions used throughout.}
+The coloured boxes have fixed meanings.
+\begin{keyidea}[Key idea]
+A concept you must carry forward. If you only read the boxes, you still get the skeleton of the subject.
+\end{keyidea}
+\begin{intuition}
+A physical or mathematical way of \emph{seeing} why a result is true, usually before or after a derivation.
+\end{intuition}
+\begin{example}[Worked example]
+A calculation with real Amber numbers, each checked against the simulator or by an independent hand calculation.
+\end{example}
+\begin{reality}[Code reality check]
+Where the code deviates from the textbook theory, or from what its own documentation says. These are the most valuable boxes if you intend to \emph{use} Amber for research. Each was reproduced by a small experiment (see Chapter~\ref{ch:limits}).
+\end{reality}
+\begin{codemap}
+A short table linking a concept to the module, class or function that implements it.
+\end{codemap}
+Identifiers set in \code{typewriter} are names in the Amber source. Section
+and chapter exercises are collected at the end of each chapter; worked
+solutions are in Appendix~\ref{app:solutions}.
+
+\paragraph{A note on honesty.}
+Amber is a young research prototype (version~0.1.0). The accompanying paper is
+a demo abstract: it deliberately describes the simulator at a high level and
+reports one experiment. We therefore draw a clear line between (i) what the
+paper states, (ii) what the code implements, and (iii) what we ran ourselves
+to find out. Numbers reported as \emph{measured} come from runs of the
+unmodified simulator; their scripts are in the \file{textbook/code}
+directory, so you can reproduce every figure and table.
+
+\paragraph{Prerequisites.}
+Undergraduate-level probability (random variables, the Poisson distribution),
+basic circuit analysis (Ohm's law, a capacitor's $i=C\,\mathrm{d}v/\mathrm{d}t$),
+elementary Python, and a first course in communications or signals. We
+introduce everything else.
+
+% ---------------------------------------------------------------------
+\chapter*{Reading Roadmap}
+\addcontentsline{toc}{chapter}{Reading roadmap}
+\markboth{Reading roadmap}{Reading roadmap}
+
+Different readers need different routes. The table suggests three.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}p{2.9cm}X@{}}
+\toprule
+If you are\dots & Read\dots \\
+\midrule
+New to Ambient IoT and want the concepts &
+ Chapters 1, 2, 3, 6, 7, 8, then 9--11. Skim Part V.\\[3pt]
+A wireless/networking researcher who will \emph{use} Amber &
+ Chapters 2, 6, 8, 10, 12, 13, then all of Part V and Chapter 21.
+ Do Chapter 19 and 20 hands-on.\\[3pt]
+Extending Amber (new protocol, energy model, channel) &
+ Chapters 13, 15--17, 20, 21, and Appendix~\ref{app:ref}. The
+ \emph{Code reality check} boxes in Chapters 8, 10, 14 and 17 matter most.\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{keyidea}[The one-paragraph summary of the whole book]
+An Ambient IoT node lives a double life. In the \emph{energy} domain it is a
+capacitor that a weak radio-frequency (or solar) source fills slowly and a
+duty-cycled load drains quickly, switching on at $V_{\mathrm{high}}$ and off at
+$V_{\mathrm{low}}$. In the \emph{communication} domain it is a passive reflector that can answer a
+base station only when it is awake, only in the slot the base station
+advertised, and only with the power budget the two-way path loss leaves it.
+The base station cannot see the node's energy state, so the protocol must be
+robust to nodes that are absent, collide, or arrive late. Amber simulates the
+coupling between these two domains millisecond by millisecond.
+\end{keyidea}
+
+% ---------------------------------------------------------------------
+\chapter*{Notation and Symbols}
+\addcontentsline{toc}{chapter}{Notation and symbols}
+\markboth{Notation}{Notation}
+
+Quantities are written in the SI system unless stated. Logarithmic powers use
+\si{\dBm} (decibels relative to one milliwatt), antenna gains use \si{\dBi}
+(relative to an isotropic radiator), and pure ratios use \si{\dB}. The right
+column shows the corresponding name in the Amber source where there is one.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\linewidth}{@{}>{$}l<{$}Xl@{}}
+\toprule
+\text{Symbol} & Meaning & Amber name\\
+\midrule
+f_c,\ \lambda,\ c & carrier frequency, wavelength $\lambda=c/f_c$, speed of light & \code{freq_hz}, \code{C}\\
+d,\ d_{2D},\ d_{3D} & distance; horizontal and slant (3-D) distance & \code{distance_m}\\
+h_{BS},\ h_{UT} & antenna heights of base station and node & \codew{Sector.height}, \code{Node.height}\\
+G,\ G_{\max} & antenna gain (linear); peak gain & \codew{antenna_gain_dbi}\\
+\varphi,\ \varphi_{3\mathrm{dB}},\ A_m & angular error, half-power beamwidth, pattern floor & \codew{beamwidth_deg}\\
+L(d),\ \mathrm{PL}(d) & path loss (linear ratio $\le1$; dB) & \code{fspl_lin}, \codew{urban_macro_loss_db_38_901}\\
+P_{BS} & transmit power of a base-station sector & \codew{Sector.power}\\
+P_{\mathrm{dl}} & downlink power arriving at a node & \code{best_pw_dbm}\\
+\eta & power split: fraction reflected (backscattered) & \codew{Node.efficiency}\\
+P_h,\ P_{bs} & harvested and backscattered power at a node & \codew{harvesting_power_dbm}, \codew{backscatter_power_dbm}\\
+P_{\mathrm{ul}} & backscatter power received at the base station & \codew{per_sector_powers}\\
+k_B,\ T_0,\ B,\ F & Boltzmann constant, 290\,K, noise bandwidth, noise factor & \codew{thermal_noise_watts}\\
+N,\ \gamma,\ \gamma_{\mathrm{req}} & noise power, SINR, required SINR & \codew{required_sinr_db}\\
+\varepsilon & SIC residual: $1-$ cancellation factor & \codew{cancellation_factor}\\
+C,\ V,\ E=\tfrac12CV^2 & capacitance, capacitor voltage, stored energy & \codew{CapacitorParams.C}\\
+\Rs,\ \Rl & series and leakage resistance & \code{R_series}, \code{R_leakage}\\
+\Vs & equivalent source voltage of the harvester & \codew{voltage_source}\\
+\Vhigh,\ \Vlow,\ \Vmax & activation, shut-down and clamp voltages & \codew{thresholds_v}, \code{voltage_max}\\
+\tau_c=\Rs C,\ \tau_\ell=\Rl C & charging and leakage time constants & --\\
+\Delta t & simulation time step (1\,ms) & \code{dt}\\
+I_L & load current of the node & \code{CurrentsA}\\
+S,\ n,\ K & slots per frame, contending nodes, number of subcarrier shifts & \code{rx_slots}, \codew{subcarrier_shift}\\
+g & offered load of a random-access system (attempts per slot) & --\\
+\bottomrule
+\end{tabularx}
+\end{center}

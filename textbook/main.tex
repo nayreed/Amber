@@ -1,0 +1,53 @@
+\documentclass[11pt,a4paper,openany,oneside]{book}
+\input{preamble}
+
+\title{Amber and 6G Ambient IoT}
+\author{A teaching text}
+\date{}
+\hypersetup{pdftitle={Amber and 6G Ambient IoT: A Teaching Text},
+            pdfauthor={Study guide to the Amber simulator}}
+
+\begin{document}
+
+\input{chapters/frontmatter}      % title page, preface, roadmap, notation
+\tableofcontents
+\listoffigures
+
+\mainmatter
+%CHAPTERS%
+\input{chapters/ch01_ambient_iot}
+\input{chapters/ch02_overview}
+\input{chapters/ch03_decibels}
+\input{chapters/ch04_antennas}
+\input{chapters/ch05_pathloss}
+\input{chapters/ch06_backscatter}
+\input{chapters/ch07_harvesting}
+\input{chapters/ch08_capacitor}
+\input{chapters/ch09_aloha}
+\input{chapters/ch10_sic}
+\input{chapters/ch11_protocols}
+\input{chapters/ch12_des}
+\input{chapters/ch13_architecture}
+\input{chapters/ch14_coverage}
+\input{chapters/ch15_controller}
+\input{chapters/ch16_bsmodule}
+\input{chapters/ch17_bsengine}
+\input{chapters/ch18_analysis}
+\input{chapters/ch19_experiments}
+\input{chapters/ch20_extending}
+\input{chapters/ch21_limits}
+
+\appendix
+\input{chapters/app_derivations}
+\input{chapters/app_reference}
+\input{chapters/app_paper}
+\input{chapters/app_solutions}
+\input{chapters/app_glossary}
+\input{chapters/app_howto}
+
+\backmatter
+\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

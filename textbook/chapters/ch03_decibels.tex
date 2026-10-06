@@ -1,0 +1,285 @@
+\part{The Physics of Radio and Energy}
+
+\chapter{Decibels, Noise and the Link Budget}
+\label{ch:decibels}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item why radio engineers work in decibels, and how to convert fluently between dB, dBm, dBi and linear units;
+ \item how to write down a \emph{link budget} as a column of additions and subtractions;
+ \item where thermal noise comes from, how to compute the noise floor of a receiver, and the difference between SNR, SINR and \emph{sensitivity};
+ \item why the signal a backscatter receiver wants to detect is almost $\SI{100}{dB}$ weaker than the carrier that produced it.
+\end{itemize}
+\end{defbox}
+
+Every number you will meet in Amber's propagation code is a power, a gain or a
+loss. Before we study how they arise (Chapters~\ref{ch:antennas}--\ref{ch:backscatter}),
+we need a common language for talking about them.
+
+\section{Why a logarithmic scale?}
+
+The powers in a link-budget differ by absurd factors. A base station sector
+may radiate $\SI{46}{dBm}\approx\SI{40}{W}$; a backscattered reply may arrive at
+the same base station with $\SI{-69}{dBm}\approx\SI{0.14}{nW}$. The ratio is
+about $3\times10^{11}$. Worse, every stage between transmitter and receiver
+\emph{multiplies} the power by a gain or loss factor: antenna gain, path loss,
+power split, receiver gain. Working with products of numbers like $10^{-7}$
+invites mistakes. Logarithms turn products into sums and make huge ratios fit
+into small numbers.
+
+\begin{defbox}[Decibel]
+For two powers $P_1$ and $P_2$ the \emph{ratio in decibels} is
+\[
+ \left(\frac{P_2}{P_1}\right)_{\mathrm{dB}} = 10\log_{10}\frac{P_2}{P_1}.
+\]
+For an amplitude (voltage, field) ratio, $20\log_{10}$ is used instead, because
+power is proportional to amplitude squared. A decibel value is always a
+\emph{ratio}; an absolute power needs a reference.
+\end{defbox}
+
+The references we need:
+\begin{itemize}
+ \item \textbf{dBm}: reference $\SI{1}{mW}$. $\Pdbm = 10\log_{10}(P/\SI{1}{mW})$.
+ \item \textbf{dBW}: reference $\SI{1}{W}$; $\Pdbm = P_{\mathrm{dBW}}+30$.
+ \item \textbf{dBi}: antenna gain relative to an \emph{isotropic} radiator
+   (Chapter~\ref{ch:antennas}).
+\end{itemize}
+
+\subsection{The conversion Amber uses}
+
+Amber's three conversion helpers in \file{propagation.py} are one-liners:
+\begin{align}
+ P_{\mathrm{W}} &= 10^{(\Pdbm-30)/10}, && \text{\codew{dbm_to_watts}}\\
+ \Pdbm &= 10\log_{10}\!\big(\max(P_{\mathrm{W}},10^{-15})\big)+30, && \text{\codew{watts_to_dbm}}\\
+ G &= 10^{G_{\mathrm{dBi}}/10}. && \text{\codew{lin_from_dbi}}
+\end{align}
+The ``$-30$'' converts watts to milliwatts: $\SI{1}{W}=\SI{1000}{mW}=30$~dB
+above one milliwatt. Notice the floor $10^{-15}\,\mathrm{W}=\SI{-120}{dBm}$ in
+\codew{watts_to_dbm}: it prevents $\log_{10}0$, but it also means that
+Amber cannot represent any power below $\SI{-120}{dBm}$ (a \emph{power of zero}
+is reported as $\SI{-120}{dBm}$).
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}rrl@{\qquad}rrl@{}}
+\toprule
+dBm & Watts & Where it appears & dBm & Watts & Where it appears\\
+\midrule
+ 46 & \SI{39.8}{W} & demo sector power & $-30$ & \SI{1}{\micro W} & weak energy harvest\\
+ 43 & \SI{20}{W} & \codew{Sector.power} default & $-45.7$ & \SI{27}{nW} & Node~0 uplink RSSI (demo)\\
+ 30 & \SI{1}{W} & paper's BS power & $-60$ & \SI{1}{nW} & \\
+  0 & \SI{1}{mW} & Node~0 downlink (demo) & $-88$ & \SI{1.6}{pW} & thermal noise, \SI{100}{MHz}\\
+$-10$ & \SI{100}{\micro W} & Node~2 downlink (demo) & $-100$ & \SI{0.1}{pW} & sector sensitivity\\
+$-20$ & \SI{10}{\micro W} & & $-120$ & \SI{1}{fW} & Amber's representation floor\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Rules of thumb you should memorise}
+
+\begin{center}
+\small
+\begin{tabular}{@{}rl@{\qquad\qquad}rl@{}}
+\toprule
+$+3$ dB & $\approx\times2$ in power & $+10$ dB & $=\times10$\\
+$-3$ dB & $\approx\times\tfrac12$ & $+20$ dB & $=\times100$\\
+$+6$ dB & $\approx\times4$ & $+30$ dB & $=\times1000$\\
+$0$ dBm & $=\SI{1}{mW}$ & $30$ dBm & $=\SI{1}{W}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{reality}[Never add dBm values]
+Gains and losses \emph{add} in decibels, but \emph{powers} add only in the
+linear domain. Two interferers at $\SI{-70}{dBm}$ and $\SI{-73}{dBm}$ do not
+produce $\SI{-143}{dBm}$ (that would be a \emph{product}, not a sum); they
+produce
+\[
+ 10\log_{10}\!\big(10^{-7}+10^{-7.3}\big)\ \mathrm{dBm}\;=\;\SI{-68.2}{dBm}.
+\]
+Amber follows this rule: \codew{compute_point_to_bs} converts each node's
+power to watts, sums, and converts back to obtain \codew{total_pw_dbm}, and
+\code{apply_sic} converts every power to watts before summing interference.
+\end{reality}
+
+\section{The link budget}
+\label{sec:linkbudget}
+
+A \emph{link budget} is the accounting that carries power from a transmitter to a
+receiver. In decibels it is a simple column of additions:
+\begin{equation}
+ P_{\mathrm{rx}}\,[\mathrm{dBm}] \;=\; P_{\mathrm{tx}}\,[\mathrm{dBm}] \;+\; G_{\mathrm{tx}}\,[\mathrm{dBi}] \;-\; \mathrm{PL}\,[\mathrm{dB}] \;+\; G_{\mathrm{rx}}\,[\mathrm{dBi}]
+ \;-\; L_{\mathrm{other}}\,[\mathrm{dB}].
+\label{eq:linkbudget}
+\end{equation}
+In Amber $L_{\mathrm{other}}$ is the optional \emph{medium attenuation} term (Chapter~\ref{ch:pathloss}); everything
+else maps one-to-one onto the arguments of \codew{compute_rx_power_watts}.
+Link-budget thinking is the single most useful habit for understanding any
+Amber output.
+
+\begin{example}[The demo's downlink and uplink, line by line]
+Consider \textbf{Node~0} of the shipped demos: it stands $\SI{20}{m}$ due north of the
+base station, whose north-facing sector has $P_{\mathrm{tx}}=\SI{46}{dBm}$,
+$G_{\max}=\SI{15}{dBi}$; the node antenna is \SI{0}{dBi}; carrier $\SI{924}{MHz}$; 3GPP UMa
+LOS path loss gives $\mathrm{PL}=\SI{60.08}{dB}$ (Chapter~\ref{ch:pathloss}); the node
+reflects a fraction $\eta=0.7$ ($-1.55$~dB).
+\begin{center}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\multicolumn{3}{@{}l}{\textbf{Downlink} (carrier to node)}\\
+\midrule
+Sector transmit power & +46.00 & dBm\\
+Sector gain toward node (on boresight) & +15.00 & dBi\\
+Path loss & $-60.08$ & dB\\
+Node antenna gain & $+0.00$ & dBi\\
+\midrule
+\textbf{Power arriving at node} $P_{\mathrm{dl}}$ & \textbf{+0.92} & \textbf{dBm}\ ($\SI{1.24}{mW}$)\\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Backscatter uplink}}\\
+\midrule
+Reflected fraction $10\log_{10}0.7$ & $-1.55$ & dB\\
+Node antenna gain (re-radiating) & $+0.00$ & dBi\\
+Path loss (same distance, same model) & $-60.08$ & dB\\
+Sector gain toward node (receiving) & $+15.00$ & dBi\\
+\midrule
+\textbf{Power arriving at base station} $P_{\mathrm{ul}}$ & \textbf{$-45.71$} & \textbf{dBm}\\
+\bottomrule
+\end{tabular}
+\end{center}
+The value $-45.71$ is exactly what the simulator logs in
+\file{broadcast/output/rx_packets.csv} (column \code{rssi_dbm}) for Node~0.
+Repeating the arithmetic for Node~1 ($\SI{30}{m}$, $\mathrm{PL}=\SI{62.10}{dB}$) gives
+$-1.10$ and $-49.74$~dBm, and for Node~2 ($\SI{100}{m}$, $\mathrm{PL}=\SI{71.57}{dB}$) gives $-10.57$ and $-68.69$~dBm,
+again matching the simulator. Notice that the uplink budget contains the
+path loss \emph{twice}: this is the signature of backscatter.
+\end{example}
+
+\section{Thermal noise}
+\label{sec:noise}
+
+Every conductor above absolute zero carries random thermal motion of charge
+carriers; a receiver sees it as noise. The available thermal-noise power in a
+bandwidth $B$ is
+\begin{equation}
+ N_{\mathrm{th}} = k_B T B,\qquad k_B=\SI{1.38e-23}{J/K}.
+\end{equation}
+At the conventional reference temperature $T_0=\SI{290}{K}$,
+$k_BT_0 = \SI{4.0e-21}{W/Hz}$, i.e.
+\[
+ 10\log_{10}\!\frac{4.0\times10^{-21}\,\mathrm{W/Hz}}{10^{-3}\,\mathrm{W}} = \SI{-174}{dBm/Hz}.
+\]
+A real receiver adds noise of its own, summarised by the \emph{noise figure} $F$
+(a ratio $\ge1$; $\mathrm{NF}=10\log_{10}F$): the receiver output has
+$F$ times more noise than an ideal noiseless receiver would have. Hence
+\begin{equation}
+ N \;=\; k_B T_0 B F,\qquad N_{\mathrm{dBm}} = -174 + 10\log_{10}B_{\mathrm{Hz}} + \mathrm{NF}.
+\label{eq:noise}
+\end{equation}
+This is exactly Amber's \codew{thermal_noise_watts(bandwidth_hz, noise_figure_db)},
+with $T_0=\SI{290}{K}$ hard-coded and the paper's defaults $B=\SI{100}{MHz}$,
+$\mathrm{NF}=\SI{6}{dB}$:
+\[
+ N_{\mathrm{dBm}} = -174+80+6=\SI{-88}{dBm}\quad(1.59\times10^{-12}\,\mathrm{W}).
+\]
+
+\section{SNR, SINR and sensitivity}
+\label{sec:sinr}
+
+Whether a receiver can decode a packet depends on how large the wanted signal
+$P_s$ is compared with everything else.
+\begin{defbox}[SNR, SINR]
+\[
+ \mathrm{SNR}=\frac{P_s}{N},\qquad
+ \mathrm{SINR}\;\gamma=\frac{P_s}{\sum_{j\neq s}P_j+N},
+\]
+where the sum runs over \emph{interfering} signals (other nodes' backscatter in
+Amber). Decoding is assumed to succeed when $\gamma\ge\gamma_{\mathrm{req}}$, a threshold determined
+by modulation and coding.
+\end{defbox}
+A related but distinct concept is \emph{sensitivity}: the weakest received power
+at which a receiver can still operate. In a classical receiver
+$S_{\min}=N+\gamma_{\mathrm{req}}$ (plus implementation losses), so sensitivity
+and noise floor are tied together by the bandwidth. \textbf{Amber stores sensitivity as an
+independent threshold}:
+\begin{itemize}
+ \item \codew{Node.sensitivity_dbm} (default $\SI{-45}{dBm}$): the weakest downlink command a node notices;
+ \item \codew{Sector.sensitivity_dbm} (default $\SI{-100}{dBm}$): the weakest backscatter packet a base-station sector can log.
+\end{itemize}
+
+\begin{reality}[Sensitivity and noise are not tied together in Amber]
+With the default $B=\SI{100}{MHz}$, the noise floor is $\SI{-88}{dBm}$, \emph{above}
+the default sector sensitivity of $\SI{-100}{dBm}$. A classical receiver could never
+decode a packet at $\SI{-100}{dBm}$ in $\SI{100}{MHz}$ of noise (its SNR would be
+$-12$~dB). For the two numbers to be consistent with $\gamma_{\mathrm{req}}=\SI{3}{dB}$ the noise bandwidth would have to be
+about $\SI{3.2}{MHz}$ (Exercise~\ref{ex:bwsens}). In the simulator the two thresholds act at different
+places:
+\begin{itemize}
+ \item the \emph{sensitivity} gate drops any packet whose RSSI is below the
+   sector's value;
+ \item the \emph{noise} enters only the SINR computation for \emph{colliding}
+   packets (Chapter~\ref{ch:sic}). A \emph{lone} packet that passes the sensitivity
+   gate is decoded no matter what its SNR is.
+\end{itemize}
+We verified the last point by injecting a single packet at $\SI{-105}{dBm}$
+(SNR $=-17$~dB) into a base station with $\SI{-110}{dBm}$ sensitivity; it was logged as decoded.
+When you use Amber, set \codew{bandwidth_hz} and the sensitivities consistently with each other.
+\end{reality}
+
+\section{The dynamic-range problem of backscatter}
+\label{sec:dynrange}
+
+Look again at the Node~0 budget: the base station \emph{transmits} $+46$~dBm per sector
+and \emph{wants to receive} $-45.7$~dBm; for the farthest demo node the wanted signal
+is $-68.7$~dBm. Between the transmitted carrier and the wanted backscatter lie
+$92$--$115$~dB. A circulator or two separate antennas typically gives
+only of order $20$--$30$~dB of isolation between transmit and receive paths, so
+even the paper's $\SI{+30}{dBm}$ carrier leaks into the receiver at roughly
+$0$ to $+10$~dBm---about $50$~dB \emph{stronger} than the strongest backscatter reply
+in our demos. This
+\emph{self-interference} is the central practical difficulty of backscatter
+readers, and it is the reason the PRDCH structure and the \emph{subcarrier
+shifting} of Chapter~\ref{ch:backscatter} exist: they move the reply into a
+frequency region where the carrier is not.
+
+\begin{codemap}
+\small
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}p{4.4cm}X@{}}
+\toprule
+\normalfont\bfseries Concept & \normalfont\bfseries Code (\file{amber/})\\
+\midrule
+dBm $\leftrightarrow$ W, dBi $\to$ linear & \codew{propagation.dbm_to_watts}, \codew{watts_to_dbm}, \codew{lin_from_dbi}\\
+Link budget, Eq.~\eqref{eq:linkbudget} & \codew{propagation.compute_rx_power_watts}\\
+Noise power, Eq.~\eqref{eq:noise} & \codew{packet_analysis.thermal_noise_watts}\\
+SINR & \codew{packet_analysis.apply_sic}\\
+Sensitivity gates & \codew{backscatter.receive_command} (node), \codew{bsengine._process_rx_buffer} (sector)\\
+\bottomrule
+\end{tabularx}
+\end{codemap}
+
+\section{Chapter summary}
+\begin{itemize}
+ \item Decibels turn the multiplicative chain of gains and losses into a sum; powers in dBm must be converted to linear before being added.
+ \item A link budget $P_{\mathrm{rx}}=P_{\mathrm{tx}}+G_{\mathrm{tx}}-\mathrm{PL}+G_{\mathrm{rx}}$ explains every RSSI in Amber's output; we reproduced the demo's $-45.71$ and $-68.69$~dBm by hand.
+ \item Noise is $N=k_BT_0BF$, giving $\SI{-88}{dBm}$ for $\SI{100}{MHz}$ and $\mathrm{NF}=\SI{6}{dB}$.
+ \item Sensitivity is a configured threshold in Amber, \emph{decoupled} from the noise floor; noise matters only in collisions.
+ \item Backscatter receivers face $\sim\SI{100}{dB}$ between carrier and wanted signal.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}
+Convert: (a) $\SI{33}{dBm}$ to watts; (b) $\SI{2}{\micro W}$ to dBm; (c) $\SI{-97}{dBm}$ to watts.
+\end{exercise}
+\begin{exercise}
+Two co-channel interferers arrive at $-70$ and $\SI{-73}{dBm}$. What is their combined power in dBm? What would it be if there were four equal interferers at $\SI{-73}{dBm}$?
+\end{exercise}
+\begin{exercise}
+Compute the thermal noise floor in dBm for $B=\SI{1}{MHz}$ and $\mathrm{NF}=\SI{8}{dB}$, and for $B=\SI{100}{MHz}$ and $\mathrm{NF}=\SI{6}{dB}$. By how many dB do they differ?
+\end{exercise}
+\begin{exercise}\label{ex:linkbudget1}
+A sector transmits $\SI{30}{dBm}$ with $\SI{17}{dBi}$ toward a node with a $\SI{1}{dBi}$ antenna, over a path loss of $\SI{80}{dB}$. (a) What is the downlink power at the node in dBm and in $\si{\micro W}$? (b) Does it exceed Amber's default node sensitivity of $\SI{-45}{dBm}$? (c) If the node reflects $\eta=0.5$ and the return path has the same loss and the same sector gain toward the node, what uplink power arrives at the base station?
+\end{exercise}
+\begin{exercise}\label{ex:bwsens}
+Show that a receiver with noise figure $\SI{6}{dB}$ has a $\SI{-100}{dBm}$ sensitivity at $\gamma_{\mathrm{req}}=\SI{3}{dB}$ only if its noise bandwidth is about $\SI{3.2}{MHz}$.
+\end{exercise}

@@ -1,0 +1,282 @@
+\part{The Ambient IoT Idea}
+
+\chapter{Why Ambient IoT?}
+\label{ch:intro}
+
+\begin{defbox}[In this chapter you will learn]
+\begin{itemize}
+ \item why batteries, not radios, are the real bottleneck of massive IoT;
+ \item the lineage---RFID, ambient backscatter, cellular IoT---that leads to \emph{3GPP Ambient IoT};
+ \item how 3GPP classifies Ambient IoT devices (A, B, C) and connects them to a network;
+ \item the four properties that make these devices hard to reason about, and in particular the coupling of \emph{energy state} to \emph{communication ability};
+ \item what gap Amber fills, and what questions a simulator of this kind can and cannot answer.
+\end{itemize}
+\end{defbox}
+
+\section{The battery is the bottleneck}
+
+The promise of the Internet of Things is to attach a communicating sensor to
+everything worth measuring: soil moisture in a field, a pallet in a warehouse,
+a strain gauge in a bridge, a temperature probe in a cold chain. Forecasts
+speak of tens of billions of devices. Two properties dominate whether such a
+number is reachable: the \emph{cost} of each device and the \emph{labour} of
+keeping it alive.
+
+Consider the energy budget of the humble coin cell. A typical lithium coin
+cell stores about $\SI{225}{\mAh}$ at $\SI{3}{V}$, that is
+\[
+ E_{\mathrm{cell}} \;=\; 0.225\,\mathrm{Ah}\times 3\,\mathrm{V}\times 3600\,\mathrm{s/h}
+ \;=\; \SI{2430}{J}.
+\]
+\begin{example}[How long does a coin cell last?]
+A sensor whose \emph{average} power draw is $\SI{100}{\micro W}$ drains the cell in
+\[
+ t=\frac{2430\,\mathrm{J}}{100\times10^{-6}\,\mathrm{W}}=2.43\times10^{7}\,\mathrm{s}\approx 281\ \text{days}.
+\]
+At $\SI{10}{\micro W}$ the same cell lasts about $7.7$ years (ignoring
+self-discharge, which in practice shortens this). A cellular radio that
+transmits at $\SI{23}{dBm}\approx\SI{200}{mW}$, even for a fraction of a
+second per day, quickly dominates the budget.
+\end{example}
+Now scale up. A deployment of $10^{6}$ devices with a five-year battery life
+needs, on average, $10^{6}/(5\times365)\approx 548$ battery replacements \emph{per
+day}, each requiring a human to find and open a device that may be inside a
+wall, on a streetlight or in a sealed container. Batteries also contain
+materials one would rather not scatter by the billion. The conclusion is
+simple: for the very largest and cheapest deployments, the only sustainable
+design is a device that needs \emph{no battery to be replaced}.
+
+\begin{keyidea}
+Massive IoT is not limited by how cheaply we can make a radio. It is limited by
+how cheaply we can \emph{power} one for a decade without touching it. Ambient
+IoT attacks the problem at its root: reduce the device's power to the
+microwatt regime and feed it from the environment.
+\end{keyidea}
+
+\section{Three ancestors}
+\label{sec:ancestors}
+
+Ambient IoT did not appear from nowhere. It sits where three technologies
+meet.
+
+\paragraph{RFID.}
+A passive UHF RFID tag contains an antenna and a tiny chip, but no battery. A
+\emph{reader} radiates a continuous wave (the carrier). The tag's antenna
+captures some of that power, a rectifier turns it into a DC supply for the chip,
+and the chip answers by \emph{switching its antenna load} so that the
+reflected carrier is modulated with the tag's data. The idea goes back to
+Stockman's 1948 paper on ``communication by means of reflected power''
+\citep{stockman1948}. Two features of RFID will recur throughout this book:
+\emph{the reader talks first}, and \emph{the tag answers by reflecting}. RFID
+readers inventory many tags using \emph{framed slotted ALOHA} (Chapter~\ref{ch:aloha}).
+
+\paragraph{Ambient backscatter.}
+In 2013 Liu et al.\ showed that devices could communicate by backscattering
+\emph{ambient} signals such as TV broadcasts, with no dedicated reader at all
+\citep{liu2013ambient}. The survey by Huynh et al.\
+\citep{huynh2018ambient}, cited by the Amber paper, organises the field into
+\emph{monostatic}, \emph{bistatic} and \emph{ambient} topologies depending on
+where the carrier comes from (Chapter~\ref{ch:backscatter}).
+
+\paragraph{Cellular IoT.}
+NB-IoT and LTE-M bring standardised, wide-area, secure connectivity to
+low-power devices, but they are \emph{active radios}: they generate their own
+carrier, which costs tens to hundreds of milliwatts while transmitting. They
+therefore need a battery.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}p{2.6cm}XXX@{}}
+\toprule
+ & Passive UHF RFID & 3GPP Ambient IoT & NB-IoT / LTE-M\\
+\midrule
+Energy source & RF from reader & RF, light, \dots\ (+ small storage) & Battery\\
+Uplink radio & Backscatter & Backscatter (or low-power active) & Active transmitter\\
+Typical active power & $\sim$\si{\micro W}--tens of \si{\micro W} & $\sim$\SI{1}{\micro W}--few hundred \si{\micro W} & $\gg$ \si{mW}\\
+Who initiates & Reader & Base station / reader & Device or network\\
+Network & Dedicated readers & Cellular infrastructure & Cellular infrastructure\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\noindent\emph{Orders of magnitude only; the Ambient-IoT column follows the 3GPP design targets quoted below.}
+
+Ambient IoT can be read as ``RFID's energy and backscatter physics, with
+cellular IoT's infrastructure and standardisation''. That combination is what
+3GPP set out to specify.
+
+\section{3GPP's view of Ambient IoT}
+\label{sec:3gpp}
+
+3GPP studied \emph{Ambient IoT} (originally ``ambient power-enabled IoT'') in
+Release~18 and Release~19 and is extending it in Release~20, with the vision
+of carrying it into 6G. The Amber paper cites the overview by L\'opez et al.\
+\citep{lopez2025zero}. Public 3GPP material (the study report TR~38.848, the
+Release-19 solutions study TR~38.769, and the device radio specification
+TS~38.191) defines the following \emph{device categories} by how much energy
+they can store and whether they can generate a radio signal on their own.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}>{\sffamily\bfseries}l>{\raggedright}X>{\raggedright}X>{\raggedright\arraybackslash}X@{}}
+\toprule
+Type & Energy storage & Independent signal generation & Uplink\\
+\midrule
+Device A & none & no & backscatter of an external carrier\\
+Device B & yes (small) & no & backscatter; stored energy may be used to amplify the reflection\\
+Device C & yes (small) & yes (active RF components) & active transmission\\
+\bottomrule
+\end{tabularx}
+\end{center}
+In the Release-19 normative work the focus was on the lowest-power class,
+described in public summaries as a device with \emph{about
+$\SI{1}{\micro W}$ peak power consumption}, some energy storage and an RF
+\emph{envelope-detector} receiver, whose uplink is backscatter on a carrier
+\emph{provided externally} (typically by the base station). Release~20
+extends the scope towards higher-power classes. The storage in B and C is
+\emph{orders of magnitude smaller} than in an NB-IoT device; this smallness is exactly why
+\emph{capacitor} models matter later in this book.
+
+\paragraph{Topologies.}
+The study also considered how devices attach to the network:
+\begin{enumerate}[label=\textbf{T\arabic*.}]
+ \item base station $\leftrightarrow$ Ambient IoT device (direct);
+ \item base station $\leftrightarrow$ \emph{intermediate node} $\leftrightarrow$ device;
+ \item base station $\leftrightarrow$ \emph{assisting node} $\leftrightarrow$ device $\leftrightarrow$ base station, in which a separate node assists the downlink (for example by supplying a carrier) while the device answers the base station directly---a \emph{bistatic}-style arrangement (we describe the roles loosely; consult the report for the exact definition);
+ \item user equipment $\leftrightarrow$ device.
+\end{enumerate}
+Amber implements topology~T1 only: base stations talk directly to nodes, and
+the same base station that radiates the carrier also receives the reflection.
+
+\begin{reality}[Where do Amber's nodes sit in this taxonomy?]
+Amber's \code{Node} carries a \code{node_type} field (``passive'' or
+``active''), but the field is currently \emph{cosmetic}: it only chooses a
+colour when a coverage map is drawn. What really defines an Amber node is its
+behaviour: it has a capacitor (so it has storage), it uplinks by
+reflecting the base station's carrier (no signal generation), and it does not
+amplify the reflection. That makes it closest to a storage-equipped
+backscatter device (3GPP's Device~B / ``type~1''). Note, however, that the
+\emph{example currents} in the shipped demos (a few mA while transmitting;
+see Chapter~\ref{ch:controller}) are far above the microwatt targets of
+Release~19: they model a sensor-class node, not an ultra-low-power tag. All
+such numbers are configurable.
+\end{reality}
+
+\section{Four properties that make these devices hard to reason about}
+\label{sec:fourprops}
+
+It is worth stating, once and clearly, what is \emph{different} about an
+Ambient IoT device from a conventional wireless node. Each property below
+reappears as a design decision inside Amber.
+
+\begin{description}[leftmargin=0.6cm,font=\sffamily\bfseries\color{ablue}]
+ \item[P1 --- Energy intermittency.] The harvested power is tiny (microwatts to
+   a milliwatt) and may vary. The device cannot run continuously; it
+   accumulates charge, wakes up, does a little work and falls asleep again.
+   Whether it is \emph{present} at a given moment is a stochastic process in
+   its own right. (Chapters~\ref{ch:harvest}--\ref{ch:capacitor}.)
+ \item[P2 --- Reflective uplink.] With no oscillator, mixer or power amplifier
+   the device can only \emph{modulate the reflection} of someone else's signal.
+   Its transmit ``power'' is a fraction of what it received, and the signal
+   it creates is subject to the path loss of \emph{both} hops
+   (Chapters~\ref{ch:pathloss} and~\ref{ch:backscatter}).
+ \item[P3 --- Reader-driven medium access.] A device that cannot afford a
+   receiver chain cannot carrier-sense, and without a carrier it cannot
+   transmit at all. The base station therefore sequences everything:
+   commands, reply slots, acknowledgements
+   (Chapters~\ref{ch:aloha}--\ref{ch:protocols}).
+ \item[P4 --- Massive scale and limited visibility.] There may be hundreds of
+   devices per cell, and the base station \emph{cannot observe their energy
+   state}. It sees only whether a reply arrived.
+\end{description}
+
+The Amber abstract compresses the consequence of these four properties into
+one sentence that we will return to repeatedly:
+
+\begin{keyidea}[The central coupling]
+In an Ambient IoT network, \emph{a node's energy state directly determines
+its ability to communicate}.
+\end{keyidea}
+
+Suppose a base station broadcasts a request and expects one hundred replies. If
+sixty devices are momentarily below their activation threshold, the
+protocol sees sixty ``failures'' that are \emph{not} radio failures at all.
+A simulator that models radio but not energy would blame the channel; a
+simulator that models energy but not protocols would not know that anything
+failed. Seeing both at once is what Amber is for.
+
+\section{The simulation gap}
+\label{sec:gap}
+
+Why not just build a testbed? The Amber paper gives the answer in its introduction:
+\emph{the scale of Ambient IoT deployments, combined with unpredictable energy
+availability and limited visibility into device state, makes field testing and
+validation impractical.} Simulation is the natural tool, but existing ones
+leave a gap, which the authors characterise as follows.
+\begin{itemize}
+ \item \textbf{Signal-level simulators} such as Sionna \citep{hoydis2022sionna}
+   and ray-tracing platforms \citep{tarneberg2023raytracing} model the radio
+   channel in great detail but, for lack of energy-harvesting, capacitor and
+   state-dependent power-consumption models, do not support Ambient IoT nodes.
+ \item \textbf{Network simulators} that study MAC and PHY performance
+   typically assume \emph{always-available power}.
+ \item \textbf{Energy-harvesting studies} usually omit protocol-level
+   communication.
+\end{itemize}
+Amber integrates the three missing pieces in one open-source, event-driven
+simulator: \emph{RF energy harvesting, capacitor storage dynamics and
+backscatter communication}. The authors state it is, to their knowledge, the
+first to do so. It lets a researcher ask system-level questions of the form:
+
+\begin{quote}
+\emph{If I put $N$ nodes in this cell, with this antenna, this capacitor and this
+protocol, what fraction of them can I register, how often can each report, and
+what is lost to collisions versus to empty capacitors?}
+\end{quote}
+
+\paragraph{What a system-level simulator is \emph{not}.}
+It is not a bit-accurate PHY simulator: Amber does not simulate waveforms,
+modulation, coding or fading (Chapters~\ref{ch:backscatter} and
+\ref{ch:limits}). It is not hardware-validated either: the paper is a demo
+abstract and reports no comparison with measurements. Treat Amber's numbers as
+\emph{comparisons between designs under shared, explicit assumptions}, not as
+predictions of absolute field performance. Learning to do this honestly is one
+of the goals of this book.
+
+\section{Chapter summary}
+
+\begin{itemize}
+ \item Batteries limit massive IoT; Ambient IoT removes them by combining RF/solar
+   harvesting, small storage and backscatter uplinks.
+ \item 3GPP defines Device~A (no storage, backscatter), B (storage,
+   backscatter), C (storage, active); Release-19 targeted a $\sim\SI{1}{\micro W}$
+   class.
+ \item Four properties---intermittency, reflective uplink, reader-driven access,
+   scale with limited visibility---couple energy to communication.
+ \item Amber closes the gap between signal-level and energy-harvesting studies
+   with a system-level, discrete-event model.
+\end{itemize}
+
+\section*{Exercises}
+\begin{exercise}\label{ex:battery}
+A $\SI{225}{\mAh}$, $\SI{3}{V}$ cell powers a sensor with an average load of
+$\SI{20}{\micro W}$. Estimate the lifetime in years. By what factor must
+the average load fall to reach a $15$-year lifetime?
+\end{exercise}
+\begin{exercise}\label{ex:swaps}
+A city deploys $2\times10^{6}$ battery-powered sensors with a four-year
+battery life. How many replacements per day does the municipality face
+on average? Why might this figure \emph{underestimate} the labour involved?
+\end{exercise}
+\begin{exercise}\label{ex:classify}
+A tag stores energy in a $\SI{100}{\micro F}$ capacitor, backscatters a carrier
+supplied by a base station, and cannot generate any RF signal itself.
+Which 3GPP device category fits best? What would change if it contained a
+local oscillator and a small power amplifier?
+\end{exercise}
+\begin{exercise}\label{ex:reader}
+Explain in three sentences why a device with no energy storage cannot send
+anything when the reader's carrier is absent, and list two protocol-design
+consequences of ``the reader talks first''.
+\end{exercise}
