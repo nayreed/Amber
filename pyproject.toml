@@ -31,4 +31,4 @@ docs = [
 Homepage = "https://github.com/mrnmir/Amber"
 
 [tool.setuptools]
-packages = ["amber"]
+packages = ["amber", "amber.split"]
