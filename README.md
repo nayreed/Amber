@@ -57,6 +57,29 @@ python demo_experiments/custom_protocol/custom_protocol_demo.py  # 12 nodes, use
 Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
 `output/` directory.
 
+## Scenario files and protocols
+
+A scenario can also be a TOML file: the values of a simulation (base stations, Tag groups,
+radio, energy, duration, seed), with the protocol named by `[reader] protocol` and set by
+`[reader.params]`. Each demo has one, such as
+[`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
+keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
+`unicast`, `registration`, `adaptive_aloha`); a protocol of your own is a module that defines a
+`Protocol` subclass as `PROTOCOL`, named in the file by its module path.
+
+Run a scenario file in one process, then write the demos' `rx_packets.csv` and
+`tx_records.csv` from its logs:
+
+```bash
+python -m amber.split.reference demo_experiments/broadcast/broadcast.toml out/
+python -m amber.split.export demo_experiments/broadcast/broadcast.toml out/
+```
+
+A file without a seed draws a new one for every run, as the demos do, and `reference` prints
+it. The same file runs split across processes with
+[amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER),
+which needs a seed in the file.
+
 ## Modules
 
 | Module | Contents |
@@ -69,6 +92,10 @@ Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
 | `backscatter` | Node-side backscatter transmit/receive |
 | `bsengine` | Base station behaviour, downlink scheduling |
 | `packet_analysis` | Collision detection, SIC, throughput and DER statistics |
+| `protocols` | The base station's protocol and the Tag class it needs, chosen by name |
+| `scenario` | Scenarios as TOML files (`load`, `Scenario`) |
+| `output` | The demos' CSV files from any run |
+| `split` | One simulation run as a Reader and one process per Tag |
 
 Full API reference, generated from the source docstrings, is at
 **[mrnmir.github.io/Amber](https://mrnmir.github.io/Amber/)**.

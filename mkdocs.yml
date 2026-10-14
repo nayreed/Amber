@@ -56,6 +56,9 @@ nav:
       - capacitor: api/capacitor.md
       - controller: api/controller.md
       - energy: api/energy.md
+      - output: api/output.md
       - packet_analysis: api/packet_analysis.md
       - propagation: api/propagation.md
+      - protocols: api/protocols.md
       - radiodevices: api/radiodevices.md
+      - scenario: api/scenario.md

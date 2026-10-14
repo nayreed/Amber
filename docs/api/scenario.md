@@ -1,0 +1,3 @@
+# scenario
+
+::: amber.scenario

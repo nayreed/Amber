@@ -24,7 +24,7 @@ exactly at the end of a Reader listening window.
 Amber times must be whole milliseconds: a command or transmission at any other time is refused
 rather than silently moved to the next millisecond.
 
-A scenario is a Python module defining:
+A scenario is a TOML file read by amber.scenario, or a Python module defining:
   SIM_TIME_MS                    simulated duration, as passed to env.run(until=...)
   NODE_IDS                       node ids, in the order one-process Amber builds them
   BS_IDS                         base station ids
@@ -45,19 +45,22 @@ import importlib.util
 import random
 import weakref
 from heapq import heappush
-from types import ModuleType
 from typing import Any, Iterator, List, Optional, Sequence, Tuple
 
 import simpy
 from simpy.events import NORMAL, Initialize, Interruption
 
+from ..scenario import load as load_toml_scenario
 from .proxies import BSProxy, Delivery, TagProxy, Uplink
 
 _SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "build_reader")
 
 
-def load_scenario(path: str) -> ModuleType:
-    """Import a scenario module from a file path and check it defines the expected names."""
+def load_scenario(path: str) -> Any:
+    """Read a scenario: a TOML file (see amber.scenario), or a Python module, which is imported
+    and checked to define the expected names."""
+    if path.endswith(".toml"):
+        return load_toml_scenario(path)
     spec = importlib.util.spec_from_file_location("amber_scenario", path)
     if spec is None:
         raise ValueError(f"cannot load scenario {path}")
@@ -69,7 +72,7 @@ def load_scenario(path: str) -> ModuleType:
     return module
 
 
-def _seed(scenario: ModuleType):
+def _seed(scenario: Any):
     if hasattr(scenario, "SEED"):
         random.seed(scenario.SEED)
 
@@ -79,7 +82,7 @@ SHARED_PHASE = 1
 _RUN_PHASE = -1  # the stop event of env.run(until=...), which plain SimPy also processes first
 
 
-def node_phase(scenario: ModuleType, node_id: int) -> int:
+def node_phase(scenario: Any, node_id: int) -> int:
     """The phase of a node's events: nodes come after the Reader and the shared objects, in NODE_IDS order."""
     return 2 + list(scenario.NODE_IDS).index(node_id)
 
@@ -142,7 +145,7 @@ class PhasedEnvironment(simpy.Environment):
             return super().run(until)
 
 
-def build_one_process(scenario: ModuleType) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
+def build_one_process(scenario: Any) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
     """Build the whole scenario in one environment, in the same order as Amber's demos (shared
     objects, then each node, then the base stations). Returns (env, bs_behaviors,
     backscatter_modules); run it with env.run(until=scenario.SIM_TIME_MS)."""
@@ -177,7 +180,7 @@ def _run_current_ms(env: simpy.Environment):
 class ReaderHost:
     """Runs the scenario's base stations, with TagProxy objects in place of the Tags."""
 
-    def __init__(self, scenario: ModuleType):
+    def __init__(self, scenario: Any):
         self.scenario = scenario
         _seed(scenario)
         self.env = PhasedEnvironment()
@@ -222,7 +225,7 @@ class ReaderHost:
 class TagHost:
     """Runs one node of the scenario, with BSProxy objects in place of the base stations."""
 
-    def __init__(self, scenario: ModuleType, node_id: int):
+    def __init__(self, scenario: Any, node_id: int):
         if node_id not in scenario.NODE_IDS:
             raise ValueError(f"node {node_id} is not in the scenario's NODE_IDS {scenario.NODE_IDS}")
         self.scenario = scenario

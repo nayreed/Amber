@@ -16,6 +16,7 @@ import dataclasses
 import os
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from .. import output
 from . import wire
 from .hosts import ReaderHost, TagHost, load_scenario
 
@@ -37,15 +38,30 @@ def write_reader_logs(output_dir: str, bss):
         _write_csv(os.path.join(output_dir, f"reader_bs{bs.id}_tx.csv"), bs.tx_packets)
 
 
+def write_reader_outputs(output_dir: str, scenario, bss):
+    """Write the files the scenario's protocol adds from its base stations, such as adaptation.csv."""
+    protocol = getattr(scenario, "protocol", None)
+    if protocol is not None:
+        output.write_protocol_outputs(output_dir, protocol, bss)
+
+
 def write_tag_logs(output_dir: str, node_id: int, bsm):
     """Write one node's transmissions and received commands as CSV."""
     _write_csv(os.path.join(output_dir, f"tag{node_id}_tx.csv"), bsm.tx_records)
     _write_csv(os.path.join(output_dir, f"tag{node_id}_rx.csv"), bsm.rx_records)
 
 
+def _load_for_split(scenario_path: str):
+    """The scenario, which must fix its seed: the Reader and every Tag must draw the same numbers."""
+    scenario = load_scenario(scenario_path)
+    if getattr(scenario, "seed_drawn", False):
+        raise ValueError(f"{scenario_path}: a split run needs a seed in [run], the same for the Reader and every Tag")
+    return scenario
+
+
 class ReaderSession:
     def __init__(self, scenario_path: str, block_bytes: int, output_dir: str):
-        self.host = ReaderHost(load_scenario(scenario_path))
+        self.host = ReaderHost(_load_for_split(scenario_path))
         self.block_bytes = block_bytes
         self.output_dir = output_dir
         self._node_ids = list(self.host.scenario.NODE_IDS)
@@ -105,11 +121,12 @@ class ReaderSession:
 
     def finish(self):
         write_reader_logs(self.output_dir, self.host.bss)
+        write_reader_outputs(self.output_dir, self.host.scenario, self.host.bss)
 
 
 class TagSession:
     def __init__(self, scenario_path: str, node_id: int, block_bytes: int, output_dir: str):
-        self.host = TagHost(load_scenario(scenario_path), node_id)
+        self.host = TagHost(_load_for_split(scenario_path), node_id)
         self.node_id = node_id
         self.block_bytes = block_bytes
         self.output_dir = output_dir

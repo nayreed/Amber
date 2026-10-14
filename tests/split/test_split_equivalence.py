@@ -57,8 +57,8 @@ def run_split(path):
 
 
 class SplitEquivalenceTest(unittest.TestCase):
-    def check(self, name, directory=SCENARIO_DIR):
-        path = os.path.join(directory, name + ".py")
+    def check(self, name, directory=SCENARIO_DIR, ext=".py"):
+        path = os.path.join(directory, name + ext)
         ref_bss, ref_bsms = run_one_process(path)
         bss, bsms = run_split(path)
 
@@ -90,6 +90,11 @@ class SplitEquivalenceTest(unittest.TestCase):
     def test_single_node(self):
         self.check("single_node")
 
+    def test_toml_scenarios(self):
+        for name in ("broadcast", "unicast", "registration", "adaptive_aloha", "single_node"):
+            with self.subTest(name):
+                self.check(name, ext=".toml")
+
     # Amber's four demos, as demo_experiments/split has them
     def test_demo_broadcast(self):
         self.check("broadcast", DEMO_DIR)
@@ -107,8 +112,8 @@ class SplitEquivalenceTest(unittest.TestCase):
 class SessionTest(unittest.TestCase):
     """The block protocol amber-reader and amber-tag run, without rfsim: same result as one process."""
 
-    def run_sessions(self, name, out):
-        path = os.path.join(SCENARIO_DIR, name + ".py")
+    def run_sessions(self, name, out, ext=".py"):
+        path = os.path.join(SCENARIO_DIR, name + ext)
         reader = ReaderSession(path, BLOCK_BYTES, out)
         tags = [TagSession(path, node_id, BLOCK_BYTES, out) for node_id in load_scenario(path).NODE_IDS]
         # An empty block first, as from a Tag that has just connected.
@@ -130,10 +135,10 @@ class SessionTest(unittest.TestCase):
             tag.finish()
         return reader, tags
 
-    def check(self, name):
-        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ".py"))
+    def check(self, name, ext=".py"):
+        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ext))
         with tempfile.TemporaryDirectory() as out:
-            reader, tags = self.run_sessions(name, out)
+            reader, tags = self.run_sessions(name, out, ext)
             self.assertEqual(ref_bss[0].rx_packets, reader.host.bss[0].rx_packets)
             self.assertEqual(ref_bss[0].tx_packets, reader.host.bss[0].tx_packets)
             for ref, tag in zip(ref_bsms, tags):
@@ -153,10 +158,20 @@ class SessionTest(unittest.TestCase):
     def test_adaptive_aloha_twelve_tags(self):
         self.check("adaptive_aloha")
 
+    def test_toml_scenarios(self):
+        for name in ("registration", "adaptive_aloha"):
+            with self.subTest(name):
+                self.check(name, ".toml")
+
     def test_reference_writes_the_same_files(self):
+        for ext in (".py", ".toml"):
+            with self.subTest(ext):
+                self.check_reference_files(ext)
+
+    def check_reference_files(self, ext):
         with tempfile.TemporaryDirectory() as split_out, tempfile.TemporaryDirectory() as ref_out:
-            self.run_sessions("registration", split_out)
-            reference.run(os.path.join(SCENARIO_DIR, "registration.py"), ref_out)
+            self.run_sessions("registration", split_out, ext)
+            reference.run(os.path.join(SCENARIO_DIR, "registration" + ext), ref_out)
             names = sorted(os.listdir(split_out))
             self.assertEqual(names, sorted(os.listdir(ref_out)))
             self.assertIn("tag3_tx.csv", names)
