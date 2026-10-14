@@ -16,6 +16,7 @@ SIM_TIME_MS = 6_001
 N_NODES = 12
 NODE_IDS = list(range(N_NODES))
 BS_IDS = [0]
+SEED = 12345
 CAPACITANCE = 300e-6
 NODE_MIN_R = 5.0
 NODE_MAX_R = 40.0
@@ -28,7 +29,7 @@ LAYOUT_SEED = 7
 class AdaptiveAlohaNode(backscatter.BackscatterModule):
     def handle_command(self, cmd, bs_id, data):
         if cmd == "collect":
-            self.chosen_slot_idx = random.randint(0, len(self.rx_slots) - 1) if self.rx_slots else -1
+            self.chosen_slot_idx = self.rng.randint(0, len(self.rx_slots) - 1) if self.rx_slots else -1
             self.state = "active"
             self.last_tx_command_time = self.env.now
 
@@ -69,7 +70,7 @@ def build_shared(env):
 
 
 def build_tag(env, shared, node_id):
-    return demo_common.build_node(env, shared, node_id, CAPACITANCE, module_cls=AdaptiveAlohaNode)
+    return demo_common.build_node(env, shared, node_id, CAPACITANCE, SEED, module_cls=AdaptiveAlohaNode)
 
 
 def build_reader(env, tags):

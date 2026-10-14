@@ -2,7 +2,8 @@
 """Block-by-block sessions driven by amber-reader and amber-tag.
 
 The C programs exchange one block per simulated millisecond over rfsim and pass every block
-through these sessions. Messages (see wire.py):
+through these sessions: the Reader sends one block to all Tags and gets one block back from each
+Tag. Messages (see wire.py):
   Reader -> Tags   {"t": "idle"} until every Tag has said hello, then {"t": "ms", "ms": n, "cmds": ...}
                    for n = 0 .. SIM_TIME_MS - 1, then {"t": "end"}
   Tag -> Reader    {"t": "hello"} while idle, {"t": "up", "ms": n, "up": ...} for each millisecond,
@@ -13,7 +14,7 @@ Every Tag message also carries "node". When the run is over each side writes its
 import csv
 import dataclasses
 import os
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import wire
 from .hosts import ReaderHost, TagHost, load_scenario
@@ -34,11 +35,8 @@ class ReaderSession:
         self.host = ReaderHost(load_scenario(scenario_path))
         self.block_bytes = block_bytes
         self.output_dir = output_dir
-        node_ids = self.host.scenario.NODE_IDS
-        # rfsim adds up what all Tags write, so the Reader can only tell one Tag's message apart.
-        if len(node_ids) != 1:
-            raise ValueError(f"over rfsim the Reader can hear only one Tag; the scenario has {len(node_ids)} nodes")
-        self._missing = set(node_ids)
+        self._node_ids = list(self.host.scenario.NODE_IDS)
+        self._missing = set(self._node_ids)
         self._ms: Optional[int] = None
         self._ending = False
 
@@ -52,28 +50,45 @@ class ReaderSession:
             msg = {"t": "ms", "ms": self._ms, "cmds": wire.encode_deliveries(self.host.run_ms(self._ms))}
         return wire.frame(msg, self.block_bytes)
 
-    def on_block(self, block: bytes) -> bool:
-        """Take the Tags' answer to the last block; True once the run is over."""
-        msg = wire.unframe(block)
+    def on_blocks(self, blocks: Sequence[bytes]) -> bool:
+        """Take the block each connected Tag answered the last block with; True once the run is over.
+
+        Empty blocks, from a Tag that has just connected, are ignored. Once every node of the
+        scenario has said hello, every node must answer every block exactly once."""
+        by_node = self._by_node([msg for msg in map(wire.unframe, blocks) if msg is not None])
         if self._ms is None:
-            if msg is not None and msg["t"] == "hello":
-                if msg["node"] not in self.host.scenario.NODE_IDS:
-                    raise ValueError(f"node {msg['node']} said hello but is not in the scenario")
-                self._missing.discard(msg["node"])
-                if not self._missing:
-                    self._ms = 0
+            self._missing -= {node for node, msg in by_node.items() if msg["t"] == "hello"}
+            if not self._missing:
+                self._ms = 0
             return False
-        if msg is None:
-            raise RuntimeError(f"no answer from the Tag at {self._ms} ms")
+        missing = [node for node in self._node_ids if node not in by_node]
+        if missing:
+            raise RuntimeError(f"no answer from nodes {missing} at {self._ms} ms")
         if self._ending:
-            if msg["t"] != "bye":
-                raise RuntimeError(f"expected bye from node {msg['node']}, got {msg['t']}")
+            for node, msg in by_node.items():
+                if msg["t"] != "bye":
+                    raise RuntimeError(f"expected bye from node {node}, got {msg['t']}")
             return True
-        if msg["t"] != "up" or msg["ms"] != self._ms:
-            raise RuntimeError(f"expected node {msg['node']}'s answer for {self._ms} ms, got {msg['t']} {msg.get('ms')}")
-        self.host.apply_uplinks(self._ms, wire.decode_uplinks(msg["up"], msg["node"]))
+        uplinks = []
+        for node in self._node_ids:
+            msg = by_node[node]
+            if msg["t"] != "up" or msg["ms"] != self._ms:
+                raise RuntimeError(f"expected node {node}'s answer for {self._ms} ms, got {msg['t']} {msg.get('ms')}")
+            uplinks += wire.decode_uplinks(msg["up"], node)
+        self.host.apply_uplinks(self._ms, uplinks)
         self._ms += 1
         return False
+
+    def _by_node(self, msgs: List[Dict]) -> Dict[int, Dict]:
+        by_node: Dict[int, Dict] = {}
+        for msg in msgs:
+            node = msg["node"]
+            if node not in self._node_ids:
+                raise ValueError(f"node {node} answered but is not in the scenario")
+            if node in by_node:
+                raise RuntimeError(f"two Tags answered as node {node} at {self._ms} ms")
+            by_node[node] = msg
+        return by_node
 
     def finish(self):
         for bs in self.host.bss:

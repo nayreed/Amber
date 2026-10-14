@@ -13,6 +13,7 @@ import demo_common  # noqa: E402
 SIM_TIME_MS = 8_001
 NODE_IDS = [0, 1, 2]
 BS_IDS = [0]
+SEED = 12345
 CAPACITANCE = 300e-6
 SCHEDULE = [("tx", 5, "cmd", {"target": -1, "cmd": "send_data"})] + [("rx", 10, "listen") for _ in range(2)]
 
@@ -28,7 +29,7 @@ def build_shared(env):
 
 
 def build_tag(env, shared, node_id):
-    bsm = demo_common.build_node(env, shared, node_id, CAPACITANCE)
+    bsm = demo_common.build_node(env, shared, node_id, CAPACITANCE, SEED)
     bsm.state = "registered"
     return bsm
 

@@ -1,6 +1,5 @@
 # tests/split/scenarios/single_node.py
-"""One node going through Amber's built-in protocol (send_id, ack, send_data): the scenario a
-Reader can run over rfsim, which adds up what all Tags write and so lets it hear one Tag."""
+"""One node going through Amber's built-in protocol (send_id, ack, send_data)."""
 
 import os
 import sys
@@ -26,7 +25,7 @@ def build_shared(env):
 
 
 def build_tag(env, shared, node_id):
-    return demo_common.build_node(env, shared, node_id, CAPACITANCE)
+    return demo_common.build_node(env, shared, node_id, CAPACITANCE, SEED)
 
 
 def build_reader(env, tags):

@@ -3,10 +3,9 @@
 messages every millisecond, produces exactly what build_one_process() produces: the whole scenario
 in one environment, with the same event order.
 
-All hosts run in this process and share Python's global random generator, as one-process Amber's
-nodes do. Each millisecond the harness hands out commands to every Tag before stepping any of
-them, which is the order one-process Amber consumes random numbers in, so the comparison is exact
-even for protocols that draw random slots.
+Every node in the scenarios draws from its own random generator. The split runs reseed Python's
+global generator before every Tag step and step the Tags in reverse order, as separate processes
+would leave it in any state, so a node that still drew from it would make the comparison fail.
 """
 
 import os
@@ -31,23 +30,29 @@ def run_one_process(path):
     return bss, bsms
 
 
+def scramble_global_random(node_id, ms):
+    """Leave Python's global generator as an unrelated process might have it."""
+    random.seed(f"other process {node_id} {ms}")
+
+
 def run_split(path):
-    random.seed(SEED)
     reader = ReaderHost(load_scenario(path))
-    # Same construction order as build_one_process(), so construction-time random draws match.
     tags = []
-    for node_id in reader.scenario.NODE_IDS:
+    for node_id in reversed(reader.scenario.NODE_IDS):
+        scramble_global_random(node_id, -1)
         tags.append(TagHost(load_scenario(path), node_id))
     for ms in range(reader.scenario.SIM_TIME_MS):
         down = wire.frame({"cmds": wire.encode_deliveries(reader.run_ms(ms))}, BLOCK_BYTES)
+        ups = {}
         for tag in tags:
+            scramble_global_random(tag.node_id, ms)
             tag.deliver(ms, wire.decode_deliveries(wire.unframe(down)["cmds"], tag.node_id))
+            ups[tag.node_id] = wire.frame({"up": wire.encode_uplinks(tag.step(ms))}, BLOCK_BYTES)
         uplinks = []
-        for tag in tags:
-            up = wire.frame({"up": wire.encode_uplinks(tag.step(ms))}, BLOCK_BYTES)
-            uplinks += wire.decode_uplinks(wire.unframe(up)["up"], tag.node_id)
+        for node_id in reader.scenario.NODE_IDS:
+            uplinks += wire.decode_uplinks(wire.unframe(ups[node_id])["up"], node_id)
         reader.apply_uplinks(ms, uplinks)
-    return reader.bss, [tag.bsm for tag in tags]
+    return reader.bss, sorted((tag.bsm for tag in tags), key=lambda bsm: bsm.node.id)
 
 
 class SplitEquivalenceTest(unittest.TestCase):
@@ -88,31 +93,80 @@ class SplitEquivalenceTest(unittest.TestCase):
 class SessionTest(unittest.TestCase):
     """The block protocol amber-reader and amber-tag run, without rfsim: same result as one process."""
 
-    def test_reader_and_tag_sessions(self):
-        path = os.path.join(SCENARIO_DIR, "single_node.py")
-        ref_bss, ref_bsms = run_one_process(path)
-        random.seed(SEED)
-        with tempfile.TemporaryDirectory() as out:
-            reader = ReaderSession(path, BLOCK_BYTES, out)
-            tag = TagSession(path, 0, BLOCK_BYTES, out)
-            # A few idle blocks first, as when the Tag connects after the Reader started.
-            self.assertFalse(reader.on_block(bytes(BLOCK_BYTES)))
-            done = False
-            while not done:
-                answer, tag_done = tag.reply(reader.next_block())
-                done = reader.on_block(answer)
-                self.assertEqual(done, tag_done)
-            reader.finish()
+    def run_sessions(self, name, out):
+        path = os.path.join(SCENARIO_DIR, name + ".py")
+        reader = ReaderSession(path, BLOCK_BYTES, out)
+        tags = [TagSession(path, node_id, BLOCK_BYTES, out) for node_id in load_scenario(path).NODE_IDS]
+        # An empty block first, as from a Tag that has just connected.
+        self.assertFalse(reader.on_blocks([bytes(BLOCK_BYTES)]))
+        done = False
+        while not done:
+            block = reader.next_block()
+            answers, tags_done = [], []
+            # The Reader gets the Tags' blocks in whatever order rfsim has their connections.
+            for tag in reversed(tags):
+                scramble_global_random(tag.node_id, reader.host.env.now)
+                answer, tag_done = tag.reply(block)
+                answers.append(answer)
+                tags_done.append(tag_done)
+            done = reader.on_blocks(answers)
+            self.assertEqual(tags_done, [done] * len(tags))
+        reader.finish()
+        for tag in tags:
             tag.finish()
+        return reader, tags
+
+    def check(self, name):
+        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ".py"))
+        with tempfile.TemporaryDirectory() as out:
+            reader, tags = self.run_sessions(name, out)
             self.assertEqual(ref_bss[0].rx_packets, reader.host.bss[0].rx_packets)
-            self.assertEqual(ref_bsms[0].tx_records, tag.host.bsm.tx_records)
+            self.assertEqual(ref_bss[0].tx_packets, reader.host.bss[0].tx_packets)
+            for ref, tag in zip(ref_bsms, tags):
+                self.assertEqual(ref.tx_records, tag.host.bsm.tx_records)
+                self.assertEqual(ref.rx_records, tag.host.bsm.rx_records)
             with open(os.path.join(out, "reader_bs0_rx.csv")) as f:
                 self.assertEqual(len(f.readlines()), len(ref_bss[0].rx_packets) + 1)
-            self.assertTrue(os.path.exists(os.path.join(out, "tag0_tx.csv")))
+            for tag in tags:
+                self.assertTrue(os.path.exists(os.path.join(out, f"tag{tag.node_id}_tx.csv")))
 
-    def test_reader_refuses_several_tags(self):
-        with self.assertRaises(ValueError):
-            ReaderSession(os.path.join(SCENARIO_DIR, "broadcast.py"), BLOCK_BYTES, ".")
+    def test_single_node(self):
+        self.check("single_node")
+
+    def test_registration_four_tags(self):
+        self.check("registration")
+
+    def test_adaptive_aloha_twelve_tags(self):
+        self.check("adaptive_aloha")
+
+    def started_reader(self):
+        """A Reader of the 4-node registration scenario that has heard every hello."""
+        path = os.path.join(SCENARIO_DIR, "registration.py")
+        reader = ReaderSession(path, BLOCK_BYTES, ".")
+        tags = [TagSession(path, node_id, BLOCK_BYTES, ".") for node_id in load_scenario(path).NODE_IDS]
+        idle = reader.next_block()
+        self.assertFalse(reader.on_blocks([tag.reply(idle)[0] for tag in tags]))
+        return reader, tags
+
+    def test_missing_tag_is_an_error(self):
+        reader, tags = self.started_reader()
+        block = reader.next_block()
+        with self.assertRaisesRegex(RuntimeError, "no answer"):
+            reader.on_blocks([tag.reply(block)[0] for tag in tags[1:]])
+
+    def test_two_tags_with_one_node_id_are_an_error(self):
+        reader, tags = self.started_reader()
+        block = reader.next_block()
+        answers = [tag.reply(block)[0] for tag in tags]
+        with self.assertRaisesRegex(RuntimeError, "two Tags"):
+            reader.on_blocks(answers + answers[:1])
+
+    def test_unknown_node_is_an_error(self):
+        path = os.path.join(SCENARIO_DIR, "registration.py")
+        reader = ReaderSession(path, BLOCK_BYTES, ".")
+        stranger = wire.frame({"t": "hello", "node": 99}, BLOCK_BYTES)
+        with self.assertRaisesRegex(ValueError, "not in the scenario"):
+            reader.on_blocks([stranger])
 
 
 class WireTest(unittest.TestCase):

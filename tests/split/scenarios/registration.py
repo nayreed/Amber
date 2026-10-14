@@ -13,6 +13,7 @@ import demo_common  # noqa: E402
 SIM_TIME_MS = 8_001
 NODE_IDS = [0, 1, 2, 3]
 BS_IDS = [0]
+SEED = 12345
 CAPACITANCE = 200e-6
 SCHEDULE = ([("tx", 5, "cmd", {"target": -1, "cmd": "send_id"})] + [("rx", 10, "listen") for _ in range(3)]
             + [("tx", 5, "ack_slot", {"cmd": "ack"}), ("tx", 5, "cmd", {"target": -1, "cmd": "send_data"})]
@@ -26,7 +27,7 @@ def build_shared(env):
 
 
 def build_tag(env, shared, node_id):
-    return demo_common.build_node(env, shared, node_id, CAPACITANCE)
+    return demo_common.build_node(env, shared, node_id, CAPACITANCE, SEED)
 
 
 def build_reader(env, tags):

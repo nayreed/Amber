@@ -2,6 +2,7 @@
 """Building blocks shared by the test scenarios, taken from Amber's demo_experiments."""
 
 import os
+import random
 
 import amber
 from amber import backscatter, capacitor, controller, energy, propagation, radiodevices
@@ -48,11 +49,18 @@ def build_shared(env, bs, groups):
     return per_node
 
 
-def build_node(env, shared, node_id, capacitance, module_cls=backscatter.BackscatterModule):
-    """One node's Capacitor, BackscatterModule and Controller, in the demos' order."""
+def node_rng(seed, node_id) -> random.Random:
+    """The node's own random generator, the same in every process that builds the node."""
+    return random.Random(f"{seed}/{node_id}")
+
+
+def build_node(env, shared, node_id, capacitance, seed, module_cls=backscatter.BackscatterModule):
+    """One node's Capacitor, BackscatterModule and Controller, in the demos' order, drawing from
+    the node's own random generator."""
     node, dl, ul, cov = shared[node_id]
+    rng = node_rng(seed, node_id)
     cap = capacitor.Capacitor(env=env, id=node.id, params=cap_params(capacitance), initial_voltage=0.0)
-    bsm = module_cls(env=env, node=node, bs_processes=[], uplink_results=ul, downlink_results=dl)
+    bsm = module_cls(env=env, node=node, bs_processes=[], uplink_results=ul, downlink_results=dl, rng=rng)
     controller.Controller(env=env, capacitor_ctrl=cap, node=node, params=CONTROLLER_PARAMS, backscatter=bsm,
-                          coverage_map=cov, downlink_results=dl)
+                          coverage_map=cov, downlink_results=dl, rng=rng)
     return bsm
