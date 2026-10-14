@@ -30,6 +30,19 @@ def _write_csv(path: str, records):
             writer.writerow(dataclasses.asdict(record))
 
 
+def write_reader_logs(output_dir: str, bss):
+    """Write each base station's received and sent packets as CSV."""
+    for bs in bss:
+        _write_csv(os.path.join(output_dir, f"reader_bs{bs.id}_rx.csv"), bs.rx_packets)
+        _write_csv(os.path.join(output_dir, f"reader_bs{bs.id}_tx.csv"), bs.tx_packets)
+
+
+def write_tag_logs(output_dir: str, node_id: int, bsm):
+    """Write one node's transmissions and received commands as CSV."""
+    _write_csv(os.path.join(output_dir, f"tag{node_id}_tx.csv"), bsm.tx_records)
+    _write_csv(os.path.join(output_dir, f"tag{node_id}_rx.csv"), bsm.rx_records)
+
+
 class ReaderSession:
     def __init__(self, scenario_path: str, block_bytes: int, output_dir: str):
         self.host = ReaderHost(load_scenario(scenario_path))
@@ -91,9 +104,7 @@ class ReaderSession:
         return by_node
 
     def finish(self):
-        for bs in self.host.bss:
-            _write_csv(os.path.join(self.output_dir, f"reader_bs{bs.id}_rx.csv"), bs.rx_packets)
-            _write_csv(os.path.join(self.output_dir, f"reader_bs{bs.id}_tx.csv"), bs.tx_packets)
+        write_reader_logs(self.output_dir, self.host.bss)
 
 
 class TagSession:
@@ -126,6 +137,4 @@ class TagSession:
         return wire.frame(answer, self.block_bytes), done
 
     def finish(self):
-        bsm = self.host.bsm
-        _write_csv(os.path.join(self.output_dir, f"tag{self.node_id}_tx.csv"), bsm.tx_records)
-        _write_csv(os.path.join(self.output_dir, f"tag{self.node_id}_rx.csv"), bsm.rx_records)
+        write_tag_logs(self.output_dir, self.node_id, self.host.bsm)

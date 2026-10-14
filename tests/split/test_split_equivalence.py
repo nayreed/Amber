@@ -13,7 +13,7 @@ import random
 import tempfile
 import unittest
 
-from amber.split import wire
+from amber.split import reference, wire
 from amber.split.hosts import ReaderHost, TagHost, build_one_process, load_scenario
 from amber.split.session import ReaderSession, TagSession
 
@@ -138,6 +138,17 @@ class SessionTest(unittest.TestCase):
 
     def test_adaptive_aloha_twelve_tags(self):
         self.check("adaptive_aloha")
+
+    def test_reference_writes_the_same_files(self):
+        with tempfile.TemporaryDirectory() as split_out, tempfile.TemporaryDirectory() as ref_out:
+            self.run_sessions("registration", split_out)
+            reference.run(os.path.join(SCENARIO_DIR, "registration.py"), ref_out)
+            names = sorted(os.listdir(split_out))
+            self.assertEqual(names, sorted(os.listdir(ref_out)))
+            self.assertIn("tag3_tx.csv", names)
+            for name in names:
+                with open(os.path.join(split_out, name)) as a, open(os.path.join(ref_out, name)) as b:
+                    self.assertEqual(a.read(), b.read(), name)
 
     def started_reader(self):
         """A Reader of the 4-node registration scenario that has heard every hello."""
