@@ -1,7 +1,7 @@
 # simulator/models/controller.py
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import random
 import simpy
 
@@ -57,6 +57,8 @@ class Controller:
                         .internal_time (s), and responds to interrupts:
                         'capacitor_discharge', 'capacitor_charging', 'capacitor_full'
       - backscatter: has .state, .controller_tx_ready(sensor_data), .do_transmit(tx_info)
+      - rng: the node's own random.Random for the startup delay and sensed values, or None
+             for Python's global generator (see BackscatterModule)
     """
 
     def __init__(
@@ -69,8 +71,10 @@ class Controller:
         coverage_map=None,
         downlink_results=None,
         keep_logs: bool = True,  # if False, skip per-step diagnostic logging (flat memory)
+        rng: Optional[random.Random] = None,
     ):
         self.env = env
+        self.rng = rng if rng is not None else random
         self.id = node.id
         self.node = node
 
@@ -103,7 +107,7 @@ class Controller:
 
         # startup delay (s)
         self.startup_delay_s = (
-            random.randrange(0, max(1, self.p.max_startup_time_ms)) / 1000.0
+            self.rng.randrange(0, max(1, self.p.max_startup_time_ms)) / 1000.0
         )
 
         # current logging buckets (for optional analytics)
@@ -168,7 +172,7 @@ class Controller:
             self._enter_charge_and_discharge(c.sensing)
             # produce a sensed value (stub)
 
-            self.sensed_value = random.randint(100, 255)
+            self.sensed_value = self.rng.randint(100, 255)
             assert self.sensed_value != 0
             if self.counter >= d.sensing:
                 self.state_name = "processing"

@@ -34,6 +34,11 @@ class BackscatterModule:
 
     Works with Controller - Controller handles energy/timing,
     BackscatterModule handles protocol.
+
+    Random slot choices come from ``rng``: a ``random.Random`` owned by this
+    node, or Python's global generator when it is None. A node with its own
+    generator draws the same numbers whatever the other nodes do, so a run
+    split across processes reproduces a one-process run.
     """    
 
     def __init__(
@@ -46,9 +51,11 @@ class BackscatterModule:
         # params: BackscatterParams = None,
         log_file: Optional[str] = None, 
         keep_logs: bool = True,  # if False, skip storing per-packet rx/tx records (flat memory)
+        rng: Optional[random.Random] = None,
     ):
         self.env = env
         self.node = node
+        self.rng = rng if rng is not None else random
         self.bs_processes = list(bs_processes) if bs_processes else []
         self.uplink_results = uplink_results or {}
         self.downlink_results = downlink_results or {}
@@ -157,7 +164,7 @@ class BackscatterModule:
                 self.rx_slots = []
                 return
             if self.rx_slots:
-                self.chosen_slot_idx = random.randint(0, len(self.rx_slots) - 1)
+                self.chosen_slot_idx = self.rng.randint(0, len(self.rx_slots) - 1)
             else:
                 self.chosen_slot_idx = -1
             self.state = "wait_ack"
@@ -181,7 +188,7 @@ class BackscatterModule:
                     if target == self.node.id:
                         self.chosen_slot_idx = len(self.rx_slots) - 1  # Unicast: pick earliest slot deterministically
                     else:
-                        self.chosen_slot_idx = random.randint(0, len(self.rx_slots) - 1)  # Broadcast: random
+                        self.chosen_slot_idx = self.rng.randint(0, len(self.rx_slots) - 1)  # Broadcast: random
                 else:
                     self.chosen_slot_idx = -1
                 self.last_tx_command_time = self.env.now
