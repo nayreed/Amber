@@ -1,6 +1,7 @@
 # tests/split/test_split_equivalence.py
 """Checks that a scenario split into a ReaderHost and one TagHost per node, exchanging framed
-messages every millisecond, produces exactly what one-process Amber produces.
+messages every millisecond, produces exactly what build_one_process() produces: the whole scenario
+in one environment, with the same event order.
 
 All hosts run in this process and share Python's global random generator, as one-process Amber's
 nodes do. Each millisecond the harness hands out commands to every Tag before stepping any of
@@ -12,8 +13,6 @@ import os
 import random
 import tempfile
 import unittest
-
-import simpy
 
 from amber.split import wire
 from amber.split.hosts import ReaderHost, TagHost, build_one_process, load_scenario
@@ -27,8 +26,7 @@ SEED = 12345
 def run_one_process(path):
     scenario = load_scenario(path)
     random.seed(SEED)
-    env = simpy.Environment()
-    bss, bsms = build_one_process(scenario, env)
+    env, bss, bsms = build_one_process(scenario)
     env.run(until=scenario.SIM_TIME_MS)
     return bss, bsms
 

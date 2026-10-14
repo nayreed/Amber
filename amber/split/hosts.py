@@ -7,8 +7,19 @@ Per millisecond n, the exchange is:
   2. TagHost.deliver(n, cmds)    each Tag receives its commands at n, before its own events at n.
   3. TagHost.step(n)             each Tag processes its events at n; returns its transmissions.
   4. ReaderHost.apply_uplinks()  the Reader receives them at n through Amber's own interrupt path.
-This is the order one-process Amber uses when the Reader's event at n was scheduled before the
-Tags' (the usual case); test_split_equivalence checks it against one-process runs.
+
+Both hosts run on a PhasedEnvironment, which processes the events of one millisecond in a fixed
+order: the Reader's, then those of the objects the Tags share, then each node's in NODE_IDS order.
+build_one_process() runs the whole scenario on the same kind of environment; it is the reference
+a split run equals, which test_split_equivalence checks. It differs from steps 1 to 4 only in when
+the Reader handles a transmission: right after the node made it, before the next node's events.
+That cannot change what the next node does, since the Reader may not send a command while
+receiving (apply_uplinks refuses it).
+
+Plain SimPy, which Amber's demos use, orders events of the same time by when they were
+scheduled, mixing the Reader's and the Tags'. A one-process run on it can differ from a split run
+when a Reader event and a Tag event fall in the same millisecond, for example a transmission
+exactly at the end of a Reader listening window.
 
 Amber times must be whole milliseconds: a command or transmission at any other time is refused
 rather than silently moved to the next millisecond.
@@ -22,17 +33,23 @@ A scenario is a Python module defining:
                                  the BackscatterModule (its bs_processes are set by the host)
   build_reader(env, tags)        the BSBehavior list, given the Tags as backscatter_modules
 and optionally:
-  SEED                           seed for Python's random generator, set before building. Amber
-                                 draws from that one generator for all nodes, so a split run
-                                 matches a one-process run only when each process has one node.
+  SEED                           seed for Python's global random generator, set before building.
+
+Give every node its own random generator (the rng argument of BackscatterModule and Controller).
+A node drawing from the global generator gets numbers that depend on what every other node in
+the same process drew, so a run split across processes cannot match a one-process run.
 """
 
+import contextlib
 import importlib.util
 import random
+import weakref
+from heapq import heappush
 from types import ModuleType
-from typing import Any, List, Sequence, Tuple
+from typing import Any, Iterator, List, Optional, Sequence, Tuple
 
 import simpy
+from simpy.events import NORMAL, Initialize, Interruption
 
 from .proxies import BSProxy, Delivery, TagProxy, Uplink
 
@@ -57,16 +74,91 @@ def _seed(scenario: ModuleType):
         random.seed(scenario.SEED)
 
 
-def build_one_process(scenario: ModuleType, env: simpy.Environment) -> Tuple[List[Any], List[Any]]:
+READER_PHASE = 0
+SHARED_PHASE = 1
+_RUN_PHASE = -1  # the stop event of env.run(until=...), which plain SimPy also processes first
+
+
+def node_phase(scenario: ModuleType, node_id: int) -> int:
+    """The phase of a node's events: nodes come after the Reader and the shared objects, in NODE_IDS order."""
+    return 2 + list(scenario.NODE_IDS).index(node_id)
+
+
+class PhasedEnvironment(simpy.Environment):
+    """A SimPy environment that orders the events of the same time by phase, then as SimPy does
+    (priority, then the order they were scheduled in).
+
+    The phase of an event is the phase of the process it interrupts, for an interrupt; otherwise
+    the phase of the running process, or when no process runs, of the event being processed, or
+    of the enclosing in_phase() block. A new process takes the phase it is created in.
+
+    This relies on the layout of SimPy 4's event queue: (time, priority, id, event) tuples, with
+    the priority here replaced by (phase, priority).
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._process_phase: "weakref.WeakKeyDictionary[simpy.Process, int]" = weakref.WeakKeyDictionary()
+        self._block_phase: Optional[int] = None
+        self._step_phase: Optional[int] = None
+
+    @contextlib.contextmanager
+    def in_phase(self, phase: int) -> Iterator[None]:
+        """Give the processes and events created in this block, outside any process, this phase."""
+        outer, self._block_phase = self._block_phase, phase
+        try:
+            yield
+        finally:
+            self._block_phase = outer
+
+    def _current_phase(self) -> int:
+        if self.active_process is not None:
+            return self._process_phase[self.active_process]
+        if self._step_phase is not None:
+            return self._step_phase
+        if self._block_phase is not None:
+            return self._block_phase
+        raise RuntimeError("an event was scheduled outside any process and any in_phase() block, so its phase is unknown")
+
+    def schedule(self, event: simpy.Event, priority=NORMAL, delay=0) -> None:
+        if isinstance(event, Interruption):
+            phase = self._process_phase[event.process]
+        else:
+            phase = self._current_phase()
+            if isinstance(event, Initialize):
+                # The first event of a new process, which resumes it.
+                self._process_phase[event.callbacks[0].__self__] = phase
+        heappush(self._queue, (self._now + delay, (phase, priority), next(self._eid), event))
+
+    def step(self) -> None:
+        self._step_phase = self._queue[0][1][0] if self._queue else None
+        try:
+            super().step()
+        finally:
+            self._step_phase = None
+
+    def run(self, until=None):
+        with self.in_phase(_RUN_PHASE):
+            return super().run(until)
+
+
+def build_one_process(scenario: ModuleType) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
     """Build the whole scenario in one environment, in the same order as Amber's demos (shared
-    objects, then each node, then the base stations). Returns (bs_behaviors, backscatter_modules)."""
+    objects, then each node, then the base stations). Returns (env, bs_behaviors,
+    backscatter_modules); run it with env.run(until=scenario.SIM_TIME_MS)."""
     _seed(scenario)
-    shared = scenario.build_shared(env)
-    bsms = [scenario.build_tag(env, shared, node_id) for node_id in scenario.NODE_IDS]
-    bss = scenario.build_reader(env, bsms)
+    env = PhasedEnvironment()
+    with env.in_phase(SHARED_PHASE):
+        shared = scenario.build_shared(env)
+    bsms = []
+    for node_id in scenario.NODE_IDS:
+        with env.in_phase(node_phase(scenario, node_id)):
+            bsms.append(scenario.build_tag(env, shared, node_id))
+    with env.in_phase(READER_PHASE):
+        bss = scenario.build_reader(env, bsms)
     for bsm in bsms:
         bsm.bs_processes = list(bss)
-    return bss, bsms
+    return env, bss, bsms
 
 
 def _advance_to(env: simpy.Environment, ms: int):
@@ -88,10 +180,11 @@ class ReaderHost:
     def __init__(self, scenario: ModuleType):
         self.scenario = scenario
         _seed(scenario)
-        self.env = simpy.Environment()
+        self.env = PhasedEnvironment()
         self._deliveries: List[Delivery] = []
         self.tags = [TagProxy(node_id, self._deliveries) for node_id in scenario.NODE_IDS]
-        self.bss = scenario.build_reader(self.env, self.tags)
+        with self.env.in_phase(READER_PHASE):
+            self.bss = scenario.build_reader(self.env, self.tags)
         self._bs_by_id = {bs.id: bs for bs in self.bss}
         if sorted(self._bs_by_id) != sorted(scenario.BS_IDS):
             raise ValueError(f"build_reader returned base stations {sorted(self._bs_by_id)}, BS_IDS is {scenario.BS_IDS}")
@@ -135,11 +228,13 @@ class TagHost:
         self.scenario = scenario
         self.node_id = node_id
         _seed(scenario)
-        self.env = simpy.Environment()
+        self.env = PhasedEnvironment()
         self._uplinks: List[Uplink] = []
         self.bss = [BSProxy(bs_id, self._uplinks) for bs_id in scenario.BS_IDS]
-        shared = scenario.build_shared(self.env)
-        self.bsm = scenario.build_tag(self.env, shared, node_id)
+        with self.env.in_phase(SHARED_PHASE):
+            shared = scenario.build_shared(self.env)
+        with self.env.in_phase(node_phase(scenario, node_id)):
+            self.bsm = scenario.build_tag(self.env, shared, node_id)
         self.bsm.bs_processes = list(self.bss)
 
     def deliver(self, ms: int, deliveries: Sequence[Delivery]):
