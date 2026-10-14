@@ -18,6 +18,7 @@ from amber.split.hosts import ReaderHost, TagHost, build_one_process, load_scena
 from amber.split.session import ReaderSession, TagSession
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments", "split")
 BLOCK_BYTES = 8192
 SEED = 12345
 
@@ -56,8 +57,8 @@ def run_split(path):
 
 
 class SplitEquivalenceTest(unittest.TestCase):
-    def check(self, name):
-        path = os.path.join(SCENARIO_DIR, name + ".py")
+    def check(self, name, directory=SCENARIO_DIR):
+        path = os.path.join(directory, name + ".py")
         ref_bss, ref_bsms = run_one_process(path)
         bss, bsms = run_split(path)
 
@@ -88,6 +89,19 @@ class SplitEquivalenceTest(unittest.TestCase):
 
     def test_single_node(self):
         self.check("single_node")
+
+    # Amber's four demos, as demo_experiments/split has them
+    def test_demo_broadcast(self):
+        self.check("broadcast", DEMO_DIR)
+
+    def test_demo_broadcast_sic(self):
+        self.check("broadcast_sic", DEMO_DIR)
+
+    def test_demo_unicast(self):
+        self.check("unicast", DEMO_DIR)
+
+    def test_demo_custom_protocol(self):
+        self.check("custom_protocol", DEMO_DIR)
 
 
 class SessionTest(unittest.TestCase):
