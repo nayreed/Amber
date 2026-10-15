@@ -2,7 +2,9 @@
 """Amber's custom_protocol demo (demo_experiments/custom_protocol), adaptive framed-slotted ALOHA, as
 an amber.split scenario with its settings unchanged. The node layout is drawn as the demo draws it,
 from random.seed(7), so the nodes stand where they stand in the demo; each node then picks its
-slots from its own random generator instead of Python's global one."""
+slots from its own random generator instead of Python's global one.
+
+LAYOUT_SEED places the nodes and SEED seeds the run, so a run with another SEED keeps the layout."""
 
 import math
 import os
@@ -19,6 +21,7 @@ N_NODES = 12
 NODE_IDS = list(range(N_NODES))
 BS_IDS = [0]
 SEED = 7
+LAYOUT_SEED = 7
 CAPACITANCE = 300e-6
 NODE_MIN_R = 5.0
 NODE_MAX_R = 40.0
@@ -61,7 +64,7 @@ def adaptive_aloha_policy(bs):
 
 
 def build_shared(env):
-    layout = random.Random(SEED)
+    layout = random.Random(LAYOUT_SEED)
     nodes = []
     for i in NODE_IDS:
         r = layout.uniform(NODE_MIN_R, NODE_MAX_R)
