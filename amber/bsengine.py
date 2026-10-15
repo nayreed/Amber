@@ -208,8 +208,8 @@ class BSBehavior:
         this frame) and any other BS state to decide the next frame — this is
         where "ack or not", "register or not", and frame adaptation live.
 
-        A command and the RX slots it advertises should be placed in the SAME
-        frame, so that the RX-slot lookahead (_get_next_rx_slots) can see them.
+        A command advertises the RX slots that follow it in the SAME frame, up
+        to the frame's next TX entry (see _get_next_rx_slots).
         """
         for frame in self.policy(self):
             if not frame:
@@ -426,25 +426,48 @@ class BSBehavior:
         # nodes_pending_ack is populated here, cleared after acks are sent
 
 
-    # def _get_next_rx_slots(self, num_slots: int, start_after_ms: float) -> List[Tuple[float, float]]:
     def _get_next_rx_slots(self, start_after_ms: float) -> List[Tuple[float, float]]:
-        """Look ahead in the schedule to find RX slots in next 2 frames
+        """The RX slots a command sent now advertises: those after the current TX entry, up to the
+        next TX entry.
+
+        A TX entry sends a new command (or acks), which replaces the slots a node holds, so a slot
+        after it could never be used by the node that picked it. A looping schedule continues into
+        the next frame when the current one has no TX entry left; a policy frame or a schedule that
+        does not loop ends with the frame.
 
         Parameters
         ----------
         start_after_ms : float
-            Only include slots starting after this time
+            Only include slots starting at or after this time
 
         Returns
         -------
         List[Tuple[float, float]]
             List of (start_ms, end_ms) tuples for upcoming RX slots
-        """        
+        """
         rx_slots = []
         schedule_len = len(self.schedule)
-
         if schedule_len == 0:
             return rx_slots
+        wraps = self.loop and self.policy is None
+
+        idx = self._schedule_idx
+        frame_offset = 0  # how many full frames ahead idx is
+        for _ in range(schedule_len - 1):
+            idx += 1
+            if idx == schedule_len:
+                if not wraps:
+                    break
+                idx = 0
+                frame_offset += 1
+            mode, duration_ms = self.schedule[idx][0], self.schedule[idx][1]
+            if mode == "tx":
+                break
+            time_in_frame = sum(self.schedule[i][1] for i in range(idx))
+            slot_start = self._frame_start_ms + frame_offset * self._frame_duration_ms + time_in_frame
+            if mode == "rx" and slot_start >= start_after_ms:
+                rx_slots.append((slot_start, slot_start + duration_ms))
+        return rx_slots
 
         # Start from current position in schedule
         idx = self._schedule_idx
@@ -556,10 +579,7 @@ class BSBehavior:
         """        
         cmd_data = dict(payload)
 
-        # Find upcoming RX slots and include in command
-        # num_rx_slots can be specified in payload, defaults to 10
-        # num_rx_slots = payload.get("num_rx_slots", 10)
-        # rx_slots = self._get_next_rx_slots(num_rx_slots, self.env.now + tx_duration_ms)
+        # The RX slots up to the next command, after this TX slot
         rx_slots = self._get_next_rx_slots(self.env.now + tx_duration_ms)
         if target != -1:
             rx_slots = rx_slots[:1]
