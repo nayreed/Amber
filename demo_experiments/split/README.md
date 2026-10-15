@@ -8,6 +8,10 @@ and one process per Tag gives exactly the results the same scenario gives in one
 demos themselves seed nothing (custom_protocol seeds only its node layout, which is kept), so
 their own output files are one sample, not a reference.
 
+`SEED` seeds a run: every node's generator and, through amber.split, Python's global one. Change it to
+draw another sample. custom_protocol places its nodes from a separate `LAYOUT_SEED`, so its layout
+stays the demo's whatever `SEED` is. `tests/split/test_seeds.py` checks both.
+
 One process, the reference:
 
     python3 -m amber.split.reference demo_experiments/split/broadcast.py out_ref
