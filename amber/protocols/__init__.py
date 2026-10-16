@@ -3,7 +3,22 @@
 
 A protocol is a subclass of Protocol, exported as PROTOCOL by its module. A scenario names one of
 Amber's own by its module name (``broadcast``, ``unicast``, ``registration``,
-``adaptive_aloha``) or any other by its full module path, such as ``my_package.my_protocol``.
+``adaptive_aloha``, ``gen2_q``) or any other by its full module path, such as
+``my_package.my_protocol``.
+
+A base station runs either a static schedule or a policy: a generator that yields one frame at a
+time, each a list of (mode, duration_ms, slot_id[, payload]) entries. The policy resumes once the
+whole frame has played out, and can then read on the BSBehavior:
+
+- ``decoded_this_frame``: the node ids decoded in this frame;
+- ``slot_results``: one SlotResult per listening slot of this frame, empty slots included, with the
+  node ids it decoded, how many packets collided, and ``empty``, ``success`` and ``collision``
+  (a slot can hold a decoded and a collided packet at once, which ``collision`` counts);
+- ``total_collided``: collided packets since the start of the run.
+
+A protocol has two shapes. One command and many slots per frame (``adaptive_aloha``) decides once
+per frame. One command and one slot per frame (``gen2_q``) decides after every slot, at the cost
+of a command before every slot, as Gen2's QueryRep is.
 """
 
 import importlib

@@ -64,8 +64,10 @@ radio, energy, duration, seed), with the protocol named by `[reader] protocol` a
 `[reader.params]`. Each demo has one, such as
 [`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
 keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
-`unicast`, `registration`, `adaptive_aloha`); a protocol of your own is a module that defines a
-`Protocol` subclass as `PROTOCOL`, named in the file by its module path.
+`unicast`, `registration`, `adaptive_aloha`, `gen2_q`). A new protocol goes there too: a module
+that defines a `Protocol` subclass as `PROTOCOL`, named in the file by its module name. The
+`amber.protocols` docstring says what a policy can read between frames, and how a protocol
+decides after every slot (`gen2_q`).
 
 Run a scenario file in one process, then write the demos' `rx_packets.csv` and
 `tx_records.csv` from its logs:

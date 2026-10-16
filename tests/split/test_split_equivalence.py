@@ -83,7 +83,7 @@ class SplitEquivalenceTest(unittest.TestCase):
             self.assertEqual(ref.acks_received, got.acks_received)
 
     def test_scenarios(self):
-        for name in ("broadcast", "unicast", "registration", "adaptive_aloha", "single_node"):
+        for name in ("broadcast", "unicast", "registration", "adaptive_aloha", "single_node", "gen2_q"):
             with self.subTest(name):
                 self.check(os.path.join(SCENARIO_DIR, name + ".toml"))
 
