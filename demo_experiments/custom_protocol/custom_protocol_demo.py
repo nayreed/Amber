@@ -62,12 +62,12 @@ class AdaptiveAlohaNode(backscatter.BackscatterModule):
             self.chosen_slot_idx = (
                 random.randint(0, len(self.rx_slots) - 1) if self.rx_slots else -1
             )
-            self.state = "active"
+            self.state = "registered"  # the controller senses data only for registered Tags
             self.last_tx_command_time = self.env.now
 
     # Called when the node's chosen slot comes up; returning None transmits nothing.
     def build_tx_payload(self, sensor_data):
-        if self.state == "active":
+        if self.state == "registered":
             return {"type": "data", "payload": sensor_data}
         return None
 

@@ -72,6 +72,8 @@ Every Tag is a `BackscatterModule` (or the protocol's subclass of it), driven by
 | `self.state` | The Tag's protocol state. The built-in protocol uses `"idle"`, `"wait_ack"` and `"registered"`. |
 | `self.rng` | The Tag's own random generator. |
 
+**A Tag hears commands only while it is on.** While its capacitor is charging (at the start, or after it dropped below the low threshold) the controller is off and `receive_command` ignores everything, so the Tag keeps the slots and state it had.
+
 A Tag only transmits when all of these hold:
 1. its capacitor has enough charge, so the controller is on;
 2. it got a command, and `chosen_slot_idx` points to one of that command's slots;
@@ -167,7 +169,7 @@ Each Tag that hears it answers in a random slot.
 
 A one-slot dead band above the target stops `n` from flipping back and forth. `n` starts at `start_slots`.
 
-**Tags.** `AdaptiveAlohaNode` answers `collect` and sets its state to `"active"`. Because the controller only senses in `"registered"`, **its payloads are all 0**. Delivery counts and collisions are right, but the data values aren't (see [Pitfalls](#pitfalls)).
+**Tags.** `AdaptiveAlohaNode` answers `collect` in a random slot and becomes `registered` on its first `collect`, so its controller senses data and every answer carries a sensed value.
 
 **Parameters:**
 
@@ -320,8 +322,8 @@ The protocols here use at most 1.3 KB with 250 Tags. A protocol that sends every
 
 ## Pitfalls
 
-- **Use the state `"registered"` if your Tags should send real data.** The controller only senses when `bsm.state == "registered"`. In any other state `sensor_data` is 0. `adaptive_aloha` is an example: its Tags use `"active"`, so every payload it delivers is 0. Set the state in `setup_tag` or in `handle_command`.
-- **Tags hear commands even with no energy.** `receive_command` only checks that the signal is strong enough, not whether the Tag is switched on. So a Tag with an empty capacitor still updates its slot, its state, or a counter like gen2_q's. Real passive Tags can't do that, so protocols that keep state from slot to slot look a little better here than they would in reality.
+- **Use the state `"registered"` if your Tags should send real data.** The controller only senses when `bsm.state == "registered"`. In any other state `sensor_data` is 0. Set the state in `setup_tag` (as broadcast and gen2_q do) or in `handle_command` (as adaptive_aloha does).
+- **A Tag that was off missed what was sent meanwhile.** It wakes up with the slots and state it had before. A protocol whose Tags count something per command (like gen2_q's slot counter) should expect Tags whose count is out of step, as with real Tags. Real Gen2 Tags also forget such state when power drops; Amber's Tags don't, unless the protocol does it.
 - **Set `last_tx_command_time`** when the Tag should answer. Without it the Tag never transmits, and a slot that started before that time is treated as stale.
 - **A command sent to specific Tags offers only one slot.** Pick index 0.
 - **The `random` module looks fine in one process.** It only goes wrong when split. The conformance test catches it.

@@ -65,6 +65,10 @@ class BackscatterModule:
 
         self.state = "idle"  # idle, wait_ack, registered
 
+        # Whether the Tag has power to decode a command; its Controller sets this every millisecond.
+        # A module without a Controller stays powered.
+        self.powered: bool = True
+
         # RX slot timing (set by BS command)
         # List of (start_ms, end_ms) tuples for upcoming RX windows
         self.rx_slots: List[Tuple[float, float]] = []
@@ -116,6 +120,10 @@ class BackscatterModule:
             # Signal too weak, ignore command
             return
 
+        # A Tag without power (charging, or below its low threshold) cannot decode anything
+        if not self.powered:
+            return
+
         # Log
         if self.keep_logs:
             self.rx_records.append(
@@ -139,7 +147,7 @@ class BackscatterModule:
         """Decide how this node reacts to a base-station command.
 
         Called by receive_command() after the framework has applied the
-        sensitivity gate, logged the reception, and stored data["rx_slots"]
+        sensitivity gate and checked that the Tag is powered, logged the reception, and stored data["rx_slots"]
         into self.rx_slots. Override in a subclass to implement your own
         protocol; you can define arbitrary command strings on the BS side and
         dispatch on them here. The default implementation is the built-in

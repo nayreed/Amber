@@ -18,17 +18,18 @@ from .base import Protocol
 
 
 class AdaptiveAlohaNode(backscatter.BackscatterModule):
-    """A Tag that answers a collect command in a random slot of the advertised frame."""
+    """A Tag that answers a collect command in a random slot of the advertised frame, with data
+    it sensed (it becomes registered on its first collect, so its controller senses)."""
 
     def handle_command(self, cmd, bs_id, data):
         if cmd == "collect":
             # rx_slots holds the frame the base station advertised; with none, stay silent.
             self.chosen_slot_idx = self.rng.randint(0, len(self.rx_slots) - 1) if self.rx_slots else -1
-            self.state = "active"
+            self.state = "registered"  # the controller senses data only for registered Tags
             self.last_tx_command_time = self.env.now
 
     def build_tx_payload(self, sensor_data):
-        if self.state == "active":
+        if self.state == "registered":
             return {"type": "data", "payload": sensor_data}
         return None
 
