@@ -19,6 +19,17 @@ whole frame has played out, and can then read on the BSBehavior:
 A protocol has two shapes. One command and many slots per frame (``adaptive_aloha``) decides once
 per frame. One command and one slot per frame (``gen2_q``) decides after every slot, at the cost
 of a command before every slot, as Gen2's QueryRep is.
+
+A new protocol goes in this package, and must run the same split across processes (the Reader
+and each Tag in its own, as OAI's amber-reader and amber-tag run it) as in one process:
+
+- a Tag draws its random numbers from ``self.rng``, its own generator, never from the random
+  module, whose numbers depend on what else ran in the same process;
+- command payloads and what a Tag sends are JSON values (numbers, strings, lists, dicts), and
+  every duration is a whole number of milliseconds.
+
+tests/split/test_protocol_conformance.py finds every module here and checks both, by running it
+with its default parameters in one process and split, and by reading it for the random module.
 """
 
 import importlib

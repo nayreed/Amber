@@ -31,8 +31,8 @@ def load(path):
     return scenario.load(path, {"run.seed": SEED}) if s.seed_drawn else s
 
 
-def run_one_process(path):
-    s = load(path)
+def run_one_process(path, loader=None):
+    s = (loader or load)(path)
     random.seed(SEED)
     env, bss, bsms = build_one_process(s)
     env.run(until=s.SIM_TIME_MS)
@@ -44,12 +44,13 @@ def scramble_global_random(node_id, ms):
     random.seed(f"other process {node_id} {ms}")
 
 
-def run_split(path):
-    reader = ReaderHost(load(path))
+def run_split(path, loader=None):
+    loader = loader or load
+    reader = ReaderHost(loader(path))
     tags = []
     for node_id in reversed(reader.scenario.NODE_IDS):
         scramble_global_random(node_id, -1)
-        tags.append(TagHost(load(path), node_id))
+        tags.append(TagHost(loader(path), node_id))
     for ms in range(reader.scenario.SIM_TIME_MS):
         down = wire.frame({"cmds": wire.encode_deliveries(reader.run_ms(ms))}, BLOCK_BYTES)
         ups = {}
