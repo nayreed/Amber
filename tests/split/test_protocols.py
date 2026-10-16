@@ -1,6 +1,6 @@
 # tests/split/test_protocols.py
-"""Checks amber.protocols: each protocol gives the schedule the scenarios had written out, checks
-its parameters, and a scenario can name a protocol of its own by module path."""
+"""Checks amber.protocols: each protocol gives the schedule it documents, checks its parameters, and
+a scenario can name a protocol of its own by module path."""
 
 import importlib
 import os
@@ -11,39 +11,41 @@ import unittest
 
 from amber import protocols
 from amber.protocols.adaptive_aloha import AdaptiveAlohaNode
-from amber.split.hosts import load_scenario
-
-SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments", "split")
 
 
-def schedule_of(path):
-    return load_scenario(path).SCHEDULE
+def tx(cmd, target=-1):
+    return ("tx", 5, "cmd", {"target": target, "cmd": cmd})
+
+
+def rx(n, ms=10):
+    return [("rx", ms, "listen") for _ in range(n)]
+
+
+ACK = ("tx", 5, "ack_slot", {"cmd": "ack"})
 
 
 class ScheduleTest(unittest.TestCase):
-    """The schedules the Python scenarios list, made by the protocols from their parameters."""
+    """The schedules the protocols make from their parameters."""
 
     def args(self, name, params, node_ids=(0, 1, 2)):
         return protocols.load(name, params, list(node_ids)).reader_args()
 
     def test_broadcast(self):
-        self.assertEqual(self.args("broadcast", {}),
-                         {"schedule": schedule_of(os.path.join(SCENARIO_DIR, "broadcast.py")), "loop": True})
+        self.assertEqual(self.args("broadcast", {}), {"schedule": [tx("send_data")] + rx(2), "loop": True})
         self.assertEqual(self.args("broadcast", {"slots": 3, "rx_ms": 15})["schedule"],
-                         schedule_of(os.path.join(DEMO_DIR, "broadcast_sic.py")))
+                         [tx("send_data")] + rx(3, 15))
 
     def test_unicast(self):
         self.assertEqual(self.args("unicast", {}),
-                         {"schedule": schedule_of(os.path.join(SCENARIO_DIR, "unicast.py")), "loop": True})
+                         {"schedule": [step for n in (0, 1, 2) for step in [tx("send_data", n)] + rx(1)], "loop": True})
         schedule = self.args("unicast", {}, (4, 2))["schedule"]
         self.assertEqual([step[3]["target"] for step in schedule if step[0] == "tx"], [4, 2])
 
     def test_registration(self):
-        self.assertEqual(self.args("registration", {})["schedule"],
-                         schedule_of(os.path.join(SCENARIO_DIR, "registration.py")))
+        self.assertEqual(self.args("registration", {}),
+                         {"schedule": [tx("send_id")] + rx(3) + [ACK, tx("send_data")] + rx(2), "loop": True})
         self.assertEqual(self.args("registration", {"id_slots": 2})["schedule"],
-                         schedule_of(os.path.join(SCENARIO_DIR, "single_node.py")))
+                         [tx("send_id")] + rx(2) + [ACK, tx("send_data")] + rx(2))
 
     def test_adaptive_aloha_uses_its_tag_class_and_a_policy(self):
         protocol = protocols.load("adaptive_aloha", {}, [0, 1])

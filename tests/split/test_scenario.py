@@ -1,6 +1,6 @@
 # tests/split/test_scenario.py
-"""Checks amber.scenario: each TOML scenario runs exactly as the Python scenario it replaces, and
-a file that is not a valid scenario is refused with a message naming the key."""
+"""Checks amber.scenario: seeds, Tag placement and settings, and that a file that is not a valid
+scenario is refused with a message naming the key."""
 
 import copy
 import math
@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 from amber import scenario
-from amber.split.hosts import SHARED_PHASE, PhasedEnvironment, build_one_process, load_scenario
+from amber.split.hosts import SHARED_PHASE, PhasedEnvironment, build_one_process
 from amber.split.session import ReaderSession, TagSession
 
 try:
@@ -33,52 +33,6 @@ def run(s):
 def base_data():
     with open(BASE, "rb") as f:
         return tomllib.load(f)
-
-
-class TomlMatchesPythonTest(unittest.TestCase):
-    """The TOML scenarios against the Python ones they replace, with the same seed: same packets,
-    same records, same state, in the same order."""
-
-    def check(self, py_path, toml_path, history_unit=None):
-        py = load_scenario(py_path)
-        toml = scenario.load(toml_path, {"run.seed": py.SEED})
-        self.assertEqual((toml.SIM_TIME_MS, toml.NODE_IDS, toml.BS_IDS),
-                         (py.SIM_TIME_MS, list(py.NODE_IDS), list(py.BS_IDS)))
-        random.seed(0)
-        ref_bss, ref_bsms = run(py)
-        random.seed(0)
-        bss, bsms = run(toml)
-        self.assertGreater(sum(len(bs.rx_packets) for bs in ref_bss), 0)
-        for ref, got in zip(ref_bss, bss):
-            self.assertEqual(ref.rx_packets, got.rx_packets)
-            self.assertEqual(ref.tx_packets, got.tx_packets)
-            self.assertEqual(ref.nodes_registered, got.nodes_registered)
-            self.assertEqual(ref.nodes_pending_ack, got.nodes_pending_ack)
-            ref_history = [(t if history_unit is None else t / history_unit,) + tuple(rest)
-                           for t, *rest in getattr(ref, "adapt_history", [])]
-            self.assertEqual(ref_history, [tuple(h) for h in getattr(got, "adapt_history", [])])
-        for ref, got in zip(ref_bsms, bsms):
-            self.assertIs(type(ref).__name__, type(got).__name__)
-            self.assertEqual(ref.tx_records, got.tx_records)
-            self.assertEqual(ref.rx_records, got.rx_records)
-            self.assertEqual(ref.state, got.state)
-            self.assertEqual(ref.acks_received, got.acks_received)
-            self.assertEqual((ref.node.x, ref.node.y), (got.node.x, got.node.y))
-
-    def test_scenarios(self):
-        for name in ("broadcast", "unicast", "registration", "single_node"):
-            with self.subTest(name):
-                self.check(os.path.join(SCENARIO_DIR, name + ".py"), os.path.join(SCENARIO_DIR, name + ".toml"))
-
-    def test_adaptive_aloha(self):
-        # The Python scenario keeps the frame times in ms, the protocol in s as the demo does.
-        self.check(os.path.join(SCENARIO_DIR, "adaptive_aloha.py"), os.path.join(SCENARIO_DIR, "adaptive_aloha.toml"),
-                   history_unit=1000.0)
-
-    def test_demos(self):
-        for name in ("broadcast", "broadcast_sic", "unicast", "custom_protocol"):
-            with self.subTest(name):
-                self.check(os.path.join(DEMO_DIR, "split", name + ".py"), os.path.join(DEMO_DIR, name, name + ".toml"))
 
 
 class SeedTest(unittest.TestCase):

@@ -1,22 +1,22 @@
 # tests/split/test_seeds.py
-"""Checks the seeds of Amber's four demos as demo_experiments/split has them: SEED decides a run,
-and changing it changes what the nodes draw but not where they stand (custom_protocol takes its
-layout from LAYOUT_SEED)."""
+"""Checks the seeds of Amber's four demos as their TOML files have them: [run] seed decides a run,
+and changing it changes what the nodes draw but not where they stand (custom_protocol places its
+nodes from the layout's own seed)."""
 
 import os
 import unittest
 
-from amber.split.hosts import build_one_process, load_scenario
+from amber import scenario
+from amber.split.hosts import build_one_process
 
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments", "split")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
 DEMOS = ("broadcast", "broadcast_sic", "unicast", "custom_protocol")
 RUN_MS = 5000  # long enough for every demo to transmit
 
 
 def run(name, seed):
-    scenario = load_scenario(os.path.join(DEMO_DIR, name + ".py"))
-    scenario.SEED = seed
-    env, bss, bsms = build_one_process(scenario)
+    s = scenario.load(os.path.join(DEMO_DIR, name, name + ".toml"), {"run.seed": seed})
+    env, bss, bsms = build_one_process(s)
     env.run(until=RUN_MS)
     layout = [(bsm.node.id, bsm.node.x, bsm.node.y) for bsm in bsms]
     return layout, [bs.rx_packets for bs in bss], [bsm.tx_records for bsm in bsms]
@@ -37,10 +37,6 @@ class SeedTest(unittest.TestCase):
                 self.assertGreater(sum(map(len, tx)), 0)
                 self.assertNotEqual(tx, other_tx)
                 self.assertNotEqual(rx, other_rx)
-
-    def test_custom_protocol_layout_is_the_demos(self):
-        scenario = load_scenario(os.path.join(DEMO_DIR, "custom_protocol.py"))
-        self.assertEqual((scenario.SEED, scenario.LAYOUT_SEED), (7, 7))
 
 
 if __name__ == "__main__":

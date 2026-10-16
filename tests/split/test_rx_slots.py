@@ -7,10 +7,14 @@ import unittest
 
 import simpy
 
-from amber import bsengine, radiodevices
-from amber.split.hosts import build_one_process, load_scenario
+from amber import bsengine, radiodevices, scenario
+from amber.split.hosts import build_one_process
 
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments", "split")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
+
+
+def load_demo(name):
+    return scenario.load(os.path.join(DEMO_DIR, name, name + ".toml"), {"run.seed": 12345})
 
 
 class Recorder:
@@ -60,8 +64,7 @@ class DemoTest(unittest.TestCase):
     """In Amber's demos every advertised slot ends before the Reader's next command."""
 
     def check(self, name, slots_per_command):
-        scenario = load_scenario(os.path.join(DEMO_DIR, name + ".py"))
-        env, bss, bsms = build_one_process(scenario)
+        env, bss, bsms = build_one_process(load_demo(name))
         seen = []
         for bsm in bsms:
             receive = bsm.receive_command
@@ -90,8 +93,8 @@ class DemoTest(unittest.TestCase):
         self.check("unicast", {1})
 
     def test_custom_protocol(self):
-        scenario = load_scenario(os.path.join(DEMO_DIR, "custom_protocol.py"))
-        self.check("custom_protocol", set(range(scenario.MIN_SLOTS, scenario.MAX_SLOTS + 1)))
+        params = load_demo("custom_protocol").protocol.params
+        self.check("custom_protocol", set(range(params["min_slots"], params["max_slots"] + 1)))
 
 
 if __name__ == "__main__":

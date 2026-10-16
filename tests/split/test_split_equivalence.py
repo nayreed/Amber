@@ -13,21 +13,29 @@ import random
 import tempfile
 import unittest
 
+from amber import scenario
 from amber.split import reference, wire
 from amber.split.hosts import ReaderHost, TagHost, build_one_process, load_scenario
 from amber.split.session import ReaderSession, TagSession
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments", "split")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
 BLOCK_BYTES = 8192
 SEED = 12345
 
 
+def load(path):
+    """The scenario, with SEED when the file has none (the demos' own files), so the Reader and every
+    Tag draw the same numbers."""
+    s = scenario.load(path)
+    return scenario.load(path, {"run.seed": SEED}) if s.seed_drawn else s
+
+
 def run_one_process(path):
-    scenario = load_scenario(path)
+    s = load(path)
     random.seed(SEED)
-    env, bss, bsms = build_one_process(scenario)
-    env.run(until=scenario.SIM_TIME_MS)
+    env, bss, bsms = build_one_process(s)
+    env.run(until=s.SIM_TIME_MS)
     return bss, bsms
 
 
@@ -37,11 +45,11 @@ def scramble_global_random(node_id, ms):
 
 
 def run_split(path):
-    reader = ReaderHost(load_scenario(path))
+    reader = ReaderHost(load(path))
     tags = []
     for node_id in reversed(reader.scenario.NODE_IDS):
         scramble_global_random(node_id, -1)
-        tags.append(TagHost(load_scenario(path), node_id))
+        tags.append(TagHost(load(path), node_id))
     for ms in range(reader.scenario.SIM_TIME_MS):
         down = wire.frame({"cmds": wire.encode_deliveries(reader.run_ms(ms))}, BLOCK_BYTES)
         ups = {}
@@ -57,8 +65,7 @@ def run_split(path):
 
 
 class SplitEquivalenceTest(unittest.TestCase):
-    def check(self, name, directory=SCENARIO_DIR, ext=".py"):
-        path = os.path.join(directory, name + ext)
+    def check(self, path):
         ref_bss, ref_bsms = run_one_process(path)
         bss, bsms = run_split(path)
 
@@ -75,45 +82,22 @@ class SplitEquivalenceTest(unittest.TestCase):
             self.assertEqual(ref.state, got.state)
             self.assertEqual(ref.acks_received, got.acks_received)
 
-    def test_broadcast(self):
-        self.check("broadcast")
-
-    def test_unicast(self):
-        self.check("unicast")
-
-    def test_registration(self):
-        self.check("registration")
-
-    def test_adaptive_aloha(self):
-        self.check("adaptive_aloha")
-
-    def test_single_node(self):
-        self.check("single_node")
-
-    def test_toml_scenarios(self):
+    def test_scenarios(self):
         for name in ("broadcast", "unicast", "registration", "adaptive_aloha", "single_node"):
             with self.subTest(name):
-                self.check(name, ext=".toml")
+                self.check(os.path.join(SCENARIO_DIR, name + ".toml"))
 
-    # Amber's four demos, as demo_experiments/split has them
-    def test_demo_broadcast(self):
-        self.check("broadcast", DEMO_DIR)
-
-    def test_demo_broadcast_sic(self):
-        self.check("broadcast_sic", DEMO_DIR)
-
-    def test_demo_unicast(self):
-        self.check("unicast", DEMO_DIR)
-
-    def test_demo_custom_protocol(self):
-        self.check("custom_protocol", DEMO_DIR)
+    def test_demos(self):
+        for name in ("broadcast", "broadcast_sic", "unicast", "custom_protocol"):
+            with self.subTest(name):
+                self.check(os.path.join(DEMO_DIR, name, name + ".toml"))
 
 
 class SessionTest(unittest.TestCase):
     """The block protocol amber-reader and amber-tag run, without rfsim: same result as one process."""
 
-    def run_sessions(self, name, out, ext=".py"):
-        path = os.path.join(SCENARIO_DIR, name + ext)
+    def run_sessions(self, name, out):
+        path = os.path.join(SCENARIO_DIR, name + ".toml")
         reader = ReaderSession(path, BLOCK_BYTES, out)
         tags = [TagSession(path, node_id, BLOCK_BYTES, out) for node_id in load_scenario(path).NODE_IDS]
         # An empty block first, as from a Tag that has just connected.
@@ -135,10 +119,10 @@ class SessionTest(unittest.TestCase):
             tag.finish()
         return reader, tags
 
-    def check(self, name, ext=".py"):
-        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ext))
+    def check(self, name):
+        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ".toml"))
         with tempfile.TemporaryDirectory() as out:
-            reader, tags = self.run_sessions(name, out, ext)
+            reader, tags = self.run_sessions(name, out)
             self.assertEqual(ref_bss[0].rx_packets, reader.host.bss[0].rx_packets)
             self.assertEqual(ref_bss[0].tx_packets, reader.host.bss[0].tx_packets)
             for ref, tag in zip(ref_bsms, tags):
@@ -158,20 +142,10 @@ class SessionTest(unittest.TestCase):
     def test_adaptive_aloha_twelve_tags(self):
         self.check("adaptive_aloha")
 
-    def test_toml_scenarios(self):
-        for name in ("registration", "adaptive_aloha"):
-            with self.subTest(name):
-                self.check(name, ".toml")
-
     def test_reference_writes_the_same_files(self):
-        for ext in (".py", ".toml"):
-            with self.subTest(ext):
-                self.check_reference_files(ext)
-
-    def check_reference_files(self, ext):
         with tempfile.TemporaryDirectory() as split_out, tempfile.TemporaryDirectory() as ref_out:
-            self.run_sessions("registration", split_out, ext)
-            reference.run(os.path.join(SCENARIO_DIR, "registration" + ext), ref_out)
+            self.run_sessions("registration", split_out)
+            reference.run(os.path.join(SCENARIO_DIR, "registration.toml"), ref_out)
             names = sorted(os.listdir(split_out))
             self.assertEqual(names, sorted(os.listdir(ref_out)))
             self.assertIn("tag3_tx.csv", names)
@@ -181,7 +155,7 @@ class SessionTest(unittest.TestCase):
 
     def started_reader(self):
         """A Reader of the 4-node registration scenario that has heard every hello."""
-        path = os.path.join(SCENARIO_DIR, "registration.py")
+        path = os.path.join(SCENARIO_DIR, "registration.toml")
         reader = ReaderSession(path, BLOCK_BYTES, ".")
         tags = [TagSession(path, node_id, BLOCK_BYTES, ".") for node_id in load_scenario(path).NODE_IDS]
         idle = reader.next_block()
@@ -202,7 +176,7 @@ class SessionTest(unittest.TestCase):
             reader.on_blocks(answers + answers[:1])
 
     def test_unknown_node_is_an_error(self):
-        path = os.path.join(SCENARIO_DIR, "registration.py")
+        path = os.path.join(SCENARIO_DIR, "registration.toml")
         reader = ReaderSession(path, BLOCK_BYTES, ".")
         stranger = wire.frame({"t": "hello", "node": 99}, BLOCK_BYTES)
         with self.assertRaisesRegex(ValueError, "not in the scenario"):
