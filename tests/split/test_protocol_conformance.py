@@ -7,7 +7,9 @@ process and once split into a Reader host and one Tag host per node, exchanging 
 amber-reader and amber-tag do; the records must be identical. The split run scrambles Python's
 global random generator before every Tag step, so a Tag that draws from it instead of self.rng
 fails, and it packs every command and transmission as JSON in 8192-byte blocks at whole
-milliseconds, so a protocol that sends something else fails too.
+milliseconds, so a protocol that sends something else fails too. A protocol whose largest message
+uses more than half a block on this small scenario fails as well, since a larger layout would
+overflow it.
 
 Each protocol module is also read for uses of the random module other than random.Random, which
 gives a clearer message than a mismatch.
@@ -28,7 +30,7 @@ from amber import scenario
 from amber.protocols import Protocol
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_split_equivalence import run_one_process, run_split  # noqa: E402
+from test_split_equivalence import BLOCK_BYTES, run_one_process, run_split  # noqa: E402
 
 SCENARIO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios", "registration.toml")
 NOT_PROTOCOLS = {"base"}
@@ -93,8 +95,13 @@ class ConformanceTest(unittest.TestCase):
                 one = records(*run_one_process(SCENARIO, loader(name)))
                 self.assertGreater(sum(len(rx) for rx, _ in one[0]), 0,
                                    f"{name} received nothing on the scenario, so the check proves nothing")
-                self.assertEqual(one, records(*run_split(SCENARIO, loader(name))),
+                sizes = {}
+                self.assertEqual(one, records(*run_split(SCENARIO, loader(name), sizes)),
                                  f"{name}: a split run differs from one process")
+                for side, size in sizes.items():
+                    self.assertLessEqual(size, BLOCK_BYTES // 2,
+                                         f"{name}: the {side}'s largest message is {size} bytes, more than half "
+                                         f"a {BLOCK_BYTES}-byte block on a four-Tag scenario")
 
 
 BAD_PROTOCOL = '''

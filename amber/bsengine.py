@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, List, Dict, Any, Tuple, Union
 from collections import Counter
 import csv
+import numbers
 import pandas as pd
 import simpy
 
@@ -71,6 +72,26 @@ ScheduleEntry = Union[
 ]
 
 
+def whole_ms_frame(frame):
+    """The frame with every duration as an int; ValueError naming the entry if one is not a whole
+    number of milliseconds.
+
+    A split run advances Reader and Tags one millisecond at a time and refuses anything in between,
+    and Tags only transmit on their 1 ms tick, so a frame off that grid could never be split and
+    would already be timed wrongly in one process. A duration such as 10.0 from float maths is fine.
+    """
+    out = []
+    for entry in frame:
+        duration = entry[1]
+        whole = (isinstance(duration, numbers.Real) and not isinstance(duration, bool)
+                 and float(duration).is_integer())
+        if not whole:
+            raise ValueError(f"frame entry {tuple(entry[:3])}: duration {duration!r} is not a whole number "
+                             "of milliseconds; Amber durations must be whole milliseconds")
+        out.append((entry[0], int(duration)) + tuple(entry[2:]))
+    return out
+
+
 class BSBehavior:
     """
     Schedule-driven base station.
@@ -113,7 +134,7 @@ class BSBehavior:
         self.env = env
         self.base_station = base_station
         self.id = base_station.id
-        self.schedule = schedule
+        self.schedule = whole_ms_frame(schedule) if schedule else schedule
         self.policy = policy
         self.backscatter_modules = list(backscatter_modules) if backscatter_modules else []
         self.loop = loop
@@ -245,10 +266,13 @@ class BSBehavior:
 
         A command advertises the RX slots that follow it in the SAME frame, up
         to the frame's next TX entry (see _get_next_rx_slots).
+
+        Every duration must be a whole number of milliseconds (see whole_ms_frame).
         """
         for frame in self.policy(self):
             if not frame:
                 continue
+            frame = whole_ms_frame(frame)
             # Reuse the static-schedule machinery (incl. lookahead) by making
             # the current frame the "schedule" for the duration of this frame.
             self.schedule = frame

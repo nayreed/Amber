@@ -44,7 +44,14 @@ def scramble_global_random(node_id, ms):
     random.seed(f"other process {node_id} {ms}")
 
 
-def run_split(path, loader=None):
+def message_bytes(block):
+    """How many bytes of a framed block the message uses (length prefix included)."""
+    return 4 + int.from_bytes(block[:4], "little")
+
+
+def run_split(path, loader=None, sizes=None):
+    """The scenario split into a Reader and one host per Tag. If sizes is a dict, it gets the largest
+    message each way, as {"reader": bytes, "tag": bytes}."""
     loader = loader or load
     reader = ReaderHost(loader(path))
     tags = []
@@ -58,6 +65,10 @@ def run_split(path, loader=None):
             scramble_global_random(tag.node_id, ms)
             tag.deliver(ms, wire.decode_deliveries(wire.unframe(down)["cmds"], tag.node_id))
             ups[tag.node_id] = wire.frame({"up": wire.encode_uplinks(tag.step(ms))}, BLOCK_BYTES)
+            if sizes is not None:
+                sizes["tag"] = max(sizes.get("tag", 0), message_bytes(ups[tag.node_id]))
+        if sizes is not None:
+            sizes["reader"] = max(sizes.get("reader", 0), message_bytes(down))
         uplinks = []
         for node_id in reader.scenario.NODE_IDS:
             uplinks += wire.decode_uplinks(wire.unframe(ups[node_id])["up"], node_id)
