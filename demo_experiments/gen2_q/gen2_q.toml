@@ -1,20 +1,18 @@
-# Amber's custom_protocol demo: adaptive framed-slotted ALOHA, 12 hybrid Tags placed at random
-# 5 to 40 m around the base station, SIC on. Seeded with 7, as the demo is.
+# The Gen2 Q algorithm (one command and one slot per frame): 12 hybrid Tags placed at random 5 to
+# 40 m around the base station, SIC on. No seed: every run is a new sample.
 
 [run]
-sim_time_ms = 15001
-seed = 7
+sim_time_ms = 6001
 
 [reader]
-protocol = "adaptive_aloha"
+protocol = "gen2_q"
 enable_sic = true
 
 [reader.params]
-start_slots = 20
-min_slots = 2
-max_slots = 32
-tx_ms = 5
-slot_ms = 8
+q0 = 4.0
+c = 0.3
+tx_ms = 1
+slot_ms = 10
 
 [[base_station]]
 id = 0

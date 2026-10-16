@@ -22,15 +22,20 @@ pip install -e .
 
 ## Quickstart
 
+Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenario files.
+Run one with `amber.run`:
+
 ```bash
-python demo_experiments/broadcast/broadcast_demo.py
-python demo_experiments/broadcast_sic/broadcast_sic_demo.py
-python demo_experiments/unicast/unicast_demo.py
-python demo_experiments/custom_protocol/custom_protocol_demo.py
+python -m amber.run demo_experiments/broadcast/broadcast.toml          # 3 Tags, broadcast downlink
+python -m amber.run demo_experiments/broadcast/broadcast_sic.toml      # the same with SIC
+python -m amber.run demo_experiments/unicast/unicast.toml              # 3 Tags, asked one at a time
+python -m amber.run demo_experiments/registration/registration.toml    # 4 Tags join, then send data
+python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Tags, adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/gen2_q/gen2_q.toml                # 12 Tags, Gen2 Q algorithm
 ```
 
-Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
-`output/` directory.
+Each prints a summary and writes `rx_packets.csv`, `tx_records.csv` and the protocol's own files
+(such as `adaptation.csv`) to `output/<scenario>/` in the demo's folder.
 
 ## API Reference
 

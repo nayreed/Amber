@@ -1,4 +1,4 @@
-# Amber's custom_protocol demo: adaptive framed-slotted ALOHA driven by a BSBehavior policy, twelve
+# The adaptive_aloha demo: adaptive framed-slotted ALOHA driven by a BSBehavior policy, twelve
 # Tags placed at random around the base station, SIC on.
 
 [run]

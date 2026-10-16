@@ -1,6 +1,6 @@
 # tests/split/test_seeds.py
-"""Checks the seeds of Amber's four demos as their TOML files have them: [run] seed decides a run,
-and changing it changes what the nodes draw but not where they stand (custom_protocol places its
+"""Checks the seeds of four of Amber's demos as their TOML files have them: [run] seed decides a run,
+and changing it changes what the nodes draw but not where they stand (adaptive_aloha places its
 nodes from the layout's own seed)."""
 
 import os
@@ -10,12 +10,12 @@ from amber import scenario
 from amber.split.hosts import build_one_process
 
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
-DEMOS = ("broadcast", "broadcast_sic", "unicast", "custom_protocol")
+DEMOS = ("broadcast/broadcast", "broadcast/broadcast_sic", "unicast/unicast", "adaptive_aloha/adaptive_aloha")
 RUN_MS = 5000  # long enough for every demo to transmit
 
 
 def run(name, seed):
-    s = scenario.load(os.path.join(DEMO_DIR, name, name + ".toml"), {"run.seed": seed})
+    s = scenario.load(os.path.join(DEMO_DIR, name + ".toml"), {"run.seed": seed})
     env, bss, bsms = build_one_process(s)
     env.run(until=RUN_MS)
     layout = [(bsm.node.id, bsm.node.x, bsm.node.y) for bsm in bsms]

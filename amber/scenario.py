@@ -7,7 +7,7 @@ amber.split runs in one process (amber.split.reference) or split into a Reader a
 per Tag (amber-reader and amber-tag in OAI).
 
 Every key is named as the field of the Amber class it sets, and every value that a file leaves
-out keeps that class's default. demo_experiments/<demo>/<demo>.toml are complete examples. The
+out keeps that class's default. demo_experiments/<protocol>/*.toml are complete examples. The
 tables:
 
 ```text

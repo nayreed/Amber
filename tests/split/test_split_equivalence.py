@@ -8,6 +8,7 @@ global generator before every Tag step and step the Tags in reverse order, as se
 would leave it in any state, so a node that still drew from it would make the comparison fail.
 """
 
+import glob
 import os
 import random
 import tempfile
@@ -89,9 +90,9 @@ class SplitEquivalenceTest(unittest.TestCase):
                 self.check(os.path.join(SCENARIO_DIR, name + ".toml"))
 
     def test_demos(self):
-        for name in ("broadcast", "broadcast_sic", "unicast", "custom_protocol"):
-            with self.subTest(name):
-                self.check(os.path.join(DEMO_DIR, name, name + ".toml"))
+        for path in sorted(glob.glob(os.path.join(DEMO_DIR, "*", "*.toml"))):
+            with self.subTest(os.path.relpath(path, DEMO_DIR)):
+                self.check(path)
 
 
 class SessionTest(unittest.TestCase):

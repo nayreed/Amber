@@ -45,17 +45,20 @@ uv sync
 
 ## Quickstart
 
-Four example scenarios are included:
+Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenario files.
+Run one with `amber.run`:
 
 ```bash
-python demo_experiments/broadcast/broadcast_demo.py              # 3 nodes, broadcast downlink
-python demo_experiments/broadcast_sic/broadcast_sic_demo.py      # 3 nodes, broadcast with SIC enabled
-python demo_experiments/unicast/unicast_demo.py                  # 3 nodes, per-node addressed downlink
-python demo_experiments/custom_protocol/custom_protocol_demo.py  # 12 nodes, user-defined adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/broadcast/broadcast.toml          # 3 Tags, broadcast downlink
+python -m amber.run demo_experiments/broadcast/broadcast_sic.toml      # the same with SIC
+python -m amber.run demo_experiments/unicast/unicast.toml              # 3 Tags, asked one at a time
+python -m amber.run demo_experiments/registration/registration.toml    # 4 Tags join, then send data
+python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Tags, adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/gen2_q/gen2_q.toml                # 12 Tags, Gen2 Q algorithm
 ```
 
-Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
-`output/` directory.
+Each prints a summary and writes `rx_packets.csv`, `tx_records.csv` and the protocol's own files
+(such as `adaptation.csv`) to `output/<scenario>/` in the demo's folder.
 
 ## Scenario files and protocols
 
@@ -64,20 +67,19 @@ radio, energy, duration, seed), with the protocol named by `[reader] protocol` a
 `[reader.params]`. Each demo has one, such as
 [`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
 keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
-`unicast`, `registration`, `adaptive_aloha`, `gen2_q`), and a new protocol goes there too.
+`unicast`, `registration`, `adaptive_aloha`, `gen2_q`). A new protocol goes there too, with a
+demo scenario in `demo_experiments/<protocol>/`.
 [`amber/protocols/README.md`](amber/protocols/README.md) explains each protocol, how to write a
 new one, and the rules it must follow to run split on OAI.
 
-Run a scenario file in one process, then write the demos' `rx_packets.csv` and
-`tx_records.csv` from its logs:
+To compare with a split run, write the logs a split run writes, then the CSV files from them:
 
 ```bash
 python -m amber.split.reference demo_experiments/broadcast/broadcast.toml out/
 python -m amber.split.export demo_experiments/broadcast/broadcast.toml out/
 ```
 
-A file without a seed draws a new one for every run, as the demos do, and `reference` prints
-it. The same file runs split across processes with
+A file without a seed draws a new one for every run, and `amber.run` and `reference` print it. The same file runs split across processes with
 [amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER),
 which needs a seed in the file.
 

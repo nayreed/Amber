@@ -107,7 +107,7 @@ Every Tag that heard the command and has the energy answers with data in a slot 
 | `tx_ms` | 5 | command length |
 | `rx_ms` | 10 | slot length |
 
-**Use it for:** a few Tags, or testing energy and radio settings. With more Tags than slots it collides a lot, because the number of slots never changes. This is the protocol of the `broadcast` and `broadcast_sic` demos.
+**Use it for:** a few Tags, or testing energy and radio settings. With more Tags than slots it collides a lot, because the number of slots never changes. Its demos are `demo_experiments/broadcast/broadcast.toml` and `broadcast_sic.toml`.
 
 ### `unicast`
 
@@ -128,11 +128,11 @@ Only the addressed Tag answers, so there are no collisions between Tags.
 | `tx_ms` | 5 | command length |
 | `rx_ms` | 10 | slot length |
 
-**Use it for:** a collision-free baseline. A frame lasts `(tx_ms + rx_ms)` × the number of Tags, so with many Tags each one is asked rarely. A Tag that has no energy when its turn comes simply misses that turn. This is the protocol of the `unicast` demo.
+**Use it for:** a collision-free baseline. A frame lasts `(tx_ms + rx_ms)` × the number of Tags, so with many Tags each one is asked rarely. A Tag that has no energy when its turn comes simply misses that turn. Its demo is `demo_experiments/unicast/`.
 
 ### `registration`
 
-**What it is.** Amber's built-in protocol from the start: Tags join first, then send data. It uses the default `BackscatterModule` behaviour, with no Tag subclass.
+**What it is.** Amber's built-in protocol from the start: Tags join first, then send data. It uses the default `BackscatterModule` behaviour, with no Tag subclass. Its demo is `demo_experiments/registration/`.
 
 **One frame:**
 1. **Join.** A `send_id` command to all Tags (`tx_ms`), then `id_slots` listening slots (`rx_ms`). Every Tag that isn't registered yet answers with its id in a random slot, and moves to `wait_ack`.
@@ -154,7 +154,7 @@ A registered Tag ignores later `send_id` commands. A Tag whose id collided stays
 
 ### `adaptive_aloha`
 
-**What it is.** Framed slotted ALOHA whose frame size follows the load. It decides once per frame. This is the protocol of the `custom_protocol` demo.
+**What it is.** Framed slotted ALOHA whose frame size follows the load. It decides once per frame. Its demo is `demo_experiments/adaptive_aloha/` (formerly `custom_protocol`).
 
 **One frame:**
 1. a `collect` command to all Tags (`tx_ms`);
@@ -188,7 +188,7 @@ A one-slot dead band above the target stops `n` from flipping back and forth. `n
 
 ### `gen2_q`
 
-**What it is.** The EPC Gen2 Q algorithm. It decides after **every slot**.
+**What it is.** The EPC Gen2 Q algorithm. It decides after **every slot**. Its demo is `demo_experiments/gen2_q/`.
 
 **Rounds:**
 - A round starts with a `query` command carrying `q`. Each Tag loads a counter, drawn at random from 0 to 2^q − 1.
@@ -245,7 +245,7 @@ Add one file, for example `amber/protocols/tdma.py`. It needs:
 2. **A Tag class**, only if Tags react differently from the built-in protocol. Subclass `backscatter.BackscatterModule` and override `handle_command` and, if needed, `build_tx_payload`.
 3. **`PROTOCOL = YourClass`** at the end of the file.
 
-The scenario then uses `protocol = "tdma"`.
+Then add its demo: a folder `demo_experiments/tdma/` holding a scenario `tdma.toml` that uses `protocol = "tdma"` (copy another demo's file and change `[reader]`). `python -m amber.run demo_experiments/tdma/tdma.toml` runs it and writes its results to `demo_experiments/tdma/output/tdma/`.
 
 ### Example: TDMA
 
@@ -342,9 +342,8 @@ PYTHONPATH=. python3 -m unittest tests/split/test_protocol_conformance.py
 # Everything
 PYTHONPATH=. python3 -m unittest discover -s tests/split
 
-# Run a scenario in one process and write its CSV files
-python -m amber.split.reference my_scenario.toml out/
-python -m amber.split.export my_scenario.toml out/
+# Run a demo in one process: summary, plus CSV files in output/<scenario>/ next to it
+python -m amber.run demo_experiments/tdma/tdma.toml
 ```
 
 The conformance test runs each protocol with its default parameters on a four-Tag scenario:

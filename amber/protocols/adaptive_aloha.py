@@ -1,6 +1,6 @@
 # amber/protocols/adaptive_aloha.py
-"""Adaptive framed-slotted ALOHA (EPC Gen2 Q-algorithm style), the protocol of Amber's
-custom_protocol demo.
+"""Adaptive framed-slotted ALOHA (EPC Gen2 Q-algorithm style), the protocol of the
+demo_experiments/adaptive_aloha demo (formerly custom_protocol).
 
 Each frame is a collect command to all Tags of tx_ms, then n listening slots of slot_ms; every
 Tag that has energy answers in one slot it picks at random. After each frame the base station

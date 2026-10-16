@@ -13,8 +13,9 @@ from amber.split.hosts import build_one_process
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
 
 
-def load_demo(name):
-    return scenario.load(os.path.join(DEMO_DIR, name, name + ".toml"), {"run.seed": 12345})
+def load_demo(folder, name=None):
+    """The demo demo_experiments/<folder>/<name>.toml (name defaults to the folder)."""
+    return scenario.load(os.path.join(DEMO_DIR, folder, (name or folder) + ".toml"), {"run.seed": 12345})
 
 
 class Recorder:
@@ -63,8 +64,8 @@ class StaticScheduleTest(unittest.TestCase):
 class DemoTest(unittest.TestCase):
     """In Amber's demos every advertised slot ends before the Reader's next command."""
 
-    def check(self, name, slots_per_command):
-        env, bss, bsms = build_one_process(load_demo(name))
+    def check(self, folder, slots_per_command, name=None):
+        env, bss, bsms = build_one_process(load_demo(folder, name))
         seen = []
         for bsm in bsms:
             receive = bsm.receive_command
@@ -87,14 +88,14 @@ class DemoTest(unittest.TestCase):
         self.check("broadcast", {2})
 
     def test_broadcast_sic(self):
-        self.check("broadcast_sic", {3})
+        self.check("broadcast", {3}, "broadcast_sic")
 
     def test_unicast(self):
         self.check("unicast", {1})
 
-    def test_custom_protocol(self):
-        params = load_demo("custom_protocol").protocol.params
-        self.check("custom_protocol", set(range(params["min_slots"], params["max_slots"] + 1)))
+    def test_adaptive_aloha(self):
+        params = load_demo("adaptive_aloha").protocol.params
+        self.check("adaptive_aloha", set(range(params["min_slots"], params["max_slots"] + 1)))
 
 
 if __name__ == "__main__":

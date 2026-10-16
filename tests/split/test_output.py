@@ -1,9 +1,9 @@
 # tests/split/test_output.py
-"""Checks amber.output and amber.split.export: the CSV files equal those the demos' own code
-writes for the same run, and a split run's export equals the files of the run in one process."""
+"""Checks amber.output, amber.run and amber.split.export: python -m amber.run writes the CSV files
+of every demo next to it, and a split run's export equals the files of the run in one process."""
 
 import contextlib
-import importlib.util
+import glob
 import io
 import os
 import tempfile
@@ -12,21 +12,13 @@ import unittest
 import pandas as pd
 
 from amber import output, scenario
+from amber import run as amber_run
 from amber.split import export, reference
 from amber.split.hosts import build_one_process
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCENARIO_DIR = os.path.join(HERE, "scenarios")
 DEMO_DIR = os.path.join(HERE, "..", "..", "demo_experiments")
-
-
-def demo_module(name):
-    """A demo script, imported (its __main__ part does not run)."""
-    path = os.path.join(DEMO_DIR, name, name + ("_demo.py"))
-    spec = importlib.util.spec_from_file_location(f"{name}_demo", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def run(path, seed=12345):
@@ -41,36 +33,37 @@ def read(path):
         return f.read()
 
 
-class DemoFilesTest(unittest.TestCase):
-    """write_packets() against each demo's own save_packets(), on the same run."""
+class RunTest(unittest.TestCase):
+    """python -m amber.run on every demo scenario."""
 
-    def demo_files(self, name, bss, bsms, out):
-        module = demo_module(name)
-        module.OUTPUT_DIR = out
-        with contextlib.redirect_stdout(io.StringIO()):
-            module.save_packets(bss[0], bsms)
+    def test_every_demo(self):
+        for path in sorted(glob.glob(os.path.join(DEMO_DIR, "*", "*.toml"))):
+            with self.subTest(path), tempfile.TemporaryDirectory() as out:
+                with contextlib.redirect_stdout(io.StringIO()) as printed:
+                    amber_run.run(path, out)
+                self.assertIn("sent=", printed.getvalue())
+                for file, columns in (("rx_packets.csv", output.RX_COLUMNS), ("tx_records.csv", output.TX_COLUMNS)):
+                    frame = pd.read_csv(os.path.join(out, file))
+                    self.assertEqual(tuple(frame.columns), columns)
+                    self.assertGreater(len(frame), 0, file)
 
-    def test_three_tag_demos(self):
-        for name in ("broadcast", "broadcast_sic", "unicast"):
-            with self.subTest(name), tempfile.TemporaryDirectory() as old, tempfile.TemporaryDirectory() as new:
-                _, bss, bsms = run(os.path.join(DEMO_DIR, name, name + ".toml"))
-                self.demo_files(name, bss, bsms, old)
-                output.write_packets(new, bss, bsms)
-                for file in ("rx_packets.csv", "tx_records.csv"):
-                    self.assertEqual(read(os.path.join(old, file)), read(os.path.join(new, file)), file)
-
-    def test_custom_protocol_demo(self):
-        # This demo writes fewer columns of the same rows, and adaptation.csv.
-        with tempfile.TemporaryDirectory() as old, tempfile.TemporaryDirectory() as new:
-            s, bss, bsms = run(os.path.join(DEMO_DIR, "custom_protocol", "custom_protocol.toml"), seed=7)
-            self.demo_files("custom_protocol", bss, bsms, old)
-            output.write_packets(new, bss, bsms)
-            output.write_protocol_outputs(new, s.protocol, bss)
-            for file in ("rx_packets.csv", "tx_records.csv"):
-                ours, theirs = pd.read_csv(os.path.join(new, file)), pd.read_csv(os.path.join(old, file))
-                self.assertGreater(len(theirs), 0)
-                pd.testing.assert_frame_equal(ours[list(theirs.columns)], theirs)
-            self.assertEqual(read(os.path.join(old, "adaptation.csv")), read(os.path.join(new, "adaptation.csv")))
+    def test_files_equal_the_run_and_go_next_to_the_scenario(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as one:
+            path = os.path.join(tmp, "adaptive_aloha.toml")
+            source = os.path.join(DEMO_DIR, "adaptive_aloha", "adaptive_aloha.toml")
+            with open(source) as f:  # seeded with 7; the trace path is made absolute for the copy
+                text = f.read().replace('"../threehundred_seconds_stable.xlsx"',
+                                        repr(os.path.abspath(os.path.join(DEMO_DIR, "threehundred_seconds_stable.xlsx"))).replace("'", '"'))
+            with open(path, "w") as f:
+                f.write(text)
+            with contextlib.redirect_stdout(io.StringIO()):
+                out = amber_run.run(path)
+            self.assertEqual(out, os.path.join(tmp, "output", "adaptive_aloha"))
+            s, bss, bsms = run(path, seed=7)
+            output.write_packets(one, bss, bsms)
+            output.write_protocol_outputs(one, s.protocol, bss)
+            for file in ("rx_packets.csv", "tx_records.csv", "adaptation.csv"):
+                self.assertEqual(read(os.path.join(one, file)), read(os.path.join(out, file)), file)
 
     def test_no_packets(self):
         with tempfile.TemporaryDirectory() as out:
