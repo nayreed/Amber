@@ -64,10 +64,9 @@ radio, energy, duration, seed), with the protocol named by `[reader] protocol` a
 `[reader.params]`. Each demo has one, such as
 [`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
 keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
-`unicast`, `registration`, `adaptive_aloha`, `gen2_q`). A new protocol goes there too: a module
-that defines a `Protocol` subclass as `PROTOCOL`, named in the file by its module name. The
-`amber.protocols` docstring says what a policy can read between frames, and how a protocol
-decides after every slot (`gen2_q`).
+`unicast`, `registration`, `adaptive_aloha`, `gen2_q`), and a new protocol goes there too.
+[`amber/protocols/README.md`](amber/protocols/README.md) explains each protocol, how to write a
+new one, and the rules it must follow to run split on OAI.
 
 Run a scenario file in one process, then write the demos' `rx_packets.csv` and
 `tx_records.csv` from its logs:

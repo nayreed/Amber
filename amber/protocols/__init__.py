@@ -20,29 +20,10 @@ A protocol has two shapes. One command and many slots per frame (``adaptive_aloh
 per frame. One command and one slot per frame (``gen2_q``) decides after every slot, at the cost
 of a command before every slot, as Gen2's QueryRep is.
 
-A new protocol goes in this package, and must run the same split across processes (the Reader
-and each Tag in its own, as OAI's amber-reader and amber-tag run it) as in one process:
-
-- a Tag draws its random numbers from ``self.rng``, its own generator, never from the random
-  module, whose numbers depend on what else ran in the same process;
-- every duration in a frame is a whole number of milliseconds (10, or 10.0 from float maths, not
-  10.5). BSBehavior refuses any other, in one process too, since the split runs one millisecond
-  at a time and Tags transmit on their 1 ms tick;
-- command payloads and what a Tag sends are plain JSON values: dicts with string keys, lists,
-  strings, ints, floats, bools and None. The split refuses anything else, naming the command or
-  transmission and the field, because JSON would fail on it or hand the other side something
-  different: a tuple ``(1, 2)`` would arrive as ``[1, 2]``, a dict key ``1`` or ``True`` as
-  ``"1"`` or ``"true"``, and a set, bytes or numpy ``int64`` cannot be sent at all. The tuples
-  Amber itself puts in ``data["rx_slots"]`` are allowed and restored;
-- a message must fit in one block, 8192 bytes by default (``block_bytes`` in OAI's amber
-  section). The Reader sends one message per millisecond holding every command of that
-  millisecond: a broadcast is encoded once with the ids it reaches (about 4 bytes per Tag, so
-  about 1 KB for 250 Tags), but each different command takes about 85 bytes, so one block holds
-  about 95 different commands in the same millisecond.
-
-tests/split/test_protocol_conformance.py finds every module here and checks them, by running it
-with its default parameters in one process and split, by checking that its largest message uses
-at most half a block, and by reading it for the random module.
+A new protocol goes in this package. amber/protocols/README.md is the guide: what each protocol
+here does, how to write a new one, and the rules it must follow to run split across processes as
+OAI runs it (Tag randomness from ``self.rng``, plain JSON payloads, whole-millisecond durations).
+tests/split/test_protocol_conformance.py checks every module here against them.
 """
 
 import importlib
