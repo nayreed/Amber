@@ -36,6 +36,35 @@ class TxPacket:
     data: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class SlotResult:
+    """What the base station heard in one listening slot, empty slots included.
+
+    A slot can hold both decoded and collided packets: without SIC the strongest of
+    colliding packets may still be decoded (capture), and with SIC several may be.
+    """
+    slot_id: str
+    start_ms: float
+    end_ms: float
+    decoded: List[int]  # node ids decoded in this slot
+    collided: int  # packets in this slot that collided (not decoded)
+
+    @property
+    def empty(self) -> bool:
+        """Nothing decoded and nothing collided: no packet above sensitivity arrived."""
+        return not self.decoded and self.collided == 0
+
+    @property
+    def collision(self) -> bool:
+        """At least one packet collided, whether or not another was decoded."""
+        return self.collided > 0
+
+    @property
+    def success(self) -> bool:
+        """At least one packet decoded and none collided."""
+        return bool(self.decoded) and self.collided == 0
+
+
 ScheduleEntry = Union[
     Tuple[str, int, str],        # (mode, duration_ms, slot_id)
     Tuple[str, int, str, Dict],  # (mode, duration_ms, slot_id, payload)
@@ -121,6 +150,9 @@ class BSBehavior:
         # Node ids decoded during the current frame; read by a policy to decide
         # how to answer (ack, register, adapt). Reset at the start of each frame.
         self.decoded_this_frame: List[int] = []
+        # One SlotResult per listening slot of the current frame, empty slots included;
+        # read by a policy after the frame. Reset at the start of each frame.
+        self.slot_results: List[SlotResult] = []
 
         # Opt-in streaming sinks: write each packet to disk instead of keeping it in memory
         self._rx_stream_fh = None
@@ -180,6 +212,7 @@ class BSBehavior:
         while True:
             self._frame_start_ms = self.env.now
             self.decoded_this_frame = []
+            self.slot_results = []
             for idx, entry in enumerate(self.schedule):
                 self._schedule_idx = idx
                 mode = entry[0]
@@ -205,8 +238,10 @@ class BSBehavior:
         iterable (typically a generator) of frames, where each frame is a list
         of schedule entries (mode, duration_ms, slot_id[, payload]). After each
         frame runs, the policy can read self.decoded_this_frame (node ids heard
-        this frame) and any other BS state to decide the next frame — this is
-        where "ack or not", "register or not", and frame adaptation live.
+        this frame), self.slot_results (what each listening slot of this frame held,
+        empty slots included) and any other BS state to decide the next frame —
+        this is where "ack or not", "register or not", and frame adaptation live.
+        A frame of one command and one slot lets the policy decide after every slot.
 
         A command advertises the RX slots that follow it in the SAME frame, up
         to the frame's next TX entry (see _get_next_rx_slots).
@@ -220,6 +255,7 @@ class BSBehavior:
             self._frame_duration_ms = sum(e[1] for e in frame)
             self._frame_start_ms = self.env.now
             self.decoded_this_frame = []
+            self.slot_results = []
             for idx, entry in enumerate(frame):
                 self._schedule_idx = idx
                 mode = entry[0]
@@ -266,7 +302,15 @@ class BSBehavior:
                     self._buffer_rx()
 
         # RX window ended - process buffer with collision detection
+        decoded_before, collided_before = len(self.decoded_this_frame), self.total_collided
         self._process_rx_buffer()
+        self.slot_results.append(SlotResult(
+            slot_id=slot_id,
+            start_ms=self._rx_start_ms,
+            end_ms=self.env.now,
+            decoded=self.decoded_this_frame[decoded_before:],
+            collided=self.total_collided - collided_before,
+        ))
 
     def _buffer_rx(self):
         """Buffer incoming transmission for later collision check."""
