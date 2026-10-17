@@ -47,6 +47,8 @@ class Gen2Node(backscatter.BackscatterModule):
 class Gen2Q(Protocol):
     PARAMS = {"q0": 4.0, "c": 0.3, "tx_ms": 1, "slot_ms": 10}
     TAG_CLASS = Gen2Node
+    COMMANDS = ("query", "queryrep")
+    COMMAND_FIELDS = {"q": 4}
 
     def check(self):
         self.positive("tx_ms", "slot_ms")

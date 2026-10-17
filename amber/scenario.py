@@ -26,6 +26,9 @@ tables:
                     bandwidth_hz, noise_figure_db, combine_mode
 [energy]            the energy trace (EnvEnergySource), needed by "external" and "hybrid" Tags:
                     trace (path relative to the scenario file, required), column, resistance
+[phy]               IQ mode (see amber.iq): when present, rfsim carries real waveforms and the
+                    physics decides what is received; r2d_kbps, d2r_kbps, subcarrier_khz
+                    (amber.phy.PhyConfig). Needs exactly one base station.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -60,7 +63,7 @@ try:
 except ModuleNotFoundError:  # Python < 3.11
     import tomli as tomllib
 
-from . import bsengine, capacitor, controller, energy, propagation, protocols, radiodevices
+from . import bsengine, capacitor, controller, energy, phy, propagation, protocols, radiodevices
 
 _ABSENT = object()
 
@@ -68,7 +71,7 @@ _ABSENT = object()
 _READER_OPTIONS = {"enable_sic": "bool", "required_sinr_db": "number", "cancellation_factor": "number",
                    "noise_figure_db": "number", "bandwidth_hz": "number"}
 _ENERGY_MODES = ("wpt", "external", "hybrid")
-_TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "tag_defaults", "tag_group")
+_TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "tag_defaults", "tag_group")
 _PLACEMENT = ("positions", "count", "layout", "ids")
 
 
@@ -248,6 +251,8 @@ class Scenario:
         The protocol the base stations and Tags run.
     path : str
         The scenario file.
+    phy : PhyConfig or None
+        The [phy] table: set for a scenario in IQ mode.
     """
 
     def __init__(self, path: str, data: Dict[str, Any]):
@@ -276,6 +281,18 @@ class Scenario:
         radio.done()
 
         self._energy = self._read_energy(top.table("energy")) if top.has("energy") else None
+
+        self.phy: Optional[phy.PhyConfig] = None
+        if top.has("phy"):
+            t = top.table("phy")
+            values = t.fields({"r2d_kbps": "int", "d2r_kbps": "int", "subcarrier_khz": "int"})
+            t.done()
+            try:
+                self.phy = phy.PhyConfig(**values)
+            except ValueError as e:
+                raise ValueError(f"{path}: {e}") from None
+            if len(self._base_stations) != 1:
+                raise ValueError(f"{path}: IQ mode ([phy]) needs exactly one base station, got {len(self._base_stations)}")
 
         defaults = top.take("tag_defaults", "table", {})
         for key in defaults:
@@ -440,6 +457,29 @@ class Scenario:
             for node in nodes:
                 shared[node.id] = _TagParts(node, dl, ul, cov, group)
         return shared
+
+    def iq_links(self) -> Dict[int, Tuple[int, int, float]]:
+        """IQ mode: {node id: (index of the sector that hears it best, its subcarrier_shift, the
+        power that sector receives from it in dBm)}. The sector is what a Reader with one receiver
+        per sector knows of where a frame came from."""
+        bss = [self._make_base_station(bs) for bs in self._base_stations]
+        out = {}
+        for group in self._groups:
+            nodes = [radiodevices.Node(id=t.node_id, x=t.x, y=t.y, **group.node_args) for t in group.tags]
+            cov = propagation.CoverageMap(base_stations=bss, nodes=nodes, node_energy_mode=group.energy_mode,
+                                          node_ext_power_fn=None, **self._radio)
+            cov.calculate_node_power(nodes, cov.compute_bs_to_point(nodes))
+            per_sector = cov.compute_point_to_bs(nodes).get("per_sector_powers", {})
+            for node in nodes:
+                heard = [(powers[node.id], name) for name, powers in per_sector.items() if node.id in powers]
+                best = max(heard) if heard else (-999.0, "")
+                sector = int(best[1].split("_S")[1]) if heard else -1
+                out[node.id] = (sector, int(getattr(node, "subcarrier_shift", 0) or 0), float(best[0]))
+        return out
+
+    @property
+    def reader_noise_figure_db(self) -> float:
+        return float(self._reader_options.get("noise_figure_db", 6.0))
 
     def build_tag(self, env, shared: Dict[int, _TagParts], node_id: int):
         """One Tag's Capacitor, BackscatterModule (the protocol's TAG_CLASS) and Controller, drawing

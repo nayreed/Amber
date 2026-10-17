@@ -38,6 +38,7 @@ class AdaptiveAloha(Protocol):
     PARAMS = {"start_slots": 20, "min_slots": 2, "max_slots": 32, "tx_ms": 5, "slot_ms": 8,
               "smoothing": 0.25, "slots_per_contender": 2}
     TAG_CLASS = AdaptiveAlohaNode
+    COMMANDS = ("collect",)
 
     def check(self):
         self.positive("start_slots", "min_slots", "max_slots", "tx_ms", "slot_ms", "slots_per_contender")

@@ -10,11 +10,14 @@ Tag. Messages (see wire.py):
                    {"t": "bye"} after "end"
 Every Tag message also carries "node". When the run is over each side writes its own CSV files
 (see amber.output).
+
+A scenario with a [phy] table runs in IQ mode instead (amber.iq): the blocks are signals, and
+the Reader reads the sum of the Tags' blocks (reads_sum), as normal rfsim gives it.
 """
 
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from . import output, wire
+from . import iq, output, wire
 from .hosts import ReaderHost, TagHost, load_scenario
 
 
@@ -27,8 +30,20 @@ def _load(scenario_path: str):
 
 
 class ReaderSession:
+    def __new__(cls, scenario_path: str, block_bytes: int, output_dir: str):
+        scenario = _load(scenario_path)
+        if getattr(scenario, "phy", None) is not None:
+            session = iq.IqReaderSession(scenario, block_bytes, output_dir)
+            session.reads_sum = True
+            return session
+        self = super().__new__(cls)
+        self._scenario = scenario
+        return self
+
+    reads_sum = False
+
     def __init__(self, scenario_path: str, block_bytes: int, output_dir: str):
-        self.host = ReaderHost(_load(scenario_path))
+        self.host = ReaderHost(self._scenario)
         self.block_bytes = block_bytes
         self.output_dir = output_dir
         self._node_ids = list(self.host.scenario.NODE_IDS)
@@ -91,8 +106,16 @@ class ReaderSession:
 
 
 class TagSession:
+    def __new__(cls, scenario_path: str, node_id: int, block_bytes: int, output_dir: str):
+        scenario = _load(scenario_path)
+        if getattr(scenario, "phy", None) is not None:
+            return iq.IqTagSession(scenario, node_id, block_bytes, output_dir)
+        self = super().__new__(cls)
+        self._scenario = scenario
+        return self
+
     def __init__(self, scenario_path: str, node_id: int, block_bytes: int, output_dir: str):
-        self.host = TagHost(_load(scenario_path), node_id)
+        self.host = TagHost(self._scenario, node_id)
         self.node_id = node_id
         self.block_bytes = block_bytes
         self.output_dir = output_dir

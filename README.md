@@ -77,6 +77,32 @@ demo scenario in `demo_experiments/<protocol>/`.
 [`amber/protocols/README.md`](amber/protocols/README.md) explains each protocol, how to write a
 new one, and the rules it must follow to run on OAI.
 
+## IQ mode: real waveforms
+
+By default the Reader and the Tags exchange messages, and Amber decides with formulas what is
+received: the carrier is always on, a command arrives whenever the Tag's received power is above
+its sensitivity, and packets within 5 ms of each other collide, with SIC applied to their powers.
+A scenario with a `[phy]` table runs in IQ mode instead
+([`tests/scenarios/gen2_q_iq.toml`](tests/scenarios/gen2_q_iq.toml) is one), following the
+3GPP Rel-19 Ambient IoT design for a monostatic Reader and backscatter Tags:
+
+- The Reader's carrier is a signal (1.92 Msps). It is on while the base station transmits or
+  listens and off while it is idle. A Tag harvests from the Reader only while it is on, and can
+  only answer by reflecting it.
+- Commands are keyed onto the carrier (OOK, Manchester, CRC-16) as short bit fields, at
+  `r2d_kbps`; a Tag decodes them with an envelope detector, or does not.
+- A Tag answers by switching its reflection (BPSK backscatter on a square-wave subcarrier,
+  Manchester, CRC-16) at `d2r_kbps`. Every Tag's reflection is added up, and the Reader
+  demodulates the sum: two Tags at once really collide, and with `enable_sic` the Reader decodes
+  the strongest, subtracts it and tries again.
+
+`python -m amber.run` runs it on one machine; on OAI, rfsim carries the samples and adds the
+Tags' signals up (normal rfsim, no `msgmode`), with the same files byte for byte. IQ mode needs
+one base station, integer payloads, and receive slots that follow each other with one length.
+A protocol lists the commands it adds in `COMMANDS` and the bit width of their integer fields in
+`COMMAND_FIELDS`. It is about ten times slower than message mode. `amber/phy.py` and
+`amber/iq.py` describe it in full.
+
 ## Modules
 
 | Module | Contents |
@@ -89,6 +115,7 @@ new one, and the rules it must follow to run on OAI.
 | `backscatter` | Node-side backscatter transmit/receive |
 | `bsengine` | Base station behaviour, downlink scheduling |
 | `packet_analysis` | Thermal noise and SIC decoding |
+| `phy`, `iq` | IQ mode: the waveforms, and the Reader and Tags exchanging them |
 | `protocols` | The base station's protocol and the Tag class it needs, chosen by name |
 | `scenario` | Scenarios as TOML files (`load`, `Scenario`) |
 | `output` | The CSV files of a run, and the one function that writes them |

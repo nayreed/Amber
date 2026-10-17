@@ -45,6 +45,11 @@ class Protocol:
     PARAMS: Dict[str, Any] = {}
     #: The class every Tag is built as.
     TAG_CLASS = backscatter.BackscatterModule
+    #: IQ mode (amber.iq) sends commands as bits: the commands this protocol sends beyond the
+    #: built-in send_id, ack and send_data ...
+    COMMANDS: Tuple[str, ...] = ()
+    #: ... and the bit width of every integer field its commands carry beyond cmd and target.
+    COMMAND_FIELDS: Dict[str, int] = {}
 
     def __init__(self, params: Mapping[str, Any], node_ids: Sequence[int]):
         unknown = sorted(set(params) - set(self.PARAMS))
