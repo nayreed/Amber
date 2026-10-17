@@ -149,6 +149,29 @@ class TestRun(unittest.TestCase):
             self.assertEqual(got, expected)
             self.assertGreater(expected["reader_bs0_rx.csv"].count("\n"), 2)
 
+    def test_the_carrier_is_always_on_and_the_tags_live_on_it(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader = ReaderSession(IQ_SCENARIO, iq.BLOCK_BYTES, out)
+            tags = [TagSession(IQ_SCENARIO, n, iq.BLOCK_BYTES, out) for n in reader.scenario.NODE_IDS]
+            powers, fractions, done = [], set(), False
+            while not done:
+                block = reader.next_block()
+                air, control = iq.split_block(block)
+                if int(control[0]) == iq.MS:
+                    powers.append(float(np.mean(np.abs(phy.from_counts(air, phy.TX_COUNTS)) ** 2)))
+                replies = [t.reply(block)[0] for t in tags]
+                if int(control[0]) == iq.MS:
+                    # Each Tag harvests from the carrier it received in this block
+                    for t in tags:
+                        self.assertAlmostEqual(t.node.carrier_fraction, powers[-1], places=6)
+                    fractions.add(round(tags[0].node.carrier_fraction, 6))
+                done = reader.on_blocks(replies)
+            # On in every millisecond, idle or listening; only a command keys part of it off
+            self.assertEqual(len(powers), reader.scenario.SIM_TIME_MS)
+            self.assertGreater(min(powers), 0.3)
+            self.assertIn(1.0, fractions)
+            self.assertLess(min(fractions), 1.0)
+
     def test_iq_mode_needs_one_base_station(self):
         with open(IQ_SCENARIO) as f:
             text = f.read()
