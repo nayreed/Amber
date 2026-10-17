@@ -21,9 +21,9 @@ per frame. One command and one slot per frame (``gen2_q``) decides after every s
 of a command before every slot, as Gen2's QueryRep is.
 
 A new protocol goes in this package. amber/protocols/README.md is the guide: what each protocol
-here does, how to write a new one, and the rules it must follow to run split across processes as
-OAI runs it (Tag randomness from ``self.rng``, plain JSON payloads, whole-millisecond durations).
-tests/split/test_protocol_conformance.py checks every module here against them.
+here does, how to write a new one, and the rules it must follow to run as a Reader container
+and Tag containers on OAI (Tag randomness from ``self.rng``, plain JSON payloads, whole-millisecond durations).
+tests/test_protocol_conformance.py checks every module here against them.
 """
 
 import importlib

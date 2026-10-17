@@ -1,14 +1,16 @@
-# Amber's unicast demo: each registered Tag is polled in turn with send_data, one slot each.
+# Amber's broadcast demo: three registered Tags answer a broadcast send_data in one of two slots,
+# no SIC.
 
 [run]
 sim_time_ms = 8001
 seed = 12345
 
 [reader]
-protocol = "unicast"
-enable_sic = true
+protocol = "broadcast"
+enable_sic = false
 
 [reader.params]
+slots = 2
 tx_ms = 5
 rx_ms = 10
 
@@ -30,7 +32,7 @@ los = true
 combine_mode = "max"
 
 [energy]
-trace = "../../../demo_experiments/threehundred_seconds_stable.xlsx"
+trace = "../../demo_experiments/threehundred_seconds_stable.xlsx"
 column = "V_IM"
 resistance = 5e3
 

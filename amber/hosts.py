@@ -1,6 +1,7 @@
-# amber/split/hosts.py
+# amber/hosts.py
 """Reader host and Tag host: each owns a SimPy environment and advances it one millisecond at a
-time, exchanging Deliveries and Uplinks with the other side in between.
+time, exchanging Deliveries and Uplinks with the other side in between. amber-reader and amber-tag
+run them in their OAI containers, through amber.session.
 
 Per millisecond n, the exchange is:
   1. ReaderHost.run_ms(n)        Reader processes its events at n; returns the commands it sent.
@@ -10,23 +11,22 @@ Per millisecond n, the exchange is:
 
 Both hosts run on a PhasedEnvironment, which processes the events of one millisecond in a fixed
 order: the Reader's, then those of the objects the Tags share, then each node's in NODE_IDS order.
-build_one_process() runs the whole scenario on the same kind of environment; it is the reference
-a split run equals, which test_split_equivalence checks. It differs from steps 1 to 4 only in when
-the Reader handles a transmission: right after the node made it, before the next node's events.
-That cannot change what the next node does, since the Reader may not send a command while
-receiving (apply_uplinks refuses it).
+build() puts the whole scenario on one environment of the same kind, for a run on one machine
+(python -m amber.run); the hosts give exactly the same records, which tests/test_hosts.py checks.
+build() differs from steps 1 to 4 only in when the Reader handles a transmission: right after the
+node made it, before the next node's events. That cannot change what the next node does, since the
+Reader may not send a command while receiving (apply_uplinks refuses it).
 
-Plain SimPy, which Amber's demos use, orders events of the same time by when they were
-scheduled, mixing the Reader's and the Tags'. A one-process run on it can differ from a split run
-when a Reader event and a Tag event fall in the same millisecond, for example a transmission
-exactly at the end of a Reader listening window.
+Plain SimPy orders events of the same time by when they were scheduled, mixing the Reader's and
+the Tags'. On it, a run could differ from the hosts when a Reader event and a Tag event fall in the
+same millisecond, for example a transmission exactly at the end of a Reader listening window.
 
 Amber times must be whole milliseconds: a command or transmission at any other time is refused
 rather than silently moved to the next millisecond.
 
 A scenario is a TOML file read by amber.scenario, or a Python module defining:
   SIM_TIME_MS                    simulated duration, as passed to env.run(until=...)
-  NODE_IDS                       node ids, in the order one-process Amber builds them
+  NODE_IDS                       node ids, in the order build() builds them
   BS_IDS                         base station ids
   build_shared(env)              objects all Tags share (energy source, coverage map); returns them
   build_tag(env, shared, id)     one node's Capacitor, BackscatterModule and Controller; returns
@@ -36,8 +36,8 @@ and optionally:
   SEED                           seed for Python's global random generator, set before building.
 
 Give every node its own random generator (the rng argument of BackscatterModule and Controller).
-A node drawing from the global generator gets numbers that depend on what every other node in
-the same process drew, so a run split across processes cannot match a one-process run.
+A node drawing from the global generator gets numbers that depend on what every other node on the
+same environment drew, so a Tag in its own container could not match a run on one machine.
 """
 
 import contextlib
@@ -50,7 +50,7 @@ from typing import Any, Iterator, List, Optional, Sequence, Tuple
 import simpy
 from simpy.events import NORMAL, Initialize, Interruption
 
-from ..scenario import load as load_toml_scenario
+from .scenario import load as load_toml_scenario
 from .proxies import BSProxy, Delivery, TagProxy, Uplink
 
 _SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "build_reader")
@@ -145,10 +145,10 @@ class PhasedEnvironment(simpy.Environment):
             return super().run(until)
 
 
-def build_one_process(scenario: Any) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
-    """Build the whole scenario in one environment, in the same order as Amber's demos (shared
-    objects, then each node, then the base stations). Returns (env, bs_behaviors,
-    backscatter_modules); run it with env.run(until=scenario.SIM_TIME_MS)."""
+def build(scenario: Any) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
+    """Build the whole scenario on one environment: shared objects, then each node, then the base
+    stations. Returns (env, bs_behaviors, backscatter_modules); run it with
+    env.run(until=scenario.SIM_TIME_MS)."""
     _seed(scenario)
     env = PhasedEnvironment()
     with env.in_phase(SHARED_PHASE):
@@ -205,7 +205,7 @@ class ReaderHost:
 
     def apply_uplinks(self, ms: int, uplinks: Sequence[Uplink]):
         """Hand the Tags' transmissions at ms to the base stations, exactly as
-        BackscatterModule.do_transmit() does in one-process Amber."""
+        BackscatterModule.do_transmit() does on one environment."""
         assert self.env.now == ms, f"apply_uplinks({ms}) called at {self.env.now} ms"
         for up in uplinks:
             bs = self._bs_by_id.get(up.bs_id)

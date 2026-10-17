@@ -1,4 +1,4 @@
-# amber/split/wire.py
+# amber/wire.py
 """Encoding of the per-millisecond messages carried in one rfsim block.
 
 A block holds one message: a 4-byte little-endian length, that many bytes of UTF-8 JSON, then

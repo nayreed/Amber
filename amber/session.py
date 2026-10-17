@@ -1,4 +1,4 @@
-# amber/split/session.py
+# amber/session.py
 """Block-by-block sessions driven by amber-reader and amber-tag.
 
 The C programs exchange one block per simulated millisecond over rfsim and pass every block
@@ -8,60 +8,27 @@ Tag. Messages (see wire.py):
                    for n = 0 .. SIM_TIME_MS - 1, then {"t": "end"}
   Tag -> Reader    {"t": "hello"} while idle, {"t": "up", "ms": n, "up": ...} for each millisecond,
                    {"t": "bye"} after "end"
-Every Tag message also carries "node". When the run is over each side writes its logs as CSV.
+Every Tag message also carries "node". When the run is over each side writes its own CSV files
+(see amber.output).
 """
 
-import csv
-import dataclasses
-import os
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from .. import output
-from . import wire
+from . import output, wire
 from .hosts import ReaderHost, TagHost, load_scenario
 
 
-def _write_csv(path: str, records):
-    if not records:
-        return
-    with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=[field.name for field in dataclasses.fields(records[0])])
-        writer.writeheader()
-        for record in records:
-            writer.writerow(dataclasses.asdict(record))
-
-
-def write_reader_logs(output_dir: str, bss):
-    """Write each base station's received and sent packets as CSV."""
-    for bs in bss:
-        _write_csv(os.path.join(output_dir, f"reader_bs{bs.id}_rx.csv"), bs.rx_packets)
-        _write_csv(os.path.join(output_dir, f"reader_bs{bs.id}_tx.csv"), bs.tx_packets)
-
-
-def write_reader_outputs(output_dir: str, scenario, bss):
-    """Write the files the scenario's protocol adds from its base stations, such as adaptation.csv."""
-    protocol = getattr(scenario, "protocol", None)
-    if protocol is not None:
-        output.write_protocol_outputs(output_dir, protocol, bss)
-
-
-def write_tag_logs(output_dir: str, node_id: int, bsm):
-    """Write one node's transmissions and received commands as CSV."""
-    _write_csv(os.path.join(output_dir, f"tag{node_id}_tx.csv"), bsm.tx_records)
-    _write_csv(os.path.join(output_dir, f"tag{node_id}_rx.csv"), bsm.rx_records)
-
-
-def _load_for_split(scenario_path: str):
+def _load(scenario_path: str):
     """The scenario, which must fix its seed: the Reader and every Tag must draw the same numbers."""
     scenario = load_scenario(scenario_path)
     if getattr(scenario, "seed_drawn", False):
-        raise ValueError(f"{scenario_path}: a split run needs a seed in [run], the same for the Reader and every Tag")
+        raise ValueError(f"{scenario_path}: the Reader and the Tags need a seed in [run], the same for all of them")
     return scenario
 
 
 class ReaderSession:
     def __init__(self, scenario_path: str, block_bytes: int, output_dir: str):
-        self.host = ReaderHost(_load_for_split(scenario_path))
+        self.host = ReaderHost(_load(scenario_path))
         self.block_bytes = block_bytes
         self.output_dir = output_dir
         self._node_ids = list(self.host.scenario.NODE_IDS)
@@ -120,13 +87,12 @@ class ReaderSession:
         return by_node
 
     def finish(self):
-        write_reader_logs(self.output_dir, self.host.bss)
-        write_reader_outputs(self.output_dir, self.host.scenario, self.host.bss)
+        output.write_reader_files(self.output_dir, getattr(self.host.scenario, "protocol", None), self.host.bss)
 
 
 class TagSession:
     def __init__(self, scenario_path: str, node_id: int, block_bytes: int, output_dir: str):
-        self.host = TagHost(_load_for_split(scenario_path), node_id)
+        self.host = TagHost(_load(scenario_path), node_id)
         self.node_id = node_id
         self.block_bytes = block_bytes
         self.output_dir = output_dir
@@ -154,4 +120,4 @@ class TagSession:
         return wire.frame(answer, self.block_bytes), done
 
     def finish(self):
-        write_tag_logs(self.output_dir, self.node_id, self.host.bsm)
+        output.write_tag_files(self.output_dir, self.node_id, self.host.bsm)

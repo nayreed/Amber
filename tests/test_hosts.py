@@ -1,26 +1,28 @@
-# tests/split/test_split_equivalence.py
-"""Checks that a scenario split into a ReaderHost and one TagHost per node, exchanging framed
-messages every millisecond, produces exactly what build_one_process() produces: the whole scenario
-in one environment, with the same event order.
+# tests/test_hosts.py
+"""Checks that a scenario run as a ReaderHost and one TagHost per node, exchanging framed messages
+every millisecond as the OAI containers do, produces exactly what build() produces: the whole
+scenario on one environment, with the same event order.
 
-Every node in the scenarios draws from its own random generator. The split runs reseed Python's
-global generator before every Tag step and step the Tags in reverse order, as separate processes
+Every node in the scenarios draws from its own random generator. run_hosts() reseeds Python's
+global generator before every Tag step and steps the Tags in reverse order, as separate containers
 would leave it in any state, so a node that still drew from it would make the comparison fail.
 """
 
+import contextlib
 import glob
+import io
 import os
 import random
 import tempfile
 import unittest
 
-from amber import scenario
-from amber.split import reference, wire
-from amber.split.hosts import ReaderHost, TagHost, build_one_process, load_scenario
-from amber.split.session import ReaderSession, TagSession
+from amber import run as amber_run
+from amber import scenario, wire
+from amber.hosts import ReaderHost, TagHost, build, load_scenario
+from amber.session import ReaderSession, TagSession
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
 BLOCK_BYTES = 8192
 SEED = 12345
 
@@ -32,20 +34,20 @@ def load(path):
     return scenario.load(path, {"run.seed": SEED}) if s.seed_drawn else s
 
 
-def run_one_process(path, loader=None):
+def run_on_one_machine(path, loader=None):
     s = (loader or load)(path)
     random.seed(SEED)
-    env, bss, bsms = build_one_process(s)
+    env, bss, bsms = build(s)
     env.run(until=s.SIM_TIME_MS)
     return bss, bsms
 
 
 def scramble_global_random(node_id, ms):
-    """Leave Python's global generator as an unrelated process might have it."""
-    random.seed(f"other process {node_id} {ms}")
+    """Leave Python's global generator as an unrelated container might have it."""
+    random.seed(f"other container {node_id} {ms}")
 
 
-def run_split(path, loader=None):
+def run_hosts(path, loader=None):
     loader = loader or load
     reader = ReaderHost(loader(path))
     tags = []
@@ -66,10 +68,10 @@ def run_split(path, loader=None):
     return reader.bss, sorted((tag.bsm for tag in tags), key=lambda bsm: bsm.node.id)
 
 
-class SplitEquivalenceTest(unittest.TestCase):
+class HostsTest(unittest.TestCase):
     def check(self, path):
-        ref_bss, ref_bsms = run_one_process(path)
-        bss, bsms = run_split(path)
+        ref_bss, ref_bsms = run_on_one_machine(path)
+        bss, bsms = run_hosts(path)
 
         self.assertGreater(sum(len(bs.rx_packets) for bs in ref_bss), 0, "scenario too short to exercise uplinks")
         for ref, got in zip(ref_bss, bss):
@@ -96,7 +98,7 @@ class SplitEquivalenceTest(unittest.TestCase):
 
 
 class SessionTest(unittest.TestCase):
-    """The block protocol amber-reader and amber-tag run, without rfsim: same result as one process."""
+    """The block protocol amber-reader and amber-tag run, without rfsim: same result as one machine."""
 
     def run_sessions(self, name, out):
         path = os.path.join(SCENARIO_DIR, name + ".toml")
@@ -122,7 +124,7 @@ class SessionTest(unittest.TestCase):
         return reader, tags
 
     def check(self, name):
-        ref_bss, ref_bsms = run_one_process(os.path.join(SCENARIO_DIR, name + ".toml"))
+        ref_bss, ref_bsms = run_on_one_machine(os.path.join(SCENARIO_DIR, name + ".toml"))
         with tempfile.TemporaryDirectory() as out:
             reader, tags = self.run_sessions(name, out)
             self.assertEqual(ref_bss[0].rx_packets, reader.host.bss[0].rx_packets)
@@ -133,7 +135,8 @@ class SessionTest(unittest.TestCase):
             with open(os.path.join(out, "reader_bs0_rx.csv")) as f:
                 self.assertEqual(len(f.readlines()), len(ref_bss[0].rx_packets) + 1)
             for tag in tags:
-                self.assertTrue(os.path.exists(os.path.join(out, f"tag{tag.node_id}_tx.csv")))
+                for side in ("tx", "rx"):
+                    self.assertTrue(os.path.exists(os.path.join(out, f"tag{tag.node_id}_{side}.csv")))
 
     def test_single_node(self):
         self.check("single_node")
@@ -144,16 +147,19 @@ class SessionTest(unittest.TestCase):
     def test_adaptive_aloha_twelve_tags(self):
         self.check("adaptive_aloha")
 
-    def test_reference_writes_the_same_files(self):
-        with tempfile.TemporaryDirectory() as split_out, tempfile.TemporaryDirectory() as ref_out:
-            self.run_sessions("registration", split_out)
-            reference.run(os.path.join(SCENARIO_DIR, "registration.toml"), ref_out)
-            names = sorted(os.listdir(split_out))
-            self.assertEqual(names, sorted(os.listdir(ref_out)))
-            self.assertIn("tag3_tx.csv", names)
-            for name in names:
-                with open(os.path.join(split_out, name)) as a, open(os.path.join(ref_out, name)) as b:
-                    self.assertEqual(a.read(), b.read(), name)
+    def test_amber_run_writes_the_same_files(self):
+        """What OAI checks: python -m amber.run writes byte for byte what the containers write together."""
+        for name in ("registration", "adaptive_aloha", "gen2_q"):
+            with self.subTest(name), tempfile.TemporaryDirectory() as containers, tempfile.TemporaryDirectory() as one:
+                self.run_sessions(name, containers)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    amber_run.run(os.path.join(SCENARIO_DIR, name + ".toml"), one)
+                names = sorted(os.listdir(containers))
+                self.assertEqual(names, sorted(os.listdir(one)))
+                self.assertIn("reader_bs0_rx.csv", names)
+                for file in names:
+                    with open(os.path.join(containers, file)) as a, open(os.path.join(one, file)) as b:
+                        self.assertEqual(a.read(), b.read(), file)
 
     def started_reader(self):
         """A Reader of the 4-node registration scenario that has heard every hello."""
@@ -187,7 +193,7 @@ class SessionTest(unittest.TestCase):
 
 class WireTest(unittest.TestCase):
     def test_round_trip_and_grouping(self):
-        from amber.split.proxies import Delivery, Uplink
+        from amber.proxies import Delivery, Uplink
         data = {"cmd": "send_id", "target": -1, "rx_slots": [(10, 20), (20, 30)]}
         deliveries = [Delivery(0, "send_id", 0, data), Delivery(1, "send_id", 0, data), Delivery(1, "ack", 0, {})]
         encoded = wire.unframe(wire.frame({"c": wire.encode_deliveries(deliveries)}, 512))["c"]

@@ -3,9 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional, List, Dict, Any, Tuple, Union
 from collections import Counter
-import csv
 import numbers
-import pandas as pd
 import simpy
 
 from .packet_analysis import apply_sic, thermal_noise_watts
@@ -76,9 +74,9 @@ def whole_ms_frame(frame):
     """The frame with every duration as an int; ValueError naming the entry if one is not a whole
     number of milliseconds.
 
-    A split run advances Reader and Tags one millisecond at a time and refuses anything in between,
-    and Tags only transmit on their 1 ms tick, so a frame off that grid could never be split and
-    would already be timed wrongly in one process. A duration such as 10.0 from float maths is fine.
+    The Reader and Tag containers advance one millisecond at a time and refuse anything in between,
+    and Tags only transmit on their 1 ms tick, so a frame off that grid could not run on OAI and
+    would be timed wrongly on one machine too. A duration such as 10.0 from float maths is fine.
     """
     out = []
     for entry in frame:
@@ -115,9 +113,7 @@ class BSBehavior:
         schedule: Optional[List[ScheduleEntry]] = None,
         backscatter_modules: List[Any] = None,  # List of BackscatterModule instances
         loop: bool = True,
-        log_file: Optional[str] = None,  # Path to log file (without extension)
-        stream_log: Optional[str] = None,  # if set, stream rx/tx packets to "<stream_log>_rx.txt"/"_tx.txt" as they arrive (bounded memory)
-        keep_logs: bool = True,  # if False (and not streaming), keep only counters and don't store packets in memory
+        keep_logs: bool = True,  # if False, keep only counters and don't store packets in memory
         # SIC parameters
         required_sinr_db: float = 3.0,
         enable_sic: bool = True,
@@ -138,7 +134,6 @@ class BSBehavior:
         self.policy = policy
         self.backscatter_modules = list(backscatter_modules) if backscatter_modules else []
         self.loop = loop
-        self.log_file = log_file
         self.on_rx = on_rx
         self.on_tx = on_tx
 
@@ -159,7 +154,7 @@ class BSBehavior:
         self.rx_packets: List[RxPacket] = []
         self.tx_packets: List[TxPacket] = []
 
-        # If False (and not streaming), packets are counted but not stored.
+        # If False, packets are counted but not stored.
         self.keep_logs: bool = keep_logs
 
         # Always-on aggregate counters (cheap, never grow with sim time)
@@ -174,24 +169,6 @@ class BSBehavior:
         # One SlotResult per listening slot of the current frame, empty slots included;
         # read by a policy after the frame. Reset at the start of each frame.
         self.slot_results: List[SlotResult] = []
-
-        # Opt-in streaming sinks: write each packet to disk instead of keeping it in memory
-        self._rx_stream_fh = None
-        self._rx_stream_writer = None
-        self._tx_stream_fh = None
-        self._tx_stream_writer = None
-        if stream_log:
-            self._rx_stream_fh = open(f"{stream_log}_rx.txt", "w", newline="")
-            self._rx_stream_writer = csv.writer(self._rx_stream_fh, delimiter="\t")
-            self._rx_stream_writer.writerow(
-                ["start_ms", "end_ms", "slot_id", "node_id", "payload", "rssi_dbm",
-                 "sector_idx", "expected_node", "matched", "subcarrier_shift", "collided"]
-            )
-            self._tx_stream_fh = open(f"{stream_log}_tx.txt", "w", newline="")
-            self._tx_stream_writer = csv.writer(self._tx_stream_fh, delimiter="\t")
-            self._tx_stream_writer.writerow(
-                ["start_ms", "end_ms", "slot_id", "target_node", "cmd", "data"]
-            )
 
         # Current RX window state
         self._rx_start_ms: float = 0.0
@@ -469,14 +446,8 @@ class BSBehavior:
                 else:
                     self.rx_count_by_node[rx["node_id"]] += 1
 
-                # store: stream to disk (bounded memory), keep in list (default), or discard (counters only)
-                if self._rx_stream_writer is not None:
-                    self._rx_stream_writer.writerow(
-                        [pkt.start_ms, pkt.end_ms, pkt.slot_id, pkt.node_id, pkt.payload,
-                         pkt.rssi_dbm, pkt.sector_idx, pkt.expected_node, pkt.matched,
-                         pkt.subcarrier_shift, pkt.collided]
-                    )
-                elif self.keep_logs:
+                # keep in list (default), or discard (counters only)
+                if self.keep_logs:
                     self.rx_packets.append(pkt)
 
                 # Only process decoded (non-collided) packets
@@ -620,12 +591,8 @@ class BSBehavior:
         # counters (always maintained)
         self.total_tx += 1
 
-        # store: stream to disk (bounded memory), keep in list (default), or discard (counters only)
-        if self._tx_stream_writer is not None:
-            self._tx_stream_writer.writerow(
-                [pkt.start_ms, pkt.end_ms, pkt.slot_id, pkt.target_node, pkt.cmd, str(pkt.data)]
-            )
-        elif self.keep_logs:
+        # keep in list (default), or discard (counters only)
+        if self.keep_logs:
             self.tx_packets.append(pkt)
 
         if self.on_tx:
@@ -681,71 +648,3 @@ class BSBehavior:
             self.nodes_pending_ack.remove(node_id)
             if node_id not in self.nodes_registered:
                 self.nodes_registered.append(node_id)
-
-    def close_stream(self):
-        """Flush and close the streaming log files, if streaming is enabled.
-
-        Call this after env.run() completes when stream_log was set, so the
-        files are flushed to disk.
-        """
-        for attr in ("_rx_stream_fh", "_tx_stream_fh"):
-            fh = getattr(self, attr, None)
-            if fh is not None:
-                fh.flush()
-                fh.close()
-                setattr(self, attr, None)
-        self._rx_stream_writer = None
-        self._tx_stream_writer = None
-
-    def save_logs(self, clear: bool = True):
-        """Save logs to file using pandas and optionally clear lists.
-
-        Parameters
-        ----------
-        clear : bool, optional
-            If True, clear the lists after saving to free memory, by default True
-        """        
-        if not self.log_file:
-            return
-
-        # Save RX packets
-        if self.rx_packets:
-            rx_data = [
-                {
-                    "start_ms": p.start_ms,
-                    "end_ms": p.end_ms,
-                    "slot_id": p.slot_id,
-                    "node_id": p.node_id,
-                    "payload": p.payload,
-                    "rssi_dbm": p.rssi_dbm,
-                    "sector_idx": p.sector_idx,
-                    "expected_node": p.expected_node,
-                    "matched": p.matched,
-                    "subcarrier_shift": p.subcarrier_shift,
-                    "collided": p.collided,
-                }
-                for p in self.rx_packets
-            ]
-            df_rx = pd.DataFrame(rx_data)
-            df_rx.to_csv(f"bs_{self.log_file}_rx.txt", index=False, sep="\t")
-
-        # Save TX packets
-        if self.tx_packets:
-            tx_data = [
-                {
-                    "start_ms": p.start_ms,
-                    "end_ms": p.end_ms,
-                    "slot_id": p.slot_id,
-                    "target_node": p.target_node,
-                    "cmd": p.cmd,
-                    "data": str(p.data),
-                }
-                for p in self.tx_packets
-            ]
-            df_tx = pd.DataFrame(tx_data)
-            df_tx.to_csv(f"bs_{self.log_file}_tx.txt", index=False, sep="\t")
-
-        # Clear lists to free memory
-        if clear:
-            self.rx_packets.clear()
-            self.tx_packets.clear()

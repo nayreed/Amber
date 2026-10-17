@@ -1,19 +1,16 @@
-# The Gen2 Q algorithm (one command and one slot per frame) on the adaptive_aloha scenario's twelve
-# Tags placed at random around the base station, SIC on.
+# Amber's unicast demo: each registered Tag is polled in turn with send_data, one slot each.
 
 [run]
-sim_time_ms = 6001
+sim_time_ms = 8001
 seed = 12345
 
 [reader]
-protocol = "gen2_q"
+protocol = "unicast"
 enable_sic = true
 
 [reader.params]
-q0 = 4.0
-c = 0.3
-tx_ms = 1
-slot_ms = 10
+tx_ms = 5
+rx_ms = 10
 
 [[base_station]]
 id = 0
@@ -33,7 +30,7 @@ los = true
 combine_mode = "max"
 
 [energy]
-trace = "../../../demo_experiments/threehundred_seconds_stable.xlsx"
+trace = "../../demo_experiments/threehundred_seconds_stable.xlsx"
 column = "V_IM"
 resistance = 5e3
 
@@ -55,6 +52,9 @@ durations_ms = { listening = 5, sensing = 2, processing = 5, transmitting = 15 }
 thresholds_v = { low = 1.3, high = 1.7 }
 
 [[tag_group]]
+energy_mode = "wpt"
+positions = [[0, 20], [0, 30]]
+
+[[tag_group]]
 energy_mode = "hybrid"
-count = 12
-layout = { kind = "ring", r_min = 5.0, r_max = 40.0, seed = 7 }
+positions = [[0, 100]]

@@ -34,8 +34,13 @@ python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Ta
 python -m amber.run demo_experiments/gen2_q/gen2_q.toml                # 12 Tags, Gen2 Q algorithm
 ```
 
-Each prints a summary and writes `rx_packets.csv`, `tx_records.csv` and the protocol's own files
-(such as `adaptation.csv`) to `output/<scenario>/` in the demo's folder.
+Each prints a summary and writes its CSV files to `output/<scenario>/` in the demo's folder:
+`reader_bs<id>_rx.csv` (packets received) and `reader_bs<id>_tx.csv` (commands sent) for each base
+station, `tag<id>_tx.csv` and `tag<id>_rx.csv` for each Tag, and the protocol's own files, such as
+`adaptation.csv`. These are the same files, byte for byte, that the Reader and Tag containers
+write on OAI ([amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER)),
+which need a seed in the file. A file without a seed draws a new one for every run and prints it.
+`python -m amber.run SCENARIO DIR` writes to `DIR` instead.
 
 ## API Reference
 

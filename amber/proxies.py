@@ -1,7 +1,7 @@
-# amber/split/proxies.py
-"""Stand-ins for the object on the other side of the Reader/Tag cut.
+# amber/proxies.py
+"""Stand-ins for the object on the other side, used by the Reader and Tag hosts (amber.hosts).
 
-In one-process Amber, BSBehavior calls BackscatterModule.receive_command() directly, and
+On one environment, BSBehavior calls BackscatterModule.receive_command() directly, and
 BackscatterModule.do_transmit() writes five fields into the BSBehavior and interrupts it.
 These proxies record those calls so they can be sent to the other host instead.
 """

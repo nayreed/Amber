@@ -1,4 +1,4 @@
-# tests/split/test_rx_slots.py
+# tests/test_rx_slots.py
 """Checks the RX slots a command advertises: those after it up to the next TX entry, since the next
 command replaces the slots a node holds. A slot past that could be picked but never used."""
 
@@ -8,9 +8,9 @@ import unittest
 import simpy
 
 from amber import bsengine, radiodevices, scenario
-from amber.split.hosts import build_one_process
+from amber.hosts import build
 
-DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "demo_experiments")
+DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
 
 
 def load_demo(folder, name=None):
@@ -65,7 +65,7 @@ class DemoTest(unittest.TestCase):
     """In Amber's demos every advertised slot ends before the Reader's next command."""
 
     def check(self, folder, slots_per_command, name=None):
-        env, bss, bsms = build_one_process(load_demo(folder, name))
+        env, bss, bsms = build(load_demo(folder, name))
         seen = []
         for bsm in bsms:
             receive = bsm.receive_command

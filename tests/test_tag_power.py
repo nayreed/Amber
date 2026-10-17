@@ -1,4 +1,4 @@
-# tests/split/test_tag_power.py
+# tests/test_tag_power.py
 """Checks that a Tag hears commands only while its controller is on, and that adaptive_aloha's Tags
 send data they sensed."""
 
@@ -10,7 +10,7 @@ import simpy
 
 from amber import scenario
 from amber.backscatter import BackscatterModule
-from amber.split.hosts import build_one_process
+from amber.hosts import build
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
 
@@ -36,7 +36,7 @@ class PoweredTest(unittest.TestCase):
 
     def test_the_controller_says_when_the_tag_is_on(self):
         s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"))
-        env, _, bsms = build_one_process(s)
+        env, _, bsms = build(s)
         self.assertTrue(all(bsm.powered is False for bsm in bsms))  # off until the capacitor charges
         seen_on = set()
         for ms in range(1, s.SIM_TIME_MS, 50):
@@ -48,7 +48,7 @@ class PoweredTest(unittest.TestCase):
 class AdaptiveAlohaDataTest(unittest.TestCase):
     def test_tags_send_sensed_data(self):
         s = scenario.load(os.path.join(SCENARIO_DIR, "adaptive_aloha.toml"))
-        env, bss, bsms = build_one_process(s)
+        env, bss, bsms = build(s)
         env.run(until=s.SIM_TIME_MS)
         decoded = [p for p in bss[0].rx_packets if not p.collided]
         self.assertGreater(len(decoded), 0)

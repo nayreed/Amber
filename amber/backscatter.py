@@ -2,7 +2,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Any, Tuple
-import pandas as pd
 import random
 import simpy
 
@@ -37,8 +36,8 @@ class BackscatterModule:
 
     Random slot choices come from ``rng``: a ``random.Random`` owned by this
     node, or Python's global generator when it is None. A node with its own
-    generator draws the same numbers whatever the other nodes do, so a run
-    split across processes reproduces a one-process run.
+    generator draws the same numbers whatever the other nodes do, so a Tag
+    in its own container reproduces a run on one machine.
     """    
 
     def __init__(
@@ -49,7 +48,6 @@ class BackscatterModule:
         uplink_results: dict = None,
         downlink_results: dict = None,
         # params: BackscatterParams = None,
-        log_file: Optional[str] = None, 
         keep_logs: bool = True,  # if False, skip storing per-packet rx/tx records (flat memory)
         rng: Optional[random.Random] = None,
     ):
@@ -60,7 +58,6 @@ class BackscatterModule:
         self.uplink_results = uplink_results or {}
         self.downlink_results = downlink_results or {}
         # self.params = params or BackscatterParams()
-        self.log_file = log_file
         self.keep_logs = keep_logs
 
         self.state = "idle"  # idle, wait_ack, registered
@@ -341,45 +338,3 @@ class BackscatterModule:
         self.last_tx_command_time = -1.0
 
         return delivered
-
-    def save_logs(self, clear: bool = True):
-        """Save logs to file using pandas and optionally clear lists.
-
-        Args:
-            clear: If True, clear the lists after saving to free memory.
-        """
-        if not self.log_file:
-            return
-
-        # Save TX records
-        if self.tx_records:
-            tx_data = [
-                {
-                    "end_ms": r.end_ms,
-                    "payload_type": r.payload_type,
-                    "payload": r.payload,
-                    "slot_idx": r.slot_idx,
-                    "delivered": r.delivered,
-                }
-                for r in self.tx_records
-            ]
-            df_tx = pd.DataFrame(tx_data)
-            df_tx.to_csv(f"node_{self.log_file}_tx.txt", index=False, sep="\t")
-
-        # Save RX records
-        if self.rx_records:
-            rx_data = [
-                {
-                    "end_ms": r.end_ms,
-                    "cmd": r.cmd,
-                    "from_bs": r.from_bs,
-                }
-                for r in self.rx_records
-            ]
-            df_rx = pd.DataFrame(rx_data)
-            df_rx.to_csv(f"node_{self.log_file}_rx.txt", index=False, sep="\t")
-
-        # Clear lists to free memory
-        if clear:
-            self.tx_records.clear()
-            self.rx_records.clear()

@@ -1,13 +1,12 @@
-# amber/split/summary.py
-"""Print the results Amber's demos print (sent, decoded, collided, DER, throughput, per node) from
-the logs of a run.
+# amber/summary.py
+"""Print the results of a run (sent, decoded, collided, DER, throughput, per node) from its CSV
+files (see amber.output).
 
-    python3 -m amber.split.summary SIM_TIME_MS LOG_DIR [LOG_DIR ...]
+    python3 -m amber.summary SIM_TIME_MS LOG_DIR [LOG_DIR ...]
 
-A LOG_DIR is either the output of an amber.split run (reader_bs*_rx.csv, tag*_tx.csv) or a demo's
-own output directory (rx_packets.csv, tx_records.csv). The numbers are computed as the demos compute
-them: a packet is decoded when it did not collide, counted once per (node, start time), and
-throughput is decoded packets per simulated second.
+A LOG_DIR holds the files of one run: reader_bs*_rx.csv and tag*_tx.csv are read. A packet is
+decoded when it did not collide, counted once per (node, start time), and throughput is decoded
+packets per simulated second.
 """
 
 import csv
@@ -24,15 +23,11 @@ def _rows(paths):
 
 
 def summarize(log_dir: str, sim_time_ms: int) -> dict:
-    if os.path.exists(os.path.join(log_dir, "rx_packets.csv")):
-        rx = [(r["node_id"], r["time_ms"], r["collided"]) for r in _rows([os.path.join(log_dir, "rx_packets.csv")])]
-        tx = [r["node_id"] for r in _rows([os.path.join(log_dir, "tx_records.csv")])]
-    else:
-        rx = [(r["node_id"], r["start_ms"], r["collided"]) for r in _rows(sorted(glob.glob(os.path.join(log_dir, "reader_bs*_rx.csv"))))]
-        tx = []
-        for path in sorted(glob.glob(os.path.join(log_dir, "tag*_tx.csv"))):
-            node_id = os.path.basename(path)[len("tag"):-len("_tx.csv")]
-            tx += [node_id for _ in _rows([path])]
+    rx = [(r["node_id"], r["start_ms"], r["collided"]) for r in _rows(sorted(glob.glob(os.path.join(log_dir, "reader_bs*_rx.csv"))))]
+    tx = []
+    for path in sorted(glob.glob(os.path.join(log_dir, "tag*_tx.csv"))):
+        node_id = os.path.basename(path)[len("tag"):-len("_tx.csv")]
+        tx += [node_id for _ in _rows([path])]
     if not tx:
         raise ValueError(f"no transmissions found in {log_dir}")
     decoded = {(node, start) for node, start, collided in rx if collided == "False"}

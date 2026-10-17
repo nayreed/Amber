@@ -1,12 +1,12 @@
-# tests/split/test_protocol_conformance.py
+# tests/test_protocol_conformance.py
 """Checks every protocol in amber/protocols, found by listing the package, so a new protocol is
 tested as soon as its file is there.
 
-Each one runs with its default parameters on the four-Tag registration scenario, once in one
-process and once split into a Reader host and one Tag host per node, exchanging framed blocks as
-amber-reader and amber-tag do; the records must be identical. The split run scrambles Python's
-global random generator before every Tag step, so a Tag that draws from it instead of self.rng
-fails, and it packs every command and transmission as JSON in 8192-byte blocks at whole
+Each one runs with its default parameters on the four-Tag registration scenario, once on one
+machine and once as a Reader host and one Tag host per node, exchanging framed blocks as the
+amber-reader and amber-tag containers do; the records must be identical. The hosts scramble
+Python's global random generator before every Tag step, so a Tag that draws from it instead of
+self.rng fails, and they pack every command and transmission as JSON in 8192-byte blocks at whole
 milliseconds, so a protocol that sends something else fails too.
 
 Each protocol module is also read for uses of the random module other than random.Random, which
@@ -28,7 +28,7 @@ from amber import scenario
 from amber.protocols import Protocol
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from test_split_equivalence import run_one_process, run_split  # noqa: E402
+from test_hosts import run_hosts, run_on_one_machine  # noqa: E402
 
 SCENARIO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios", "registration.toml")
 NOT_PROTOCOLS = {"base"}
@@ -85,16 +85,16 @@ class ConformanceTest(unittest.TestCase):
                 source = inspect.getsource(importlib.import_module(f"amber.protocols.{name}"))
                 uses = global_random_uses(source)
                 self.assertEqual(uses, [], f"amber/protocols/{name}.py uses the random module at {uses}: a Tag "
-                                           "must draw from self.rng, its own generator, or a split run differs")
+                                           "must draw from self.rng, its own generator, or its containers on OAI differ")
 
-    def test_split_equals_one_process(self):
+    def test_hosts_equal_one_machine(self):
         for name in protocol_names():
             with self.subTest(name):
-                one = records(*run_one_process(SCENARIO, loader(name)))
+                one = records(*run_on_one_machine(SCENARIO, loader(name)))
                 self.assertGreater(sum(len(rx) for rx, _ in one[0]), 0,
                                    f"{name} received nothing on the scenario, so the check proves nothing")
-                self.assertEqual(one, records(*run_split(SCENARIO, loader(name))),
-                                 f"{name}: a split run differs from one process")
+                self.assertEqual(one, records(*run_hosts(SCENARIO, loader(name))),
+                                 f"{name}: the Reader and Tag hosts differ from a run on one machine")
 
 
 BAD_PROTOCOL = '''
@@ -128,7 +128,7 @@ class CatchesMistakesTest(unittest.TestCase):
         self.assertEqual(global_random_uses("from random import Random, choice\n"), [(1, "from random import choice")])
         self.assertEqual(global_random_uses("import random\nrng = random.Random(1)\n"), [])
 
-    def test_split_check(self):
+    def test_hosts_check(self):
         with tempfile.TemporaryDirectory() as tmp:
             os.makedirs(os.path.join(tmp, "bad_protocols"))
             open(os.path.join(tmp, "bad_protocols", "__init__.py"), "w").close()
@@ -137,9 +137,9 @@ class CatchesMistakesTest(unittest.TestCase):
             sys.path.insert(0, tmp)
             try:
                 load = loader("bad_protocols.bad")
-                one = records(*run_one_process(SCENARIO, load))
+                one = records(*run_on_one_machine(SCENARIO, load))
                 self.assertGreater(sum(len(rx) for rx, _ in one[0]), 0)
-                self.assertNotEqual(one, records(*run_split(SCENARIO, load)))
+                self.assertNotEqual(one, records(*run_hosts(SCENARIO, load)))
             finally:
                 sys.path.remove(tmp)
                 for name in [m for m in sys.modules if m.startswith("bad_protocols")]:

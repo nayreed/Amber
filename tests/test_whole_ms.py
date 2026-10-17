@@ -1,7 +1,7 @@
-# tests/split/test_whole_ms.py
-"""Checks that BSBehavior refuses a frame duration that is not a whole number of milliseconds, in
-one process too: a split run advances one millisecond at a time, so such a frame could never be
-split."""
+# tests/test_whole_ms.py
+"""Checks that BSBehavior refuses a frame duration that is not a whole number of milliseconds, on
+one machine too: the Reader and Tag containers advance one millisecond at a time, so such a frame
+could not run on OAI."""
 
 import unittest
 
@@ -27,7 +27,7 @@ class WholeMillisecondsTest(unittest.TestCase):
             with self.subTest(duration), self.assertRaisesRegex(ValueError, "whole number of milliseconds"):
                 whole_ms_frame([("tx", 1, "cmd"), ("rx", duration, "slot")])
 
-    def test_policy_frame_refused_in_one_process(self):
+    def test_policy_frame_refused_on_one_machine(self):
         env = simpy.Environment()
 
         def policy(bs):

@@ -1,4 +1,4 @@
-# tests/split/test_scenario.py
+# tests/test_scenario.py
 """Checks amber.scenario: seeds, Tag placement and settings, and that a file that is not a valid
 scenario is refused with a message naming the key."""
 
@@ -10,8 +10,8 @@ import tempfile
 import unittest
 
 from amber import scenario
-from amber.split.hosts import SHARED_PHASE, PhasedEnvironment, build_one_process
-from amber.split.session import ReaderSession, TagSession
+from amber.hosts import SHARED_PHASE, PhasedEnvironment, build
+from amber.session import ReaderSession, TagSession
 
 try:
     import tomllib
@@ -20,12 +20,12 @@ except ModuleNotFoundError:  # Python < 3.11
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCENARIO_DIR = os.path.join(HERE, "scenarios")
-DEMO_DIR = os.path.join(HERE, "..", "..", "demo_experiments")
+DEMO_DIR = os.path.join(HERE, "..", "demo_experiments")
 BASE = os.path.join(SCENARIO_DIR, "single_node.toml")
 
 
 def run(s):
-    env, bss, bsms = build_one_process(s)
+    env, bss, bsms = build(s)
     env.run(until=s.SIM_TIME_MS)
     return bss, bsms
 
@@ -46,16 +46,16 @@ class SeedTest(unittest.TestCase):
         self.assertFalse(fixed.seed_drawn)
         self.assertEqual(fixed.SEED, 5)
 
-    def test_a_split_run_needs_a_seed(self):
+    def test_the_containers_need_a_seed(self):
         demo = os.path.join(DEMO_DIR, "broadcast", "broadcast.toml")
-        with self.assertRaisesRegex(ValueError, "split run needs a seed"):
+        with self.assertRaisesRegex(ValueError, "need a seed"):
             ReaderSession(demo, 8192, ".")
-        with self.assertRaisesRegex(ValueError, "split run needs a seed"):
+        with self.assertRaisesRegex(ValueError, "need a seed"):
             TagSession(demo, 0, 8192, ".")
 
     def test_each_tag_draws_from_its_own_generator(self):
         s = scenario.load(BASE, {"run.seed": 41})
-        tag = build_one_process(s)[2][0]
+        tag = build(s)[2][0]
         self.assertIsInstance(tag.rng, random.Random)
         random.seed(1)
         first = run(s)[1][0].tx_records

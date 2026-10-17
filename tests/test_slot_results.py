@@ -1,4 +1,4 @@
-# tests/split/test_slot_results.py
+# tests/test_slot_results.py
 """Checks BSBehavior.slot_results, what each listening slot of a frame held (empty slots included),
 and the gen2_q protocol, which decides after every slot from it."""
 
@@ -11,8 +11,8 @@ import simpy
 
 from amber import protocols, radiodevices, scenario
 from amber.bsengine import BSBehavior, SlotResult
-from amber.split import reference
-from amber.split.hosts import build_one_process
+from amber import output
+from amber.hosts import build
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
 
@@ -143,7 +143,7 @@ class Gen2ScenarioTest(unittest.TestCase):
     def test_runs_and_writes_q_csv(self):
         path = os.path.join(SCENARIO_DIR, "gen2_q.toml")
         s = scenario.load(path)
-        env, bss, bsms = build_one_process(s)
+        env, bss, bsms = build(s)
         env.run(until=s.SIM_TIME_MS)
         decoded = [p for p in bss[0].rx_packets if not p.collided]
         self.assertGreater(len(decoded), 0)
@@ -151,7 +151,7 @@ class Gen2ScenarioTest(unittest.TestCase):
         self.assertTrue(all(p.payload != 0 for p in decoded))
         self.assertGreater(len({q for _, q, _, _ in bss[0].q_history}), 1)
         with tempfile.TemporaryDirectory() as out:
-            reference.run(path, out)
+            output.write_run(out, s, bss, bsms)
             frame = pd.read_csv(os.path.join(out, "q.csv"))
             self.assertEqual(list(frame.columns), ["time_s", "q", "decoded", "collided"])
             self.assertEqual(len(frame), len(bss[0].q_history))

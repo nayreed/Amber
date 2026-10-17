@@ -1,4 +1,4 @@
-# tests/split/test_protocols.py
+# tests/test_protocols.py
 """Checks amber.protocols: each protocol gives the schedule it documents, checks its parameters, and
 a scenario can name a protocol of its own by module path."""
 

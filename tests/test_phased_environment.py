@@ -1,11 +1,11 @@
-# tests/split/test_phased_environment.py
+# tests/test_phased_environment.py
 """Checks the event order of PhasedEnvironment on events of the same time."""
 
 import unittest
 
 import simpy
 
-from amber.split.hosts import READER_PHASE, PhasedEnvironment
+from amber.hosts import READER_PHASE, PhasedEnvironment
 
 
 class PhasedEnvironmentTest(unittest.TestCase):
