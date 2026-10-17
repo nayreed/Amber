@@ -4,9 +4,9 @@
 A scenario with a [phy] table runs in IQ mode. Then every rfsim block holds one millisecond of
 IQ samples (amber.phy) and rfsim adds up what the Tags send, as normal rfsim does:
 
-- The Reader's carrier is real. It is on while a base station transmits or listens and off
-  while it is idle. A Tag harvests from the Reader only while the carrier is on (its
-  carrier_fraction), and can only answer by reflecting it.
+- The Reader's carrier is real and always on, for the whole run. A command keys it off for
+  part of each chip, so a Tag harvests less while one is sent (its carrier_fraction). A Tag can
+  only answer by reflecting the carrier.
 - A command reaches a Tag only if the Tag decodes it from the waveform: commands are sent as
   bits (see encode_command), at phy.r2d_kbps, so a long command takes several milliseconds.
 - A Tag's answer reaches the Reader only if the Reader decodes it from the sum of every Tag's
@@ -249,7 +249,7 @@ class IqReaderSession:
             control[0], control[1], control[2] = MS, ms & 0x7FFF, ms >> 15
             for node_ids, cmd, data in _group_deliveries(self.host.run_ms(ms)):
                 self._queue(node_ids, cmd, data, ms)
-            air = self.tx.next_ms(self.bs.mode in ("tx", "rx"))
+            air = self.tx.next_ms(True)
         return join_block(phy.to_counts(air, phy.TX_COUNTS), control)
 
     def _queue(self, node_ids: List[int], cmd: str, data: Dict[str, Any], ms: int):

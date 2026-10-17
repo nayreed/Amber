@@ -114,6 +114,7 @@ class BackscatterModule:
 
         # Check if received power is above node sensitivity. In IQ mode (amber.iq) the Tag has
         # decoded the command from the waveform, so the physics has already decided.
+        # MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
         if not self.phy_decides:
             node_sensitivity = getattr(self.node, "sensitivity_dbm", -45.0)
             best_pw_dbm = self.downlink_results.get("best_pw_dbm", {})

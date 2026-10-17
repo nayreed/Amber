@@ -203,6 +203,7 @@ class ReaderHost:
         self._deliveries.clear()
         return out
 
+    # MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
     def apply_uplinks(self, ms: int, uplinks: Sequence[Uplink]):
         """Hand the Tags' transmissions at ms to the base stations, exactly as
         BackscatterModule.do_transmit() does on one environment."""

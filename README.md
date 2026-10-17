@@ -79,16 +79,17 @@ new one, and the rules it must follow to run on OAI.
 
 ## IQ mode: real waveforms
 
-By default the Reader and the Tags exchange messages, and Amber decides with formulas what is
+Message mode will be removed once IQ mode is checked against it side by side; until then both
+run. By default the Reader and the Tags exchange messages, and Amber decides with formulas what is
 received: the carrier is always on, a command arrives whenever the Tag's received power is above
 its sensitivity, and packets within 5 ms of each other collide, with SIC applied to their powers.
 A scenario with a `[phy]` table runs in IQ mode instead
 ([`tests/scenarios/gen2_q_iq.toml`](tests/scenarios/gen2_q_iq.toml) is one), following the
 3GPP Rel-19 Ambient IoT design for a monostatic Reader and backscatter Tags:
 
-- The Reader's carrier is a signal (1.92 Msps). It is on while the base station transmits or
-  listens and off while it is idle. A Tag harvests from the Reader only while it is on, and can
-  only answer by reflecting it.
+- The Reader's carrier is a signal (1.92 Msps), always on for the whole run. A command keys it
+  off for part of each chip, so a Tag harvests less while one is sent. A Tag can only answer by
+  reflecting the carrier.
 - Commands are keyed onto the carrier (OOK, Manchester, CRC-16) as short bit fields, at
   `r2d_kbps`; a Tag decodes them with an envelope detector, or does not.
 - A Tag answers by switching its reflection (BPSK backscatter on a square-wave subcarrier,

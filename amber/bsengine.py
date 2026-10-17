@@ -94,8 +94,9 @@ class BSBehavior:
     """
     Schedule-driven base station.
 
-    Carrier is always on (implicit) - transmitted continuously on a separate subcarrier
-    for WPT. Nodes harvest energy all the time. The schedule only handles communication.
+    In message mode the carrier is always on (implicit): nodes harvest energy all the time. In IQ
+    mode (amber.iq) the carrier is a real signal, also always on. The schedule only handles
+    communication.
 
     Schedule entries (mode, duration_ms, slot_id, payload):
 
@@ -114,7 +115,8 @@ class BSBehavior:
         backscatter_modules: List[Any] = None,  # List of BackscatterModule instances
         loop: bool = True,
         keep_logs: bool = True,  # if False, keep only counters and don't store packets in memory
-        # SIC parameters
+        # SIC parameters. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+        # IQ mode uses only enable_sic.
         required_sinr_db: float = 3.0,
         enable_sic: bool = True,
         cancellation_factor: float = 0.9,
@@ -338,6 +340,7 @@ class BSBehavior:
         """        
         if not self._rx_buffer:
             return
+        # Below the phy_decides branch: the 5 ms window and SINR/SIC formula. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
         if self.phy_decides:
             for rx in self._rx_buffer:
                 self._record_rx(rx, collided=rx["node_id"] < 0, check_sensitivity=False)
@@ -433,7 +436,7 @@ class BSBehavior:
                 print(f"Warning: Received packet with out-of-range sector index {rx['sector_idx']} from node {rx['node_id']}")
                 return
 
-            # Check sensitivity
+            # Check sensitivity. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
             sector = self.base_station.sectors[rx["sector_idx"]]
             if check_sensitivity and rx["rssi_dbm"] < sector.sensitivity_dbm:
                 return

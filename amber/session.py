@@ -29,6 +29,8 @@ def _load(scenario_path: str):
     return scenario
 
 
+# MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+# The JSON sessions below; IQ mode uses amber.iq.IqReaderSession and IqTagSession.
 class ReaderSession:
     def __new__(cls, scenario_path: str, block_bytes: int, output_dir: str):
         scenario = _load(scenario_path)
