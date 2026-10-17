@@ -38,11 +38,12 @@ AIR_SAMPLES = SAMPLE_RATE_HZ // 1000  # samples per millisecond
 # rfsim carries 16-bit samples. The Reader sends its carrier at TX_COUNTS, which stands for the
 # carrier at whatever power it has; a Tag scales it by the power it receives.
 TX_COUNTS = 8192
-# What reaches the Reader is written as a 16-bit receiver (ADC) would sample it: full scale is
-# ADC_HEADROOM_DB above the strongest Tag (see up_scale), so several strong Tags can overlap
-# without clipping, and a Tag far weaker than the strongest one is lost in the rounding.
-ADC_HEADROOM_DB = 20.0
-ADC_FULL_SCALE = 32767
+# What reaches the Reader is written as its 16-bit receiver (ADC) would sample it. The gain puts
+# the Reader's thermal noise at ADC_NOISE_COUNTS rms on I and on Q (see up_scale), as a real
+# receiver is set up, so weak Tags are limited by the noise and not by rounding. The 16 bits then
+# reach about 90 dB above the noise; a Tag stronger than that is clipped, and so is the sum of the
+# Tags (rfsim's sum saturates, see iq.add_blocks), like a saturated front end.
+ADC_NOISE_COUNTS = 1.0
 
 K_BOLTZMANN = 1.380649e-23
 T_REF_K = 290.0
@@ -88,9 +89,9 @@ def from_counts(iq: np.ndarray, scale: float) -> np.ndarray:
     return (iq[0::2] + 1j * iq[1::2]) / scale
 
 
-def up_scale(strongest_dbm: float) -> float:
-    """Counts per sqrt(watt) of the Reader's receiver, given the strongest Tag it can hear."""
-    return ADC_FULL_SCALE / math.sqrt(dbm_to_w(strongest_dbm + ADC_HEADROOM_DB))
+def up_scale(noise_w: float) -> float:
+    """Counts per sqrt(watt) of the Reader's receiver, given its thermal noise power."""
+    return ADC_NOISE_COUNTS / math.sqrt(noise_w / 2)
 
 
 # ----------------------------------------------------------------------------------------------

@@ -38,12 +38,13 @@ def uplink(powers_dbm, sic=True, seed=0, shifts=None, carrier=None):
     tags = [phy.TagReflector(CFG, s, rng.uniform(0, 2 * math.pi)) for s in shifts]
     for i, (t, p) in enumerate(zip(tags, powers_dbm)):
         t.queue(10 + i, 1000 + i, p)
-    scale = phy.up_scale(max(powers_dbm))
+    scale = phy.up_scale(NOISE_W)
     decoded, collisions = [], 0
     for ms in range(3):
         c = np.ones(phy.AIR_SAMPLES, dtype=complex) if carrier is None else carrier
-        x = sum(t.next_ms(c, ms * phy.AIR_SAMPLES) for t in tags)
-        d, n = rx.receive(ms, phy.from_counts(phy.to_counts(x, scale), scale))
+        # Each Tag writes its own 16-bit samples and the Reader gets their saturated sum, as in iq.py
+        x = sum(phy.to_counts(t.next_ms(c, ms * phy.AIR_SAMPLES), scale).astype(np.int64) for t in tags)
+        d, n = rx.receive(ms, phy.from_counts(np.clip(x, -32768, 32767), scale))
         decoded += d
         collisions += n
     return sorted(d.node_id for d in decoded), collisions
@@ -68,6 +69,17 @@ class TestPhy(unittest.TestCase):
 
     def test_one_tag_decodes(self):
         self.assertEqual(uplink([-80.0]), ([10], 0))
+
+    def test_a_weak_tag_is_heard_beside_a_tag_next_to_the_reader(self):
+        # The receiver gain follows the noise, not the strongest Tag: -95 dBm still decodes beside
+        # a Tag at -20 dBm on another subcarrier
+        self.assertEqual(uplink([-20.0, -95.0], shifts=[0, 1]), ([10, 11], 0))
+
+    def test_the_sum_of_strong_tags_saturates_and_does_not_wrap(self):
+        strong = np.full(2 * phy.AIR_SAMPLES, 30000, dtype="<i2")
+        blocks = [np.concatenate([strong, np.zeros(iq.CONTROL_INT16, dtype="<i2")]).tobytes()] * 2
+        air, _ = iq.split_block(iq.add_blocks(blocks))
+        self.assertTrue(np.all(air == 32767))
 
     def test_a_tag_far_below_the_noise_is_not_heard(self):
         self.assertEqual(uplink([-125.0]), ([], 0))
