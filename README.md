@@ -45,17 +45,25 @@ uv sync
 
 ## Quickstart
 
-Four example scenarios are included:
+Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenario files.
+Run one with `amber.run`:
 
 ```bash
-python demo_experiments/broadcast/broadcast_demo.py              # 3 nodes, broadcast downlink
-python demo_experiments/broadcast_sic/broadcast_sic_demo.py      # 3 nodes, broadcast with SIC enabled
-python demo_experiments/unicast/unicast_demo.py                  # 3 nodes, per-node addressed downlink
-python demo_experiments/custom_protocol/custom_protocol_demo.py  # 12 nodes, user-defined adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/broadcast/broadcast.toml          # 3 Tags, broadcast downlink
+python -m amber.run demo_experiments/broadcast/broadcast_sic.toml      # the same with SIC
+python -m amber.run demo_experiments/unicast/unicast.toml              # 3 Tags, asked one at a time
+python -m amber.run demo_experiments/registration/registration.toml    # 4 Tags join, then send data
+python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Tags, adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/gen2_q/gen2_q.toml                # 12 Tags, Gen2 Q algorithm
 ```
 
-Each prints a summary and writes `rx_packets.csv` and `tx_records.csv` to its
-`output/` directory.
+Each prints a summary and writes its CSV files to `output/<scenario>/` in the demo's folder:
+`reader_bs<id>_rx.csv` (packets received) and `reader_bs<id>_tx.csv` (commands sent) for each base
+station, `tag<id>_tx.csv` and `tag<id>_rx.csv` for each Tag, and the protocol's own files, such as
+`adaptation.csv`. These are the same files, byte for byte, that the Reader and Tag containers
+write on OAI ([amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER)),
+which need a seed in the file. A file without a seed draws a new one for every run and prints it.
+`python -m amber.run SCENARIO DIR` writes to `DIR` instead.
 
 ## Scenario files and protocols
 
@@ -64,21 +72,10 @@ radio, energy, duration, seed), with the protocol named by `[reader] protocol` a
 `[reader.params]`. Each demo has one, such as
 [`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
 keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
-`unicast`, `registration`, `adaptive_aloha`); a protocol of your own is a module that defines a
-`Protocol` subclass as `PROTOCOL`, named in the file by its module path.
-
-Run a scenario file in one process, then write the demos' `rx_packets.csv` and
-`tx_records.csv` from its logs:
-
-```bash
-python -m amber.split.reference demo_experiments/broadcast/broadcast.toml out/
-python -m amber.split.export demo_experiments/broadcast/broadcast.toml out/
-```
-
-A file without a seed draws a new one for every run, as the demos do, and `reference` prints
-it. The same file runs split across processes with
-[amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER),
-which needs a seed in the file.
+`unicast`, `registration`, `adaptive_aloha`, `gen2_q`). A new protocol goes there too, with a
+demo scenario in `demo_experiments/<protocol>/`.
+[`amber/protocols/README.md`](amber/protocols/README.md) explains each protocol, how to write a
+new one, and the rules it must follow to run on OAI.
 
 ## Modules
 
@@ -91,11 +88,13 @@ which needs a seed in the file.
 | `energy` | `EnvEnergySource` — replays an external energy trace |
 | `backscatter` | Node-side backscatter transmit/receive |
 | `bsengine` | Base station behaviour, downlink scheduling |
-| `packet_analysis` | Collision detection, SIC, throughput and DER statistics |
+| `packet_analysis` | Thermal noise and SIC decoding |
 | `protocols` | The base station's protocol and the Tag class it needs, chosen by name |
 | `scenario` | Scenarios as TOML files (`load`, `Scenario`) |
-| `output` | The demos' CSV files from any run |
-| `split` | One simulation run as a Reader and one process per Tag |
+| `output` | The CSV files of a run, and the one function that writes them |
+| `run` | `python -m amber.run`: run a scenario on one machine |
+| `hosts`, `session`, `wire`, `proxies` | The Reader and the Tags as separate hosts exchanging a message every millisecond, as amber-reader and amber-tag run them on OAI |
+| `summary` | Sent, decoded, collided, DER and throughput from a run's files |
 
 Full API reference, generated from the source docstrings, is at
 **[mrnmir.github.io/Amber](https://mrnmir.github.io/Amber/)**.

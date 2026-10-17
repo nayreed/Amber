@@ -119,6 +119,9 @@ class Controller:
         self.fsm_count_in_current_cap_cycle = 0
         self.fsm_counts_per_cap_cycle = []  # list of counts, one per cap cycle
 
+        if backscatter is not None:
+            backscatter.powered = self.is_active  # off until the capacitor first charges
+
         self.action = env.process(self.run())
 
     # ----------------------------
@@ -293,6 +296,10 @@ class Controller:
                         self.fsm_counts_per_cap_cycle.append(self.fsm_count_in_current_cap_cycle)
                     self.fsm_count_in_current_cap_cycle = 0
                     self.capacitor_ctrl.action.interrupt("capacitor_charging")
+
+            # A Tag hears commands only while it is on
+            if self.backscatter is not None:
+                self.backscatter.powered = self.is_active
 
             # advance one millisecond
             yield self.env.timeout(1)

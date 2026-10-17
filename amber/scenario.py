@@ -3,11 +3,11 @@
 
 A scenario file says what is simulated (base stations, Tags, radio, energy, duration, seed) and
 names the protocol that drives it (see amber.protocols). load() reads one into a Scenario, which
-amber.split runs in one process (amber.split.reference) or split into a Reader and one process
-per Tag (amber-reader and amber-tag in OAI).
+runs on one machine (python -m amber.run) or as a Reader container and one container per Tag
+(amber-reader and amber-tag in OAI), through amber.hosts.
 
 Every key is named as the field of the Amber class it sets, and every value that a file leaves
-out keeps that class's default. demo_experiments/<demo>/<demo>.toml are complete examples. The
+out keeps that class's default. demo_experiments/<protocol>/*.toml are complete examples. The
 tables:
 
 ```text
@@ -230,7 +230,7 @@ class _TagParts(NamedTuple):
 
 
 class Scenario:
-    """A scenario read from a TOML file, in the form amber.split.hosts runs.
+    """A scenario read from a TOML file, in the form amber.hosts runs.
 
     Attributes
     ----------
@@ -416,7 +416,7 @@ class Scenario:
             places.append((x, y))
         return places
 
-    # ---------------- building, as amber.split.hosts calls it ----------------
+    # ---------------- building, as amber.hosts calls it ----------------
 
     def _make_base_station(self, bs: Dict[str, Any]) -> radiodevices.BaseStation:
         args = {k: v for k, v in bs.items() if k != "sectors"}
@@ -478,7 +478,7 @@ def load(path: str, overrides: Optional[Mapping[str, Any]] = None) -> Scenario:
     Returns
     -------
     Scenario
-        The scenario, ready for amber.split.hosts.
+        The scenario, ready for amber.hosts.
 
     Raises
     ------

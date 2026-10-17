@@ -11,3 +11,5 @@
 ::: amber.protocols.registration
 
 ::: amber.protocols.adaptive_aloha
+
+::: amber.protocols.gen2_q

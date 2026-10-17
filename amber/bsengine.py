@@ -3,8 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional, List, Dict, Any, Tuple, Union
 from collections import Counter
-import csv
-import pandas as pd
+import numbers
 import simpy
 
 from .packet_analysis import apply_sic, thermal_noise_watts
@@ -36,10 +35,59 @@ class TxPacket:
     data: Dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class SlotResult:
+    """What the base station heard in one listening slot, empty slots included.
+
+    A slot can hold both decoded and collided packets: without SIC the strongest of
+    colliding packets may still be decoded (capture), and with SIC several may be.
+    """
+    slot_id: str
+    start_ms: float
+    end_ms: float
+    decoded: List[int]  # node ids decoded in this slot
+    collided: int  # packets in this slot that collided (not decoded)
+
+    @property
+    def empty(self) -> bool:
+        """Nothing decoded and nothing collided: no packet above sensitivity arrived."""
+        return not self.decoded and self.collided == 0
+
+    @property
+    def collision(self) -> bool:
+        """At least one packet collided, whether or not another was decoded."""
+        return self.collided > 0
+
+    @property
+    def success(self) -> bool:
+        """At least one packet decoded and none collided."""
+        return bool(self.decoded) and self.collided == 0
+
+
 ScheduleEntry = Union[
     Tuple[str, int, str],        # (mode, duration_ms, slot_id)
     Tuple[str, int, str, Dict],  # (mode, duration_ms, slot_id, payload)
 ]
+
+
+def whole_ms_frame(frame):
+    """The frame with every duration as an int; ValueError naming the entry if one is not a whole
+    number of milliseconds.
+
+    The Reader and Tag containers advance one millisecond at a time and refuse anything in between,
+    and Tags only transmit on their 1 ms tick, so a frame off that grid could not run on OAI and
+    would be timed wrongly on one machine too. A duration such as 10.0 from float maths is fine.
+    """
+    out = []
+    for entry in frame:
+        duration = entry[1]
+        whole = (isinstance(duration, numbers.Real) and not isinstance(duration, bool)
+                 and float(duration).is_integer())
+        if not whole:
+            raise ValueError(f"frame entry {tuple(entry[:3])}: duration {duration!r} is not a whole number "
+                             "of milliseconds; Amber durations must be whole milliseconds")
+        out.append((entry[0], int(duration)) + tuple(entry[2:]))
+    return out
 
 
 class BSBehavior:
@@ -65,9 +113,7 @@ class BSBehavior:
         schedule: Optional[List[ScheduleEntry]] = None,
         backscatter_modules: List[Any] = None,  # List of BackscatterModule instances
         loop: bool = True,
-        log_file: Optional[str] = None,  # Path to log file (without extension)
-        stream_log: Optional[str] = None,  # if set, stream rx/tx packets to "<stream_log>_rx.txt"/"_tx.txt" as they arrive (bounded memory)
-        keep_logs: bool = True,  # if False (and not streaming), keep only counters and don't store packets in memory
+        keep_logs: bool = True,  # if False, keep only counters and don't store packets in memory
         # SIC parameters
         required_sinr_db: float = 3.0,
         enable_sic: bool = True,
@@ -84,11 +130,10 @@ class BSBehavior:
         self.env = env
         self.base_station = base_station
         self.id = base_station.id
-        self.schedule = schedule
+        self.schedule = whole_ms_frame(schedule) if schedule else schedule
         self.policy = policy
         self.backscatter_modules = list(backscatter_modules) if backscatter_modules else []
         self.loop = loop
-        self.log_file = log_file
         self.on_rx = on_rx
         self.on_tx = on_tx
 
@@ -109,7 +154,7 @@ class BSBehavior:
         self.rx_packets: List[RxPacket] = []
         self.tx_packets: List[TxPacket] = []
 
-        # If False (and not streaming), packets are counted but not stored.
+        # If False, packets are counted but not stored.
         self.keep_logs: bool = keep_logs
 
         # Always-on aggregate counters (cheap, never grow with sim time)
@@ -121,24 +166,9 @@ class BSBehavior:
         # Node ids decoded during the current frame; read by a policy to decide
         # how to answer (ack, register, adapt). Reset at the start of each frame.
         self.decoded_this_frame: List[int] = []
-
-        # Opt-in streaming sinks: write each packet to disk instead of keeping it in memory
-        self._rx_stream_fh = None
-        self._rx_stream_writer = None
-        self._tx_stream_fh = None
-        self._tx_stream_writer = None
-        if stream_log:
-            self._rx_stream_fh = open(f"{stream_log}_rx.txt", "w", newline="")
-            self._rx_stream_writer = csv.writer(self._rx_stream_fh, delimiter="\t")
-            self._rx_stream_writer.writerow(
-                ["start_ms", "end_ms", "slot_id", "node_id", "payload", "rssi_dbm",
-                 "sector_idx", "expected_node", "matched", "subcarrier_shift", "collided"]
-            )
-            self._tx_stream_fh = open(f"{stream_log}_tx.txt", "w", newline="")
-            self._tx_stream_writer = csv.writer(self._tx_stream_fh, delimiter="\t")
-            self._tx_stream_writer.writerow(
-                ["start_ms", "end_ms", "slot_id", "target_node", "cmd", "data"]
-            )
+        # One SlotResult per listening slot of the current frame, empty slots included;
+        # read by a policy after the frame. Reset at the start of each frame.
+        self.slot_results: List[SlotResult] = []
 
         # Current RX window state
         self._rx_start_ms: float = 0.0
@@ -180,6 +210,7 @@ class BSBehavior:
         while True:
             self._frame_start_ms = self.env.now
             self.decoded_this_frame = []
+            self.slot_results = []
             for idx, entry in enumerate(self.schedule):
                 self._schedule_idx = idx
                 mode = entry[0]
@@ -205,21 +236,27 @@ class BSBehavior:
         iterable (typically a generator) of frames, where each frame is a list
         of schedule entries (mode, duration_ms, slot_id[, payload]). After each
         frame runs, the policy can read self.decoded_this_frame (node ids heard
-        this frame) and any other BS state to decide the next frame — this is
-        where "ack or not", "register or not", and frame adaptation live.
+        this frame), self.slot_results (what each listening slot of this frame held,
+        empty slots included) and any other BS state to decide the next frame —
+        this is where "ack or not", "register or not", and frame adaptation live.
+        A frame of one command and one slot lets the policy decide after every slot.
 
         A command advertises the RX slots that follow it in the SAME frame, up
         to the frame's next TX entry (see _get_next_rx_slots).
+
+        Every duration must be a whole number of milliseconds (see whole_ms_frame).
         """
         for frame in self.policy(self):
             if not frame:
                 continue
+            frame = whole_ms_frame(frame)
             # Reuse the static-schedule machinery (incl. lookahead) by making
             # the current frame the "schedule" for the duration of this frame.
             self.schedule = frame
             self._frame_duration_ms = sum(e[1] for e in frame)
             self._frame_start_ms = self.env.now
             self.decoded_this_frame = []
+            self.slot_results = []
             for idx, entry in enumerate(frame):
                 self._schedule_idx = idx
                 mode = entry[0]
@@ -266,7 +303,15 @@ class BSBehavior:
                     self._buffer_rx()
 
         # RX window ended - process buffer with collision detection
+        decoded_before, collided_before = len(self.decoded_this_frame), self.total_collided
         self._process_rx_buffer()
+        self.slot_results.append(SlotResult(
+            slot_id=slot_id,
+            start_ms=self._rx_start_ms,
+            end_ms=self.env.now,
+            decoded=self.decoded_this_frame[decoded_before:],
+            collided=self.total_collided - collided_before,
+        ))
 
     def _buffer_rx(self):
         """Buffer incoming transmission for later collision check."""
@@ -401,14 +446,8 @@ class BSBehavior:
                 else:
                     self.rx_count_by_node[rx["node_id"]] += 1
 
-                # store: stream to disk (bounded memory), keep in list (default), or discard (counters only)
-                if self._rx_stream_writer is not None:
-                    self._rx_stream_writer.writerow(
-                        [pkt.start_ms, pkt.end_ms, pkt.slot_id, pkt.node_id, pkt.payload,
-                         pkt.rssi_dbm, pkt.sector_idx, pkt.expected_node, pkt.matched,
-                         pkt.subcarrier_shift, pkt.collided]
-                    )
-                elif self.keep_logs:
+                # keep in list (default), or discard (counters only)
+                if self.keep_logs:
                     self.rx_packets.append(pkt)
 
                 # Only process decoded (non-collided) packets
@@ -552,12 +591,8 @@ class BSBehavior:
         # counters (always maintained)
         self.total_tx += 1
 
-        # store: stream to disk (bounded memory), keep in list (default), or discard (counters only)
-        if self._tx_stream_writer is not None:
-            self._tx_stream_writer.writerow(
-                [pkt.start_ms, pkt.end_ms, pkt.slot_id, pkt.target_node, pkt.cmd, str(pkt.data)]
-            )
-        elif self.keep_logs:
+        # keep in list (default), or discard (counters only)
+        if self.keep_logs:
             self.tx_packets.append(pkt)
 
         if self.on_tx:
@@ -613,71 +648,3 @@ class BSBehavior:
             self.nodes_pending_ack.remove(node_id)
             if node_id not in self.nodes_registered:
                 self.nodes_registered.append(node_id)
-
-    def close_stream(self):
-        """Flush and close the streaming log files, if streaming is enabled.
-
-        Call this after env.run() completes when stream_log was set, so the
-        files are flushed to disk.
-        """
-        for attr in ("_rx_stream_fh", "_tx_stream_fh"):
-            fh = getattr(self, attr, None)
-            if fh is not None:
-                fh.flush()
-                fh.close()
-                setattr(self, attr, None)
-        self._rx_stream_writer = None
-        self._tx_stream_writer = None
-
-    def save_logs(self, clear: bool = True):
-        """Save logs to file using pandas and optionally clear lists.
-
-        Parameters
-        ----------
-        clear : bool, optional
-            If True, clear the lists after saving to free memory, by default True
-        """        
-        if not self.log_file:
-            return
-
-        # Save RX packets
-        if self.rx_packets:
-            rx_data = [
-                {
-                    "start_ms": p.start_ms,
-                    "end_ms": p.end_ms,
-                    "slot_id": p.slot_id,
-                    "node_id": p.node_id,
-                    "payload": p.payload,
-                    "rssi_dbm": p.rssi_dbm,
-                    "sector_idx": p.sector_idx,
-                    "expected_node": p.expected_node,
-                    "matched": p.matched,
-                    "subcarrier_shift": p.subcarrier_shift,
-                    "collided": p.collided,
-                }
-                for p in self.rx_packets
-            ]
-            df_rx = pd.DataFrame(rx_data)
-            df_rx.to_csv(f"bs_{self.log_file}_rx.txt", index=False, sep="\t")
-
-        # Save TX packets
-        if self.tx_packets:
-            tx_data = [
-                {
-                    "start_ms": p.start_ms,
-                    "end_ms": p.end_ms,
-                    "slot_id": p.slot_id,
-                    "target_node": p.target_node,
-                    "cmd": p.cmd,
-                    "data": str(p.data),
-                }
-                for p in self.tx_packets
-            ]
-            df_tx = pd.DataFrame(tx_data)
-            df_tx.to_csv(f"bs_{self.log_file}_tx.txt", index=False, sep="\t")
-
-        # Clear lists to free memory
-        if clear:
-            self.rx_packets.clear()
-            self.tx_packets.clear()
