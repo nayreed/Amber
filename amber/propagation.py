@@ -583,7 +583,7 @@ class CoverageMap:
         if self.node_energy_mode == "wpt":
             for node in target_nodes:
                 node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w = downlink_results["best_pw_w"].get(node_id, 0.0) * getattr(node, "carrier_fraction", 1.0)
                 efficiency = getattr(node, "efficiency", 1.0)
                 if node.state != "transmitting":
                     harvested_w = received_w
@@ -602,7 +602,7 @@ class CoverageMap:
                 else:
                     node.harvesting_power_dbm = watts_to_dbm(0.0)
                 node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w = downlink_results["best_pw_w"].get(node_id, 0.0) * getattr(node, "carrier_fraction", 1.0)
                 efficiency = getattr(node, "efficiency", 1.0)
                 backscatter_w = received_w * efficiency
                 node.backscatter_power_dbm = watts_to_dbm(backscatter_w)
@@ -610,7 +610,7 @@ class CoverageMap:
         elif self.node_energy_mode == "hybrid":
             for node in target_nodes:
                 node_id = getattr(node, "id", None)
-                received_w = downlink_results["best_pw_w"].get(node_id, 0.0)
+                received_w = downlink_results["best_pw_w"].get(node_id, 0.0) * getattr(node, "carrier_fraction", 1.0)
                 efficiency = getattr(node, "efficiency", 1.0)
                 if node.state != "transmitting":
                     harvested_w = received_w

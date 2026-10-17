@@ -318,6 +318,16 @@ OAI's `amber-reader` and `amber-tag` run the Reader and each Tag in **separate c
 
 The protocols here use at most 1.3 KB with 250 Tags. A protocol that sends every Tag its own command in the same millisecond will run out sooner. Raising `block_bytes` works, but every block is sent at full size to every Tag every millisecond, so it slows the run.
 
+### In IQ mode
+
+In IQ mode (a scenario with `[phy]`, see the main README) commands go over the air as bits, so three more rules apply.
+
+- **Declare your commands and their fields.** List the commands the protocol sends beyond `send_id`, `ack` and `send_data` in `COMMANDS` (16 at most in all), and give every integer field they carry beyond `cmd` and `target` a bit width in `COMMAND_FIELDS`, as `gen2_q` does with `q`. A command with any other field is refused.
+- **Payloads are integers** that fit in 32 bits, as every protocol here sends.
+- **Slots follow each other with one length**, as every schedule here makes them: a command carries their count, where the first starts and their length, and the Tag works the slots out.
+
+Airtime is real too: at the default 80 kb/s a command takes up to about 1 ms, and each ack is a command of its own; a Tag's frame takes about 1.2 ms at 60 kb/s. A command that runs past its `tx_ms` reaches the Tags late, and a frame that ends after its slot is lost.
+
 ---
 
 ## Pitfalls

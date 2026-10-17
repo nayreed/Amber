@@ -94,8 +94,9 @@ class BSBehavior:
     """
     Schedule-driven base station.
 
-    Carrier is always on (implicit) - transmitted continuously on a separate subcarrier
-    for WPT. Nodes harvest energy all the time. The schedule only handles communication.
+    In message mode the carrier is always on (implicit): nodes harvest energy all the time. In IQ
+    mode (amber.iq) the carrier is a real signal, also always on. The schedule only handles
+    communication.
 
     Schedule entries (mode, duration_ms, slot_id, payload):
 
@@ -114,7 +115,8 @@ class BSBehavior:
         backscatter_modules: List[Any] = None,  # List of BackscatterModule instances
         loop: bool = True,
         keep_logs: bool = True,  # if False, keep only counters and don't store packets in memory
-        # SIC parameters
+        # SIC parameters. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+        # IQ mode uses only enable_sic.
         required_sinr_db: float = 3.0,
         enable_sic: bool = True,
         cancellation_factor: float = 0.9,
@@ -181,6 +183,10 @@ class BSBehavior:
         self.rssi_dbm: float = -999.0
         self.best_sector_idx: int = -1
         self.subcarrier_shift: int = 0
+
+        # IQ mode (amber.iq): the physics has already decided what was decoded. A reception with
+        # node id -1 is a preamble heard but not decoded (a collision).
+        self.phy_decides: bool = False
 
         # Buffer for collision detection (filled during RX window)
         self._rx_buffer: List[Dict[str, Any]] = []
@@ -334,6 +340,11 @@ class BSBehavior:
         """        
         if not self._rx_buffer:
             return
+        # Below the phy_decides branch: the 5 ms window and SINR/SIC formula. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+        if self.phy_decides:
+            for rx in self._rx_buffer:
+                self._record_rx(rx, collided=rx["node_id"] < 0, check_sensitivity=False)
+            return
 
         # Group by subcarrier_shift
         by_subcarrier: Dict[int, List[Dict]] = {}
@@ -407,63 +418,69 @@ class BSBehavior:
                 else:
                     collided = False  # Single packet, no collision
 
-                # Validate sector
-                if rx["sector_idx"] < 0:
-                    print(f"Warning: Received packet with invalid sector index {rx['sector_idx']} from node {rx['node_id']}")
-                    continue
-                if rx["sector_idx"] >= len(self.base_station.sectors):
-                    print(f"Warning: Received packet with out-of-range sector index {rx['sector_idx']} from node {rx['node_id']}")
-                    continue
-
-                # Check sensitivity
-                sector = self.base_station.sectors[rx["sector_idx"]]
-                if rx["rssi_dbm"] < sector.sensitivity_dbm:
-                    continue
-
-                # Check if matched expected
-                matched = (
-                    self._rx_expect == "any" or self._rx_expect == rx["node_id"]
-                )
-
-                pkt = RxPacket(
-                    start_ms=self._rx_start_ms,
-                    end_ms=rx["time_ms"],
-                    slot_id=self._rx_slot_id,
-                    node_id=rx["node_id"],
-                    payload=rx["payload"],
-                    rssi_dbm=rx["rssi_dbm"],
-                    sector_idx=rx["sector_idx"],
-                    expected_node=self._rx_expect,
-                    matched=matched,
-                    bs_id=self.id,
-                    subcarrier_shift=rx["subcarrier_shift"],
-                    collided=collided,
-                )
-                # counters (always maintained)
-                self.total_rx += 1
-                if collided:
-                    self.total_collided += 1
-                else:
-                    self.rx_count_by_node[rx["node_id"]] += 1
-
-                # keep in list (default), or discard (counters only)
-                if self.keep_logs:
-                    self.rx_packets.append(pkt)
-
-                # Only process decoded (non-collided) packets
-                if not collided:
-                    self.decoded_this_frame.append(rx["node_id"])
-                    # Track node for ack if not already registered
-                    if rx["node_id"] not in self.nodes_registered:
-                        if rx["node_id"] not in self.nodes_pending_ack:
-                            self.nodes_pending_ack.append(rx["node_id"])
-
-                    if self.on_rx:
-                        self.on_rx(pkt)
+                self._record_rx(rx, collided, check_sensitivity=True)
 
         # Buffer is now processed - acks will be sent in the next TX slot
         # nodes_pending_ack is populated here, cleared after acks are sent
 
+
+    def _record_rx(self, rx: Dict[str, Any], collided: bool, check_sensitivity: bool):
+        """Log one reception and, when decoded, act on it."""
+        # Validate sector. A collision in IQ mode has none: the Reader cannot know who sent it.
+        anonymous = collided and rx["node_id"] < 0
+        if not anonymous:
+            if rx["sector_idx"] < 0:
+                print(f"Warning: Received packet with invalid sector index {rx['sector_idx']} from node {rx['node_id']}")
+                return
+            if rx["sector_idx"] >= len(self.base_station.sectors):
+                print(f"Warning: Received packet with out-of-range sector index {rx['sector_idx']} from node {rx['node_id']}")
+                return
+
+            # Check sensitivity. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+            sector = self.base_station.sectors[rx["sector_idx"]]
+            if check_sensitivity and rx["rssi_dbm"] < sector.sensitivity_dbm:
+                return
+
+        # Check if matched expected
+        matched = (
+            self._rx_expect == "any" or self._rx_expect == rx["node_id"]
+        )
+
+        pkt = RxPacket(
+            start_ms=self._rx_start_ms,
+            end_ms=rx["time_ms"],
+            slot_id=self._rx_slot_id,
+            node_id=rx["node_id"],
+            payload=rx["payload"],
+            rssi_dbm=rx["rssi_dbm"],
+            sector_idx=rx["sector_idx"],
+            expected_node=self._rx_expect,
+            matched=matched,
+            bs_id=self.id,
+            subcarrier_shift=rx["subcarrier_shift"],
+            collided=collided,
+        )
+        # counters (always maintained)
+        self.total_rx += 1
+        if collided:
+            self.total_collided += 1
+        else:
+            self.rx_count_by_node[rx["node_id"]] += 1
+
+        # keep in list (default), or discard (counters only)
+        if self.keep_logs:
+            self.rx_packets.append(pkt)
+
+        # Only process decoded (non-collided) packets
+        if not collided:
+            self.decoded_this_frame.append(rx["node_id"])
+            # Track node for ack if not already registered
+            if rx["node_id"] not in self.nodes_registered:
+                if rx["node_id"] not in self.nodes_pending_ack:
+                    self.nodes_pending_ack.append(rx["node_id"])
+
+            if self.on_rx:
+                self.on_rx(pkt)
 
     def _get_next_rx_slots(self, start_after_ms: float) -> List[Tuple[float, float]]:
         """The RX slots a command sent now advertises: those after the current TX entry, up to the

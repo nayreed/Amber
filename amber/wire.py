@@ -1,6 +1,8 @@
 # amber/wire.py
 """Encoding of the per-millisecond messages carried in one rfsim block.
 
+MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
+
 A block holds one message: a 4-byte little-endian length, that many bytes of UTF-8 JSON, then
 zero padding. An all-zero block means "no message" (for example before a peer has connected).
 Command payloads and Tag payloads must therefore be JSON-serializable; the one tuple field Amber
