@@ -65,11 +65,11 @@ def join_block(air: np.ndarray, control: np.ndarray) -> bytes:
 
 
 def add_blocks(blocks: Sequence[bytes]) -> bytes:
-    """The sum of the blocks, wrapping around like rfsim's 16-bit sum."""
+    """The sum of the blocks, clipped at the 16-bit limits like rfsim's sum (a saturated ADC)."""
     total = np.zeros(BLOCK_SAMPLES * 2, dtype=np.int64)
     for b in blocks:
         total += np.frombuffer(b, dtype="<i2")
-    return ((total + 32768) % 65536 - 32768).astype("<i2").tobytes()
+    return np.clip(total, -32768, 32767).astype("<i2").tobytes()
 
 
 # ----------------------------------------------------------------------------------------------
@@ -198,9 +198,9 @@ def _group_deliveries(deliveries: Sequence[Delivery]) -> List[Tuple[List[int], s
     return out
 
 
-def _up_scale(links: Dict[int, Tuple[int, int, float]]) -> float:
+def _up_scale(scenario: Any) -> float:
     """The Reader's receiver scale, which the Tags write their reflections at."""
-    return phy.up_scale(max(p for _, _, p in links.values()))
+    return phy.up_scale(phy.thermal_noise_w(scenario.reader_noise_figure_db))
 
 
 def _seed(scenario: Any) -> int:
@@ -226,7 +226,7 @@ class IqReaderSession:
         self.bs.phy_decides = True
         self.codec = CommandCodec(scenario.protocol, scenario.NODE_IDS, self.bs.id)
         self.links = scenario.iq_links()
-        self.scale = _up_scale(self.links)
+        self.scale = _up_scale(scenario)
         self.tx = phy.ReaderTransmitter(self.cfg)
         self.rx = phy.ReaderReceiver(self.cfg, [sc for _, sc, _ in self.links.values()],
                                      phy.thermal_noise_w(scenario.reader_noise_figure_db), self.bs.enable_sic,
@@ -323,7 +323,7 @@ class IqTagSession:
         self.reflector = phy.TagReflector(self.cfg, int(self.node.subcarrier_shift or 0), rng.uniform(0, 2 * math.pi))
         self.incident_w = bsm.downlink_results.get("best_pw_w", {}).get(node_id, 0.0)
         self.index = list(scenario.NODE_IDS).index(node_id)
-        self.scale = _up_scale(scenario.iq_links())
+        self.scale = _up_scale(scenario)
         self._next_ms = 0
 
     def reply(self, block: bytes) -> Tuple[bytes, bool]:
