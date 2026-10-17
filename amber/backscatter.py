@@ -85,6 +85,10 @@ class BackscatterModule:
 
         # IQ mode: commands reach the Tag only when it decodes them (set by amber.iq)
         self.phy_decides: bool = False
+        # Whole milliseconds one transmission is on the air. A Tag starts one only if it ends
+        # inside its slot. In message mode a packet arrives at once, so 1; IQ mode sets the
+        # length of its uplink frame.
+        self.tx_airtime_ms: int = 1
 
     def receive_command(self, cmd: str, bs_id: int, data: dict = None):
         """Called by BSEngine when BS transmits a command to this node.
@@ -235,9 +239,9 @@ class BackscatterModule:
         # Check if current time is within chosen RX slot
         slot_start, slot_end = self.rx_slots[self.chosen_slot_idx]
         now = self.env.now
-        # Reject now == slot_end: the BS _do_rx window uses `while now < end_time`,
-        # so at exactly slot_end it has already closed and would miss the packet.
-        if now < slot_start or now >= slot_end:
+        # The transmission takes [now, now + tx_airtime_ms) and must end by slot_end: the BS
+        # _do_rx window uses `while now < end_time`, so at slot_end it has already closed.
+        if now < slot_start or now + self.tx_airtime_ms > slot_end:
             return None  # Not in our slot yet (or past it)
 
         # Verify slot was assigned after the command (not stale from previous cycle)

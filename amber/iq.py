@@ -314,6 +314,8 @@ class IqTagSession:
         self.output_dir = output_dir
         bsm = self.host.bsm
         bsm.phy_decides = True
+        # A reply must end inside its slot, or the Reader is sending its next command by then
+        bsm.tx_airtime_ms = math.ceil(self.cfg.d2r_frame_chips * self.cfg.d2r_samples_per_chip / phy.AIR_SAMPLES)
         self.node = bsm.node
         self.codec = CommandCodec(scenario.protocol, scenario.NODE_IDS, scenario.BS_IDS[0])
         rng = np.random.default_rng([_seed(scenario), 1, node_id])
