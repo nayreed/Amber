@@ -230,7 +230,7 @@ class IqReaderSession:
         self.tx = phy.ReaderTransmitter(self.cfg)
         self.rx = phy.ReaderReceiver(self.cfg, [sc for _, sc, _ in self.links.values()],
                                      phy.thermal_noise_w(scenario.reader_noise_figure_db), self.bs.enable_sic,
-                                     np.random.default_rng([_seed(scenario), 0]))
+                                     np.random.default_rng([_seed(scenario), 0]), list(self.links))
         self._index = {node: i for i, node in enumerate(scenario.NODE_IDS)}
         self._ms: Optional[int] = None
         self._ending = False

@@ -34,7 +34,7 @@ def uplink(powers_dbm, sic=True, seed=0, shifts=None, carrier=None):
     """(node ids decoded, collisions) for Tags 10, 11, ... reflecting at once."""
     rng = np.random.default_rng(seed)
     shifts = shifts or [0] * len(powers_dbm)
-    rx = phy.ReaderReceiver(CFG, shifts, NOISE_W, sic, rng)
+    rx = phy.ReaderReceiver(CFG, shifts, NOISE_W, sic, rng, range(10, 10 + len(powers_dbm)))
     tags = [phy.TagReflector(CFG, s, rng.uniform(0, 2 * math.pi)) for s in shifts]
     for i, (t, p) in enumerate(zip(tags, powers_dbm)):
         t.queue(10 + i, 1000 + i, p)
@@ -92,6 +92,11 @@ class TestPhy(unittest.TestCase):
 
     def test_without_sic_the_weaker_tag_is_a_collision(self):
         self.assertEqual(uplink([-70.0, -80.0], sic=False), ([10], 1))
+
+    def test_sic_separates_three_tags_with_nearly_the_same_data(self):
+        # Small IDs and values are mostly the same zeros; scrambled per Tag, the frames still differ
+        for seed in range(8):
+            self.assertEqual(uplink([-57.0, -64.0, -67.0], seed=seed), ([10, 11, 12], 0))
 
     def test_many_equal_tags_collide(self):
         decoded, collisions = uplink([-80.0] * 6)
