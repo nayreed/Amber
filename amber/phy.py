@@ -305,8 +305,18 @@ def d2r_bits(node_id: int, payload: int) -> List[int]:
     return body + crc16(body)
 
 
+def d2r_scrambler(node_id: int) -> np.ndarray:
+    """The bits a Tag XORs its frame with (all but the preamble), seeded by its own ID, as NR
+    scrambles each device's data with its own identity. Without it, frames of Tags that answer
+    together carry mostly the same bits (small IDs and values are mostly zeros), and the Reader
+    cannot tell them apart on those bits."""
+    rng = np.random.Generator(np.random.PCG64([0x5C4A, node_id]))
+    return rng.integers(0, 2, D2R_ID_BITS + D2R_PAYLOAD_BITS + CRC_BITS, dtype=np.int64)
+
+
 def d2r_chips(node_id: int, payload: int) -> List[int]:
-    return list(D2R_PREAMBLE) + manchester(d2r_bits(node_id, payload))
+    bits = np.asarray(d2r_bits(node_id, payload)) ^ d2r_scrambler(node_id)
+    return list(D2R_PREAMBLE) + manchester([int(b) for b in bits])
 
 
 class TagReflector:
@@ -363,8 +373,13 @@ class ReaderReceiver:
     """
 
     def __init__(self, cfg: PhyConfig, shifts: Sequence[int], noise_w: float, enable_sic: bool,
-                 rng: np.random.Generator):
+                 rng: np.random.Generator, node_ids: Sequence[int]):
         self.cfg = cfg
+        # The Tags it may hear: it tries each one's scrambler and keeps the frame whose ID and CRC hold
+        self._ids = np.asarray(sorted(set(node_ids)), dtype=np.int64)
+        self._scramblers = np.stack([d2r_scrambler(int(n)) for n in self._ids]) if len(self._ids) else \
+            np.zeros((0, D2R_ID_BITS + D2R_PAYLOAD_BITS + CRC_BITS), dtype=np.int64)
+        self._id_weights = 1 << np.arange(D2R_ID_BITS - 1, -1, -1, dtype=np.int64)
         self.shifts = sorted(set(shifts))
         for s in self.shifts:
             cfg.subcarrier_period(s)
@@ -416,6 +431,17 @@ class ReaderReceiver:
         shape = abs(c) ** 2 / (n * max(float(np.sum(np.abs(z[:n]) ** 2)), 1e-300))
         return above_noise and shape > 0.5, c / (n * self.spc)
 
+    def _descramble(self, bits: np.ndarray) -> Optional[Tuple[int, int]]:
+        """(node id, payload) of the first known Tag whose scrambler gives back its own ID and a CRC
+        that holds, or None."""
+        plain = bits[None, :] ^ self._scramblers
+        ids = plain[:, :D2R_ID_BITS] @ self._id_weights
+        for row in np.flatnonzero(ids == self._ids):
+            body = [int(b) for b in plain[row, :-CRC_BITS]]
+            if crc16(body) == [int(b) for b in plain[row, -CRC_BITS:]]:
+                return int(self._ids[row]), bits_to_int(body[D2R_ID_BITS:])
+        return None
+
     def _decode_at(self, s: int, k: int) -> Tuple[List[Decoded], int]:
         view = self._z[s][k:k + self.frame_chips]  # decoded frames are taken out of _z itself
         z0 = view.copy()
@@ -427,12 +453,11 @@ class ReaderReceiver:
             return decoded, 0
         for _ in range(MAX_SIC_ROUNDS):
             soft = (z[len(self._pre):] * np.conj(a)).real
-            bits = [1 if soft[i] > soft[i + 1] else 0 for i in range(0, len(soft), 2)]
-            body, crc = bits[:-CRC_BITS], bits[-CRC_BITS:]
-            if crc16(body) != crc:
+            bits = np.asarray([1 if soft[i] > soft[i + 1] else 0 for i in range(0, len(soft), 2)], dtype=np.int64)
+            frame = self._descramble(bits)
+            if frame is None:
                 break
-            node_id = bits_to_int(body[:D2R_ID_BITS])
-            payload = bits_to_int(body[D2R_ID_BITS:])
+            node_id, payload = frame
             if payload >= 1 << 31:
                 payload -= 1 << 32
             if any(d.node_id == node_id and d.payload == payload for d in decoded):
