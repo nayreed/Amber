@@ -1,5 +1,7 @@
-# The Gen2 Q algorithm (one command and one slot per frame): 12 hybrid Tags placed at random 5 to
-# 40 m around the base station, SIC on. No seed: every run is a new sample.
+# The Gen2 Q algorithm (one command and one slot per frame): 12 hybrid Tags placed at random
+# around the base station, SIC on. The Reader's carrier, every command and every Tag's reflection
+# are real waveforms (amber.iq), so the physics decides what is received. No seed: every run is a
+# new sample.
 
 [run]
 sim_time_ms = 6001
@@ -13,6 +15,11 @@ q0 = 4.0
 c = 0.3
 tx_ms = 1
 slot_ms = 10
+
+[phy]
+r2d_kbps = 80
+d2r_kbps = 60
+subcarrier_khz = 240
 
 [[base_station]]
 id = 0

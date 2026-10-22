@@ -1,30 +1,28 @@
 # amber/hosts.py
 """Reader host and Tag host: each owns a SimPy environment and advances it one millisecond at a
-time, exchanging Deliveries and Uplinks with the other side in between. amber-reader and amber-tag
-run them in their OAI containers, through amber.session.
+time. amber.iq drives them, one block of IQ samples per millisecond, as amber-reader and amber-tag
+do in their OAI containers (through amber.session) and as python -m amber.run does on one machine.
 
 Per millisecond n, the exchange is:
   1. ReaderHost.run_ms(n)        Reader processes its events at n; returns the commands it sent.
-  2. TagHost.deliver(n, cmds)    each Tag receives its commands at n, before its own events at n.
-  3. TagHost.step(n)             each Tag processes its events at n; returns its transmissions.
-  4. ReaderHost.apply_uplinks()  the Reader receives them at n through Amber's own interrupt path.
+                                 amber.iq puts them on the Reader's carrier as bits.
+  2. TagHost.deliver(n, cmds)    each Tag receives the commands it decoded at n, before its own
+                                 events at n.
+  3. TagHost.step(n)             each Tag processes its events at n; returns its transmissions,
+                                 which amber.iq reflects off the carrier.
+  4. The Reader decodes what the Tags reflected; amber.iq hands the receptions to the base station
+     through Amber's own interrupt path.
 
 Both hosts run on a PhasedEnvironment, which processes the events of one millisecond in a fixed
 order: the Reader's, then those of the objects the Tags share, then each node's in NODE_IDS order.
-build() puts the whole scenario on one environment of the same kind, for a run on one machine
-(python -m amber.run); the hosts give exactly the same records, which tests/test_hosts.py checks.
-build() differs from steps 1 to 4 only in when the Reader handles a transmission: right after the
-node made it, before the next node's events. That cannot change what the next node does, since the
-Reader may not send a command while receiving (apply_uplinks refuses it).
-
 Plain SimPy orders events of the same time by when they were scheduled, mixing the Reader's and
-the Tags'. On it, a run could differ from the hosts when a Reader event and a Tag event fall in the
-same millisecond, for example a transmission exactly at the end of a Reader listening window.
+the Tags'; a run could then differ between the containers and one machine.
 
 Amber times must be whole milliseconds: a command or transmission at any other time is refused
 rather than silently moved to the next millisecond.
 
 A scenario is a TOML file read by amber.scenario, or a Python module defining:
+  phy                            the PhyConfig of the IQ waveforms (amber.phy)
   SIM_TIME_MS                    simulated duration, as passed to env.run(until=...)
   NODE_IDS                       node ids, in the order build() builds them
   BS_IDS                         base station ids
@@ -32,6 +30,8 @@ A scenario is a TOML file read by amber.scenario, or a Python module defining:
   build_tag(env, shared, id)     one node's Capacitor, BackscatterModule and Controller; returns
                                  the BackscatterModule (its bs_processes are set by the host)
   build_reader(env, tags)        the BSBehavior list, given the Tags as backscatter_modules
+  iq_links()                     {node id: (sector, subcarrier_shift, power)} as Scenario.iq_links
+  reader_noise_figure_db         the Reader's receiver noise figure
 and optionally:
   SEED                           seed for Python's global random generator, set before building.
 
@@ -45,7 +45,7 @@ import importlib.util
 import random
 import weakref
 from heapq import heappush
-from typing import Any, Iterator, List, Optional, Sequence, Tuple
+from typing import Any, Iterator, List, Optional, Sequence
 
 import simpy
 from simpy.events import NORMAL, Initialize, Interruption
@@ -53,7 +53,8 @@ from simpy.events import NORMAL, Initialize, Interruption
 from .scenario import load as load_toml_scenario
 from .proxies import BSProxy, Delivery, TagProxy, Uplink
 
-_SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "build_reader")
+_SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "build_reader", "phy", "iq_links",
+                   "reader_noise_figure_db")
 
 
 def load_scenario(path: str) -> Any:
@@ -145,25 +146,6 @@ class PhasedEnvironment(simpy.Environment):
             return super().run(until)
 
 
-def build(scenario: Any) -> Tuple[PhasedEnvironment, List[Any], List[Any]]:
-    """Build the whole scenario on one environment: shared objects, then each node, then the base
-    stations. Returns (env, bs_behaviors, backscatter_modules); run it with
-    env.run(until=scenario.SIM_TIME_MS)."""
-    _seed(scenario)
-    env = PhasedEnvironment()
-    with env.in_phase(SHARED_PHASE):
-        shared = scenario.build_shared(env)
-    bsms = []
-    for node_id in scenario.NODE_IDS:
-        with env.in_phase(node_phase(scenario, node_id)):
-            bsms.append(scenario.build_tag(env, shared, node_id))
-    with env.in_phase(READER_PHASE):
-        bss = scenario.build_reader(env, bsms)
-    for bsm in bsms:
-        bsm.bs_processes = list(bss)
-    return env, bss, bsms
-
-
 def _advance_to(env: simpy.Environment, ms: int):
     """Process every event before ms and set the clock to ms."""
     if env.now < ms:
@@ -202,25 +184,6 @@ class ReaderHost:
         out = list(self._deliveries)
         self._deliveries.clear()
         return out
-
-    # MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
-    def apply_uplinks(self, ms: int, uplinks: Sequence[Uplink]):
-        """Hand the Tags' transmissions at ms to the base stations, exactly as
-        BackscatterModule.do_transmit() does on one environment."""
-        assert self.env.now == ms, f"apply_uplinks({ms}) called at {self.env.now} ms"
-        for up in uplinks:
-            bs = self._bs_by_id.get(up.bs_id)
-            if bs is None:
-                raise ValueError(f"node {up.node_id} transmitted to unknown base station {up.bs_id}")
-            bs.received_tag_id = up.node_id
-            bs.data_from_tag = up.payload
-            bs.rssi_dbm = up.rssi_dbm
-            bs.best_sector_idx = up.sector_idx
-            bs.subcarrier_shift = up.subcarrier_shift
-            bs.action.interrupt("receive_data")
-            _run_current_ms(self.env)
-        if self._deliveries:
-            raise ValueError(f"a base station sent a command while receiving at {ms} ms")
 
 
 class TagHost:

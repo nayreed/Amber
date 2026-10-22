@@ -296,37 +296,21 @@ For a policy, look at `adaptive_aloha.py` (it decides once per frame) and `gen2_
 
 ## Rules for running on OAI
 
-OAI's `amber-reader` and `amber-tag` run the Reader and each Tag in **separate containers**. They exchange one message each way every simulated millisecond, as JSON. A protocol must give the same results there as `python -m amber.run` on one machine, so it must follow three rules.
+OAI's `amber-reader` and `amber-tag` run the Reader and each Tag in **separate containers**. They exchange one block of IQ samples each way every simulated millisecond. A protocol must give the same results there as `python -m amber.run` on one machine, and the commands and payloads must survive being sent over the air as bits, so it must follow these rules.
 
 1. **Tag randomness comes from `self.rng`**, never from the `random` module. The `random` module's numbers depend on what else ran in the same program, so the containers would differ from one machine. The same goes for numpy's global generator. The policy runs on the Reader and may use its own `random.Random(...)`.
 
-2. **Every duration is a whole number of milliseconds.** The containers advance one millisecond at a time, and Tags only act on their 1 ms tick. A duration like `10.0` that comes out of float maths is fine; `10.5` isn't. Amber refuses such a frame with an error, on one machine too.
+2. **Every duration is a whole number of milliseconds.** The containers advance one millisecond at a time, and Tags only act on their 1 ms tick. A duration like `10.0` that comes out of float maths is fine; `10.5` isn't. Amber refuses such a frame with an error.
 
-3. **Commands and Tag payloads are plain JSON values:** dicts with string keys, lists, strings, ints, floats, bools and `None`. Anything else either fails or arrives changed:
+3. **Declare your commands and their fields.** List the commands the protocol sends beyond `send_id`, `ack` and `send_data` in `COMMANDS` (16 at most in all), and give every integer field they carry beyond `cmd` and `target` a bit width in `COMMAND_FIELDS`, as `gen2_q` does with `q`. A command with any other field is refused.
 
-   | You send | The other side gets |
-   |---|---|
-   | tuple `(1, 2)` | list `[1, 2]` |
-   | dict `{1: "a"}` | `{"1": "a"}`, so `d[1]` raises KeyError |
-   | set, bytes, numpy `int64` | an error |
+4. **Payloads are integers** that fit in 32 bits, as every protocol here sends.
 
-   The changed values are the dangerous ones, because nothing fails: the containers just give different results. The tuples Amber itself puts in `rx_slots` are fine, because Amber restores them.
+5. **Slots follow each other with one length**, as every schedule here makes them: a command carries their count, where the first starts and their length, and the Tag works the slots out.
 
-**Message size.** All of one millisecond's commands travel in one block of 8192 bytes (`block_bytes` in OAI's `amber` section).
-- A command to all Tags is encoded once, plus about 4 bytes per Tag it reaches, so about 1 KB for 250 Tags.
-- Each *different* command costs about 85 bytes, so a block holds about 95 different commands in the same millisecond.
+Airtime is real: at the default 80 kb/s a command takes up to about 1 ms, and each ack is a command of its own; a Tag's frame takes about 1.2 ms at 60 kb/s. A command that runs past its `tx_ms` reaches the Tags late, and a frame that ends after its slot is lost.
 
-The protocols here use at most 1.3 KB with 250 Tags. A protocol that sends every Tag its own command in the same millisecond will run out sooner. Raising `block_bytes` works, but every block is sent at full size to every Tag every millisecond, so it slows the run.
-
-### In IQ mode
-
-In IQ mode (a scenario with `[phy]`, see the main README) commands go over the air as bits, so three more rules apply.
-
-- **Declare your commands and their fields.** List the commands the protocol sends beyond `send_id`, `ack` and `send_data` in `COMMANDS` (16 at most in all), and give every integer field they carry beyond `cmd` and `target` a bit width in `COMMAND_FIELDS`, as `gen2_q` does with `q`. A command with any other field is refused.
-- **Payloads are integers** that fit in 32 bits, as every protocol here sends.
-- **Slots follow each other with one length**, as every schedule here makes them: a command carries their count, where the first starts and their length, and the Tag works the slots out.
-
-Airtime is real too: at the default 80 kb/s a command takes up to about 1 ms, and each ack is a command of its own; a Tag's frame takes about 1.2 ms at 60 kb/s. A command that runs past its `tx_ms` reaches the Tags late, and a frame that ends after its slot is lost.
+A command reaches a Tag only if the Tag decodes it from the waveform, and a Tag's frame reaches the Reader only if the Reader decodes it from the sum of every Tag's reflection. There is no formula for either: a Tag that is too far away does not hear, and two Tags that answer in the same slot collide.
 
 ---
 
@@ -346,7 +330,7 @@ Airtime is real too: at the default 80 kb/s a command takes up to about 1 ms, an
 From the repository root:
 
 ```bash
-# Every protocol here, on one machine and as Reader and Tag hosts (finds new files automatically)
+# Every protocol here, on one machine and as Reader and Tag sessions (finds new files automatically)
 PYTHONPATH=. python3 -m unittest tests/test_protocol_conformance.py
 
 # Everything
@@ -359,6 +343,6 @@ python -m amber.run demo_experiments/tdma/tdma.toml
 The conformance test runs each protocol with its default parameters on a four-Tag scenario:
 - it checks the module defines `PROTOCOL`;
 - it checks the source doesn't use the `random` module;
-- it requires the Reader and Tag hosts, exchanging blocks as the OAI containers do, to give exactly the same records as one machine.
+- it requires a Reader session and one Tag session per node, exchanging blocks of IQ samples as the OAI containers do, to give exactly the same records as `iq.run()` on one machine.
 
 A test can only cover what the scenario reaches, so the rules above still matter for code paths it doesn't run.

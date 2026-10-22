@@ -9,29 +9,28 @@ import unittest
 import pandas as pd
 import simpy
 
-from amber import protocols, radiodevices, scenario
+from amber import iq, protocols, radiodevices, scenario
 from amber.bsengine import BSBehavior, SlotResult
-from amber import output
-from amber.hosts import build
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
 
 
-def transmit(env, bs, at_ms, node_id, rssi_dbm):
-    """A node's transmission at at_ms, delivered as BackscatterModule.do_transmit() delivers it."""
+def transmit(env, bs, at_ms, node_id, rssi_dbm=-50.0):
+    """What the Reader decoded at at_ms, handed over as amber.iq hands it: a frame of node_id, or,
+    for node id -1, a preamble heard but not decoded (a collision)."""
     yield env.timeout(at_ms)
     bs.received_tag_id = node_id
-    bs.data_from_tag = 100 + node_id
+    bs.data_from_tag = 100 + node_id if node_id >= 0 else None
     bs.rssi_dbm = rssi_dbm
-    bs.best_sector_idx = 0
+    bs.best_sector_idx = 0 if node_id >= 0 else -1
     bs.subcarrier_shift = 0
     bs.action.interrupt("receive_data")
 
 
 class SlotResultsTest(unittest.TestCase):
-    def frame_results(self, enable_sic=False):
-        """One frame: a command, then slots A to D holding nothing, one packet, two equal packets,
-        and a strong and a weak packet."""
+    def frame_results(self):
+        """One frame: a command, then slots A to D holding nothing, one packet, two packets that
+        collided, and a packet decoded beside one that collided."""
         env = simpy.Environment()
         station = radiodevices.BaseStation(id=0, x=0, y=0, site_radius=2,
                                            sectors=[radiodevices.Sector(azimuth_deg=0, beamwidth_deg=360)])
@@ -42,9 +41,9 @@ class SlotResultsTest(unittest.TestCase):
                 [("rx", 10, name) for name in ("A", "B", "C", "D")]
             seen.extend(bs.slot_results)
 
-        bs = BSBehavior(env=env, base_station=station, policy=policy, enable_sic=enable_sic)
-        for at_ms, node_id, rssi in ((15, 1, -50), (25, 2, -50), (25, 3, -50), (35, 4, -40), (35, 5, -80)):
-            env.process(transmit(env, bs, at_ms, node_id, rssi))
+        bs = BSBehavior(env=env, base_station=station, policy=policy)
+        for at_ms, node_id in ((15, 1), (25, -1), (25, -1), (35, 4), (35, -1)):
+            env.process(transmit(env, bs, at_ms, node_id))
         env.run(until=60)
         return seen
 
@@ -54,9 +53,9 @@ class SlotResultsTest(unittest.TestCase):
                          [("A", 1, 11), ("B", 11, 21), ("C", 21, 31), ("D", 31, 41)])
         self.assertEqual((a.decoded, a.collided, a.empty, a.success, a.collision), ([], 0, True, False, False))
         self.assertEqual((b.decoded, b.collided, b.empty, b.success, b.collision), ([1], 0, False, True, False))
-        # Two packets of equal power: neither reaches the SINR to be decoded.
+        # Two receptions with no node id: the Reader heard both preambles and decoded neither.
         self.assertEqual((c.decoded, c.collided, c.empty, c.success, c.collision), ([], 2, False, False, True))
-        # Without SIC the strongest packet is still decoded (capture): decoded and collided at once.
+        # One decoded and one that collided in the same slot (capture): decoded and collided at once.
         self.assertEqual((d.decoded, d.collided, d.empty, d.success, d.collision), ([4], 1, False, False, True))
 
     def test_reset_at_each_frame(self):
@@ -80,7 +79,7 @@ class SlotResultsTest(unittest.TestCase):
                                            sectors=[radiodevices.Sector(azimuth_deg=0, beamwidth_deg=360)])
         bs = BSBehavior(env=env, base_station=station, loop=False,
                         schedule=[("tx", 5, "cmd", {"cmd": "go", "target": -1}), ("rx", 10, "a"), ("rx", 10, "b")])
-        env.process(transmit(env, bs, 20, 7, -50))
+        env.process(transmit(env, bs, 20, 7))
         env.run(until=40)
         self.assertEqual([(s.slot_id, s.decoded) for s in bs.slot_results], [("a", []), ("b", [7])])
 
@@ -143,18 +142,17 @@ class Gen2ScenarioTest(unittest.TestCase):
     def test_runs_and_writes_q_csv(self):
         path = os.path.join(SCENARIO_DIR, "gen2_q.toml")
         s = scenario.load(path)
-        env, bss, bsms = build(s)
-        env.run(until=s.SIM_TIME_MS)
-        decoded = [p for p in bss[0].rx_packets if not p.collided]
-        self.assertGreater(len(decoded), 0)
-        # The Tags are registered, so they sense data instead of sending 0.
-        self.assertTrue(all(p.payload != 0 for p in decoded))
-        self.assertGreater(len({q for _, q, _, _ in bss[0].q_history}), 1)
         with tempfile.TemporaryDirectory() as out:
-            output.write_run(out, s, bss, bsms)
+            reader, _ = iq.run(s, out)
+            bs = reader.host.bss[0]
+            decoded = [p for p in bs.rx_packets if not p.collided]
+            self.assertGreater(len(decoded), 0)
+            # The Tags are registered, so they sense data instead of sending 0.
+            self.assertTrue(all(p.payload != 0 for p in decoded))
+            self.assertGreater(len({q for _, q, _, _ in bs.q_history}), 1)
             frame = pd.read_csv(os.path.join(out, "q.csv"))
             self.assertEqual(list(frame.columns), ["time_s", "q", "decoded", "collided"])
-            self.assertEqual(len(frame), len(bss[0].q_history))
+            self.assertEqual(len(frame), len(bs.q_history))
 
 
 if __name__ == "__main__":

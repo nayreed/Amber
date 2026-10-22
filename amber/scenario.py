@@ -4,7 +4,7 @@
 A scenario file says what is simulated (base stations, Tags, radio, energy, duration, seed) and
 names the protocol that drives it (see amber.protocols). load() reads one into a Scenario, which
 runs on one machine (python -m amber.run) or as a Reader container and one container per Tag
-(amber-reader and amber-tag in OAI), through amber.hosts.
+(amber-reader and amber-tag in OAI), through amber.hosts and amber.iq.
 
 Every key is named as the field of the Amber class it sets, and every value that a file leaves
 out keeps that class's default. demo_experiments/<protocol>/*.toml are complete examples. The
@@ -18,7 +18,7 @@ tables:
 [reader]
     protocol        the protocol (required): a module of amber.protocols, or a full module path
     params          table of the protocol's parameters
-    enable_sic, required_sinr_db, cancellation_factor, noise_figure_db, bandwidth_hz
+    enable_sic, noise_figure_db
                     BSBehavior's options
 [[base_station]]    one or more: id, x, y (required) and BaseStation's other fields, and sectors,
                     a list of tables of Sector's fields (azimuth_deg and beamwidth_deg required)
@@ -26,9 +26,9 @@ tables:
                     bandwidth_hz, noise_figure_db, combine_mode
 [energy]            the energy trace (EnvEnergySource), needed by "external" and "hybrid" Tags:
                     trace (path relative to the scenario file, required), column, resistance
-[phy]               IQ mode (see amber.iq): when present, rfsim carries real waveforms and the
-                    physics decides what is received; r2d_kbps, d2r_kbps, subcarrier_khz
-                    (amber.phy.PhyConfig). Needs exactly one base station.
+[phy]               required: rfsim carries real waveforms (see amber.iq) and the physics decides
+                    what is received; r2d_kbps, d2r_kbps, subcarrier_khz (amber.phy.PhyConfig).
+                    Needs exactly one base station.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -68,8 +68,7 @@ from . import bsengine, capacitor, controller, energy, phy, propagation, protoco
 _ABSENT = object()
 
 # BSBehavior options a scenario may set; the protocol sets schedule, loop and policy.
-_READER_OPTIONS = {"enable_sic": "bool", "required_sinr_db": "number", "cancellation_factor": "number",
-                   "noise_figure_db": "number", "bandwidth_hz": "number"}
+_READER_OPTIONS = {"enable_sic": "bool", "noise_figure_db": "number"}
 _ENERGY_MODES = ("wpt", "external", "hybrid")
 _TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "tag_defaults", "tag_group")
 _PLACEMENT = ("positions", "count", "layout", "ids")
@@ -233,7 +232,7 @@ class _TagParts(NamedTuple):
 
 
 class Scenario:
-    """A scenario read from a TOML file, in the form amber.hosts runs.
+    """A scenario read from a TOML file, in the form amber.hosts and amber.iq run.
 
     Attributes
     ----------
@@ -251,8 +250,8 @@ class Scenario:
         The protocol the base stations and Tags run.
     path : str
         The scenario file.
-    phy : PhyConfig or None
-        The [phy] table: set for a scenario in IQ mode.
+    phy : PhyConfig
+        The [phy] table.
     """
 
     def __init__(self, path: str, data: Dict[str, Any]):
@@ -282,17 +281,15 @@ class Scenario:
 
         self._energy = self._read_energy(top.table("energy")) if top.has("energy") else None
 
-        self.phy: Optional[phy.PhyConfig] = None
-        if top.has("phy"):
-            t = top.table("phy")
-            values = t.fields({"r2d_kbps": "int", "d2r_kbps": "int", "subcarrier_khz": "int"})
-            t.done()
-            try:
-                self.phy = phy.PhyConfig(**values)
-            except ValueError as e:
-                raise ValueError(f"{path}: {e}") from None
-            if len(self._base_stations) != 1:
-                raise ValueError(f"{path}: IQ mode ([phy]) needs exactly one base station, got {len(self._base_stations)}")
+        t = top.table("phy", required=True)
+        values = t.fields({"r2d_kbps": "int", "d2r_kbps": "int", "subcarrier_khz": "int"})
+        t.done()
+        try:
+            self.phy: phy.PhyConfig = phy.PhyConfig(**values)
+        except ValueError as e:
+            raise ValueError(f"{path}: {e}") from None
+        if len(self._base_stations) != 1:
+            raise ValueError(f"{path}: [phy] needs exactly one base station, got {len(self._base_stations)}")
 
         defaults = top.take("tag_defaults", "table", {})
         for key in defaults:
@@ -433,7 +430,7 @@ class Scenario:
             places.append((x, y))
         return places
 
-    # ---------------- building, as amber.hosts calls it ----------------
+    # ---------------- building, as amber.hosts and amber.iq call it ----------------
 
     def _make_base_station(self, bs: Dict[str, Any]) -> radiodevices.BaseStation:
         args = {k: v for k, v in bs.items() if k != "sectors"}
@@ -518,7 +515,7 @@ def load(path: str, overrides: Optional[Mapping[str, Any]] = None) -> Scenario:
     Returns
     -------
     Scenario
-        The scenario, ready for amber.hosts.
+        The scenario, ready for amber.iq.
 
     Raises
     ------

@@ -1,8 +1,8 @@
-# The Gen2 Q algorithm (one command and one slot per frame) on the adaptive_aloha scenario's twelve
-# Tags placed at random around the base station, SIC on.
+# The Gen2 Q algorithm (one command and one slot per frame) on twelve Tags placed at random around
+# the base station, SIC on, for a short run. OAI's image check runs it.
 
 [run]
-sim_time_ms = 6001
+sim_time_ms = 1501
 seed = 12345
 
 [reader]
@@ -14,6 +14,11 @@ q0 = 4.0
 c = 0.3
 tx_ms = 1
 slot_ms = 10
+
+[phy]
+r2d_kbps = 80
+d2r_kbps = 60
+subcarrier_khz = 240
 
 [[base_station]]
 id = 0

@@ -22,8 +22,8 @@ class Node:
     sensitivity_dbm: float = -45.0
     subcarrier_shift: Optional[int] = 0 
     state: str = field(default="listening", init=False, repr=False)
-    # Share of the last millisecond the Reader's carrier was on, as the Tag received it (IQ mode);
-    # what the Tag harvests from the Reader scales with it. Without IQ mode the carrier is always on.
+    # Share of the last millisecond the Reader's carrier was on, as the Tag received it (amber.iq);
+    # what the Tag harvests from the Reader scales with it. 1.0 until the first block.
     carrier_fraction: float = field(default=1.0, init=False, repr=False)
 
 

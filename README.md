@@ -49,12 +49,12 @@ Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenari
 Run one with `amber.run`:
 
 ```bash
-python -m amber.run demo_experiments/broadcast/broadcast.toml          # 3 Tags, broadcast downlink
-python -m amber.run demo_experiments/broadcast/broadcast_sic.toml      # the same with SIC
-python -m amber.run demo_experiments/unicast/unicast.toml              # 3 Tags, asked one at a time
-python -m amber.run demo_experiments/registration/registration.toml    # 4 Tags join, then send data
+python -m amber.run demo_experiments/broadcast/broadcast.toml         # 3 Tags, broadcast downlink
+python -m amber.run demo_experiments/broadcast/broadcast_sic.toml     # the same with SIC
+python -m amber.run demo_experiments/unicast/unicast.toml             # 3 Tags, asked one at a time
+python -m amber.run demo_experiments/registration/registration.toml   # 4 Tags join, then send data
 python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Tags, adaptive framed-slotted ALOHA
-python -m amber.run demo_experiments/gen2_q/gen2_q.toml                # 12 Tags, Gen2 Q algorithm
+python -m amber.run demo_experiments/gen2_q/gen2_q.toml               # 12 Tags, Gen2 Q algorithm
 ```
 
 Each prints a summary and writes its CSV files to `output/<scenario>/` in the demo's folder:
@@ -77,15 +77,11 @@ demo scenario in `demo_experiments/<protocol>/`.
 [`amber/protocols/README.md`](amber/protocols/README.md) explains each protocol, how to write a
 new one, and the rules it must follow to run on OAI.
 
-## IQ mode: real waveforms
+## Real waveforms
 
-Message mode will be removed once IQ mode is checked against it side by side; until then both
-run. By default the Reader and the Tags exchange messages, and Amber decides with formulas what is
-received: the carrier is always on, a command arrives whenever the Tag's received power is above
-its sensitivity, and packets within 5 ms of each other collide, with SIC applied to their powers.
-A scenario with a `[phy]` table runs in IQ mode instead
-([`tests/scenarios/gen2_q_iq.toml`](tests/scenarios/gen2_q_iq.toml) is one), following the
-3GPP Rel-19 Ambient IoT design for a monostatic Reader and backscatter Tags:
+Every scenario has a `[phy]` table, and the Reader and the Tags exchange real waveforms; there is
+no mode in which Amber decides with formulas what is received. The design follows 3GPP Rel-19
+Ambient IoT for a monostatic Reader and backscatter Tags:
 
 - The Reader's carrier is a signal (1.92 Msps), always on for the whole run. A command keys it
   off for part of each chip, so a Tag harvests less while one is sent. A Tag can only answer by
@@ -98,11 +94,11 @@ A scenario with a `[phy]` table runs in IQ mode instead
   the strongest, subtracts it and tries again.
 
 `python -m amber.run` runs it on one machine; on OAI, rfsim carries the samples and adds the
-Tags' signals up (normal rfsim, no `msgmode`), with the same files byte for byte. IQ mode needs
-one base station, integer payloads, and receive slots that follow each other with one length.
-A protocol lists the commands it adds in `COMMANDS` and the bit width of their integer fields in
-`COMMAND_FIELDS`. It is about ten times slower than message mode. `amber/phy.py` and
-`amber/iq.py` describe it in full.
+Tags' signals up (normal rfsim), with the same files byte for byte. A scenario needs one base
+station, integer payloads, and receive slots that follow each other with one length. A protocol
+lists the commands it adds in `COMMANDS` and the bit width of their integer fields in
+`COMMAND_FIELDS`. A run is slow: 12 Tags took about 4 s of run time per simulated second on one
+core. `amber/phy.py` and `amber/iq.py` describe it in full.
 
 ## Modules
 
@@ -115,13 +111,12 @@ A protocol lists the commands it adds in `COMMANDS` and the bit width of their i
 | `energy` | `EnvEnergySource` — replays an external energy trace |
 | `backscatter` | Node-side backscatter transmit/receive |
 | `bsengine` | Base station behaviour, downlink scheduling |
-| `packet_analysis` | Thermal noise and SIC decoding |
-| `phy`, `iq` | IQ mode: the waveforms, and the Reader and Tags exchanging them |
+| `phy`, `iq` | The waveforms, and the Reader and Tags exchanging them |
 | `protocols` | The base station's protocol and the Tag class it needs, chosen by name |
 | `scenario` | Scenarios as TOML files (`load`, `Scenario`) |
 | `output` | The CSV files of a run, and the one function that writes them |
 | `run` | `python -m amber.run`: run a scenario on one machine |
-| `hosts`, `session`, `wire`, `proxies` | The Reader and the Tags as separate hosts exchanging a message every millisecond, as amber-reader and amber-tag run them on OAI |
+| `hosts`, `session`, `proxies` | The Reader and the Tags as separate hosts, one block of IQ samples every millisecond, as amber-reader and amber-tag run them on OAI |
 | `summary` | Sent, decoded, collided, DER and throughput from a run's files |
 
 Full API reference, generated from the source docstrings, is at
