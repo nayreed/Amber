@@ -37,7 +37,7 @@ def base_data():
 
 class SeedTest(unittest.TestCase):
     def test_a_file_without_seed_draws_one(self):
-        demo = os.path.join(DEMO_DIR, "broadcast", "broadcast_iq.toml")
+        demo = os.path.join(DEMO_DIR, "broadcast", "broadcast.toml")
         a, b = scenario.load(demo), scenario.load(demo)
         self.assertTrue(a.seed_drawn)
         self.assertIsInstance(a.SEED, int)

@@ -11,8 +11,8 @@ import unittest
 from amber import iq, scenario
 
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
-DEMOS = ("broadcast/broadcast_iq", "broadcast/broadcast_sic_iq", "unicast/unicast_iq",
-         "adaptive_aloha/adaptive_aloha_iq")
+DEMOS = ("broadcast/broadcast", "broadcast/broadcast_sic", "unicast/unicast",
+         "adaptive_aloha/adaptive_aloha")
 RUN_MS = 4000  # long enough for every demo to transmit
 
 

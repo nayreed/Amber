@@ -14,7 +14,7 @@ from amber import iq, phy, scenario
 from amber.session import ReaderSession, TagSession
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
-IQ_SCENARIO = os.path.join(SCENARIO_DIR, "gen2_q_iq.toml")
+IQ_SCENARIO = os.path.join(SCENARIO_DIR, "gen2_q.toml")
 CFG = phy.PhyConfig()
 NOISE_W = phy.thermal_noise_w(6.0)
 

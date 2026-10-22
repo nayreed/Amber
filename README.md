@@ -49,12 +49,12 @@ Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenari
 Run one with `amber.run`:
 
 ```bash
-python -m amber.run demo_experiments/broadcast/broadcast_iq.toml          # 3 Tags, broadcast downlink
-python -m amber.run demo_experiments/broadcast/broadcast_sic_iq.toml      # the same with SIC
-python -m amber.run demo_experiments/unicast/unicast_iq.toml              # 3 Tags, asked one at a time
-python -m amber.run demo_experiments/registration/registration_iq.toml    # 4 Tags join, then send data
-python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha_iq.toml  # 12 Tags, adaptive framed-slotted ALOHA
-python -m amber.run demo_experiments/gen2_q/gen2_q_iq.toml                # 12 Tags, Gen2 Q algorithm
+python -m amber.run demo_experiments/broadcast/broadcast.toml         # 3 Tags, broadcast downlink
+python -m amber.run demo_experiments/broadcast/broadcast_sic.toml     # the same with SIC
+python -m amber.run demo_experiments/unicast/unicast.toml             # 3 Tags, asked one at a time
+python -m amber.run demo_experiments/registration/registration.toml   # 4 Tags join, then send data
+python -m amber.run demo_experiments/adaptive_aloha/adaptive_aloha.toml  # 12 Tags, adaptive framed-slotted ALOHA
+python -m amber.run demo_experiments/gen2_q/gen2_q.toml               # 12 Tags, Gen2 Q algorithm
 ```
 
 Each prints a summary and writes its CSV files to `output/<scenario>/` in the demo's folder:
@@ -70,7 +70,7 @@ which need a seed in the file. A file without a seed draws a new one for every r
 A scenario can also be a TOML file: the values of a simulation (base stations, Tag groups,
 radio, energy, duration, seed), with the protocol named by `[reader] protocol` and set by
 `[reader.params]`. Each demo has one, such as
-[`demo_experiments/broadcast/broadcast_iq.toml`](demo_experiments/broadcast/broadcast_iq.toml); the
+[`demo_experiments/broadcast/broadcast.toml`](demo_experiments/broadcast/broadcast.toml); the
 keys are listed in `amber/scenario.py`. The protocols are in `amber/protocols/` (`broadcast`,
 `unicast`, `registration`, `adaptive_aloha`, `gen2_q`). A new protocol goes there too, with a
 demo scenario in `demo_experiments/<protocol>/`.

@@ -79,17 +79,17 @@ class DemoTest(unittest.TestCase):
                 self.assertLessEqual(slots[-1][1], later[0])
 
     def test_broadcast(self):
-        self.check("broadcast", {2}, "broadcast_iq")
+        self.check("broadcast", {2}, "broadcast")
 
     def test_broadcast_sic(self):
-        self.check("broadcast", {3}, "broadcast_sic_iq")
+        self.check("broadcast", {3}, "broadcast_sic")
 
     def test_unicast(self):
-        self.check("unicast", {1}, "unicast_iq")
+        self.check("unicast", {1}, "unicast")
 
     def test_adaptive_aloha(self):
-        params = load_demo("adaptive_aloha", "adaptive_aloha_iq").protocol.params
-        self.check("adaptive_aloha", set(range(params["min_slots"], params["max_slots"] + 1)), "adaptive_aloha_iq")
+        params = load_demo("adaptive_aloha", "adaptive_aloha").protocol.params
+        self.check("adaptive_aloha", set(range(params["min_slots"], params["max_slots"] + 1)))
 
 
 if __name__ == "__main__":

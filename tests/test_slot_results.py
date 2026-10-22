@@ -140,7 +140,7 @@ class Gen2PolicyTest(unittest.TestCase):
 
 class Gen2ScenarioTest(unittest.TestCase):
     def test_runs_and_writes_q_csv(self):
-        path = os.path.join(SCENARIO_DIR, "gen2_q_iq.toml")
+        path = os.path.join(SCENARIO_DIR, "gen2_q.toml")
         s = scenario.load(path)
         with tempfile.TemporaryDirectory() as out:
             reader, _ = iq.run(s, out)

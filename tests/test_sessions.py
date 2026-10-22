@@ -52,7 +52,7 @@ class SessionTest(unittest.TestCase):
 
     def test_amber_run_writes_the_same_files(self):
         """What OAI checks: python -m amber.run writes byte for byte what the containers write together."""
-        for name in ("registration", "adaptive_aloha", "gen2_q_iq"):
+        for name in ("registration", "adaptive_aloha", "gen2_q"):
             with self.subTest(name), shortened(os.path.join(SCENARIO_DIR, name + ".toml"), 1501) as path, \
                     tempfile.TemporaryDirectory() as containers, tempfile.TemporaryDirectory() as one:
                 reader = ReaderSession(path, iq.BLOCK_BYTES, containers)
