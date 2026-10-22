@@ -1,6 +1,3 @@
-# broadcast_sic.toml in IQ mode (amber.iq): the same scenario, with the carrier, commands and reflections as
-# real waveforms. Message mode (broadcast_sic.toml) stays for side-by-side runs until it is removed.
-
 # The broadcast demo with SIC: three slots of 15 ms, a smaller capacitor and a narrower, less
 # sensitive first sector. No seed, as the original demo had none.
 

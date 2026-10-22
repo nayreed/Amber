@@ -1,6 +1,7 @@
-# gen2_q.toml in IQ mode (amber.iq): the same 12 hybrid Tags, with the Reader's carrier, every
-# command and every Tag's reflection as real waveforms, so the physics decides what is received.
-# No seed: every run is a new sample.
+# The Gen2 Q algorithm (one command and one slot per frame): 12 hybrid Tags placed at random
+# around the base station, SIC on. The Reader's carrier, every command and every Tag's reflection
+# are real waveforms (amber.iq), so the physics decides what is received. No seed: every run is a
+# new sample.
 
 [run]
 sim_time_ms = 6001

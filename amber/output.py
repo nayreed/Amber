@@ -12,7 +12,7 @@ Each Tag writes:
 Every file is written even when it has no rows, so a run in which nothing was received has a
 reader_bs<id>_rx.csv holding only its header. The Reader and Tag containers on OAI each write
 their own files; python -m amber.run writes all of them for a run on one machine, with the same
-bytes for the same scenario and seed.
+bytes for the same scenario and seed (amber.iq.run).
 """
 
 import csv
@@ -52,10 +52,3 @@ def write_tag_files(output_dir: str, node_id: int, bsm) -> None:
     _write_records(os.path.join(output_dir, f"tag{node_id}_tx.csv"), TxRecord, bsm.tx_records)
     _write_records(os.path.join(output_dir, f"tag{node_id}_rx.csv"), RxRecord, bsm.rx_records)
 
-
-def write_run(output_dir: str, scenario, bss, bsms) -> None:
-    """Write every file of a run on one machine: the Reader's, then each Tag's."""
-    os.makedirs(output_dir, exist_ok=True)
-    write_reader_files(output_dir, getattr(scenario, "protocol", None), bss)
-    for node_id, bsm in zip(scenario.NODE_IDS, bsms):
-        write_tag_files(output_dir, node_id, bsm)

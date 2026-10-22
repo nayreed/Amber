@@ -1,8 +1,8 @@
 # amber/iq.py
-"""IQ mode: rfsim carries real waveforms between the Reader and the Tags.
+"""rfsim carries real waveforms between the Reader and the Tags.
 
-A scenario with a [phy] table runs in IQ mode. Then every rfsim block holds one millisecond of
-IQ samples (amber.phy) and rfsim adds up what the Tags send, as normal rfsim does:
+Every rfsim block holds one millisecond of IQ samples (amber.phy) and rfsim adds up what the
+Tags send, as normal rfsim does:
 
 - The Reader's carrier is real and always on, for the whole run. A command keys it off for
   part of each chip, so a Tag harvests less while one is sent (its carrier_fraction). A Tag can
@@ -10,8 +10,8 @@ IQ samples (amber.phy) and rfsim adds up what the Tags send, as normal rfsim doe
 - A command reaches a Tag only if the Tag decodes it from the waveform: commands are sent as
   bits (see encode_command), at phy.r2d_kbps, so a long command takes several milliseconds.
 - A Tag's answer reaches the Reader only if the Reader decodes it from the sum of every Tag's
-  reflection: two Tags reflecting at once really collide. Amber's collision window, SINR
-  threshold and sensitivity checks are not used; the base station's enable_sic is.
+  reflection: two Tags reflecting at once really collide. Whether the Reader cancels the stronger
+  Tag first is the base station's enable_sic.
 
 A block is 2048 samples (8192 bytes): 1920 samples of signal (one millisecond at 1.92 Msps),
 then 128 samples of control that are not on the air. The Reader's control says which
@@ -223,7 +223,6 @@ class IqReaderSession:
         self.host = ReaderHost(scenario)
         self.output_dir = output_dir
         self.bs = self.host.bss[0]
-        self.bs.phy_decides = True
         self.codec = CommandCodec(scenario.protocol, scenario.NODE_IDS, self.bs.id)
         self.links = scenario.iq_links()
         self.scale = _up_scale(scenario)
@@ -313,7 +312,6 @@ class IqTagSession:
         self.node_id = node_id
         self.output_dir = output_dir
         bsm = self.host.bsm
-        bsm.phy_decides = True
         # A reply must end inside its slot, or the Reader is sending its next command by then
         bsm.tx_airtime_ms = math.ceil(self.cfg.d2r_frame_chips * self.cfg.d2r_samples_per_chip / phy.AIR_SAMPLES)
         self.node = bsm.node

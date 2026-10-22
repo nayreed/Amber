@@ -1,6 +1,3 @@
-# unicast.toml in IQ mode (amber.iq): the same scenario, with the carrier, commands and reflections as
-# real waveforms. Message mode (unicast.toml) stays for side-by-side runs until it is removed.
-
 # Amber's unicast demo: each of the 3 Tags (WPT, WPT, hybrid) is asked for data in turn, one slot
 # each, with SIC. No seed, as the demo has none: every run is a new sample.
 

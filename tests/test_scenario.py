@@ -9,9 +9,8 @@ import random
 import tempfile
 import unittest
 
-from amber import scenario
-from amber.hosts import SHARED_PHASE, PhasedEnvironment, build
-from amber.session import ReaderSession, TagSession
+from amber import iq, scenario
+from amber.hosts import SHARED_PHASE, PhasedEnvironment
 
 try:
     import tomllib
@@ -25,9 +24,10 @@ BASE = os.path.join(SCENARIO_DIR, "single_node.toml")
 
 
 def run(s):
-    env, bss, bsms = build(s)
-    env.run(until=s.SIM_TIME_MS)
-    return bss, bsms
+    """The Reader's base stations and the Tags' modules after a run in IQ mode."""
+    with tempfile.TemporaryDirectory() as out:
+        reader, tags = iq.run(s, out)
+    return reader.host.bss, [tag.host.bsm for tag in tags]
 
 
 def base_data():
@@ -37,7 +37,7 @@ def base_data():
 
 class SeedTest(unittest.TestCase):
     def test_a_file_without_seed_draws_one(self):
-        demo = os.path.join(DEMO_DIR, "broadcast", "broadcast.toml")
+        demo = os.path.join(DEMO_DIR, "broadcast", "broadcast_iq.toml")
         a, b = scenario.load(demo), scenario.load(demo)
         self.assertTrue(a.seed_drawn)
         self.assertIsInstance(a.SEED, int)
@@ -46,16 +46,9 @@ class SeedTest(unittest.TestCase):
         self.assertFalse(fixed.seed_drawn)
         self.assertEqual(fixed.SEED, 5)
 
-    def test_the_containers_need_a_seed(self):
-        demo = os.path.join(DEMO_DIR, "broadcast", "broadcast.toml")
-        with self.assertRaisesRegex(ValueError, "need a seed"):
-            ReaderSession(demo, 8192, ".")
-        with self.assertRaisesRegex(ValueError, "need a seed"):
-            TagSession(demo, 0, 8192, ".")
-
     def test_each_tag_draws_from_its_own_generator(self):
         s = scenario.load(BASE, {"run.seed": 41})
-        tag = build(s)[2][0]
+        tag = run(s)[1][0]
         self.assertIsInstance(tag.rng, random.Random)
         random.seed(1)
         first = run(s)[1][0].tx_records
@@ -165,6 +158,12 @@ class ErrorTest(unittest.TestCase):
             (set_("nope", "reader", "protocol"), "unknown protocol 'nope'"),
             (set_(4, "reader", "params", "slots"), "registration has no parameter slots"),
             (set_(1, "reader", "loop"), "reader has no key loop"),
+            # The formulas of the old message mode have no place in a scenario any more
+            (set_(3.0, "reader", "required_sinr_db"), "reader has no key required_sinr_db"),
+            (set_(0.9, "reader", "cancellation_factor"), "reader has no key cancellation_factor"),
+            (set_(100e6, "reader", "bandwidth_hz"), "reader has no key bandwidth_hz"),
+            (drop("phy"), r"phy is required"),
+            (set_(80, "phy", "r2d_kbit"), "phy has no key r2d_kbit"),
             (set_("yes", "reader", "enable_sic"), r"reader\.enable_sic: must be true or false"),
             (drop("base_station"), "base_station is required"),
             (set_([], "base_station"), r"base_station: must be one or more \[\[base_station\]\] tables"),

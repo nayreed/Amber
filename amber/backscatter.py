@@ -83,11 +83,8 @@ class BackscatterModule:
         # Timestamp of last command that enables transmission
         self.last_tx_command_time: float = -1.0
 
-        # IQ mode: commands reach the Tag only when it decodes them (set by amber.iq)
-        self.phy_decides: bool = False
         # Whole milliseconds one transmission is on the air. A Tag starts one only if it ends
-        # inside its slot. In message mode a packet arrives at once, so 1; IQ mode sets the
-        # length of its uplink frame.
+        # inside its slot. amber.iq sets the length of its uplink frame.
         self.tx_airtime_ms: int = 1
 
     def receive_command(self, cmd: str, bs_id: int, data: dict = None):
@@ -116,16 +113,8 @@ class BackscatterModule:
         """
         data = data or {}
 
-        # Check if received power is above node sensitivity. In IQ mode (amber.iq) the Tag has
-        # decoded the command from the waveform, so the physics has already decided.
-        # MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
-        if not self.phy_decides:
-            node_sensitivity = getattr(self.node, "sensitivity_dbm", -45.0)
-            best_pw_dbm = self.downlink_results.get("best_pw_dbm", {})
-            received_power = best_pw_dbm.get(self.node.id, -999.0)
-            if received_power < node_sensitivity:
-                # Signal too weak, ignore command
-                return
+        # The Tag has decoded the command from the waveform (amber.iq), so the physics has
+        # already decided that it arrived.
 
         # A Tag without power (charging, or below its low threshold) cannot decode anything
         if not self.powered:
@@ -145,7 +134,7 @@ class BackscatterModule:
         self.rx_slots = data.get("rx_slots", [])
 
         # Protocol logic: how this node reacts to the command. Everything above
-        # is framework-level (sensitivity gate, logging, slot bookkeeping) and
+        # is framework-level (power check, logging, slot bookkeeping) and
         # applies to every protocol. Override handle_command() in a subclass to
         # design your own protocol.
         self.handle_command(cmd, bs_id, data)
@@ -153,8 +142,8 @@ class BackscatterModule:
     def handle_command(self, cmd: str, bs_id: int, data: dict):
         """Decide how this node reacts to a base-station command.
 
-        Called by receive_command() after the framework has applied the
-        sensitivity gate and checked that the Tag is powered, logged the reception, and stored data["rx_slots"]
+        Called by receive_command() after the framework has checked
+        that the Tag is powered, logged the reception, and stored data["rx_slots"]
         into self.rx_slots. Override in a subclass to implement your own
         protocol; you can define arbitrary command strings on the BS side and
         dispatch on them here. The default implementation is the built-in
@@ -319,8 +308,6 @@ class BackscatterModule:
             bs.received_tag_id = self.node.id
             bs.data_from_tag = payload
             bs.rssi_dbm = best_rssi_dbm
-            bs.best_sector_idx = int(best_sector_name.split("_S")[1])
-            bs.subcarrier_shift = getattr(self.node, "subcarrier_shift", 0)
 
             bs.action.interrupt("receive_data")
             delivered = True

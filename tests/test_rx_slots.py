@@ -8,7 +8,7 @@ import unittest
 import simpy
 
 from amber import bsengine, radiodevices, scenario
-from amber.hosts import build
+from amber.hosts import ReaderHost
 
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
 
@@ -65,17 +65,11 @@ class DemoTest(unittest.TestCase):
     """In Amber's demos every advertised slot ends before the Reader's next command."""
 
     def check(self, folder, slots_per_command, name=None):
-        env, bss, bsms = build(load_demo(folder, name))
+        """Runs the demo's Reader alone, with no Tag to answer, and reads the commands it sends."""
+        host = ReaderHost(load_demo(folder, name))
         seen = []
-        for bsm in bsms:
-            receive = bsm.receive_command
-
-            def record(cmd, bs_id, data=None, receive=receive, bsm=bsm):
-                seen.append((bsm.env.now, list((data or {}).get("rx_slots", []))))
-                receive(cmd, bs_id, data)
-
-            bsm.receive_command = record
-        env.run(until=5000)
+        for ms in range(5000):
+            seen += [(ms, list((d.data or {}).get("rx_slots", []))) for d in host.run_ms(ms)]
         command_times = sorted({t for t, _ in seen})
         self.assertGreater(len(command_times), 10)
         for t, slots in seen:
@@ -85,17 +79,17 @@ class DemoTest(unittest.TestCase):
                 self.assertLessEqual(slots[-1][1], later[0])
 
     def test_broadcast(self):
-        self.check("broadcast", {2})
+        self.check("broadcast", {2}, "broadcast_iq")
 
     def test_broadcast_sic(self):
-        self.check("broadcast", {3}, "broadcast_sic")
+        self.check("broadcast", {3}, "broadcast_sic_iq")
 
     def test_unicast(self):
-        self.check("unicast", {1})
+        self.check("unicast", {1}, "unicast_iq")
 
     def test_adaptive_aloha(self):
-        params = load_demo("adaptive_aloha").protocol.params
-        self.check("adaptive_aloha", set(range(params["min_slots"], params["max_slots"] + 1)))
+        params = load_demo("adaptive_aloha", "adaptive_aloha_iq").protocol.params
+        self.check("adaptive_aloha", set(range(params["min_slots"], params["max_slots"] + 1)), "adaptive_aloha_iq")
 
 
 if __name__ == "__main__":

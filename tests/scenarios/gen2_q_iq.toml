@@ -1,5 +1,5 @@
-# gen2_q.toml in IQ mode: the same twelve Tags, the carrier and every frame as real waveforms
-# (amber.iq), for a shorter run.
+# The Gen2 Q algorithm (one command and one slot per frame) on twelve Tags placed at random around
+# the base station, SIC on, for a short run. OAI's image check runs it.
 
 [run]
 sim_time_ms = 1501

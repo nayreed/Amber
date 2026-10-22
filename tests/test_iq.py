@@ -1,7 +1,7 @@
 # tests/test_iq.py
-"""Checks of IQ mode (amber.phy, amber.iq): the waveforms decode when they should and fail when
-they should, the carrier matters, commands survive their bit fields, and a run in IQ mode is the
-same whether its blocks go through the sessions one by one or are added up by iq.run()."""
+"""Checks of amber.phy and amber.iq: the waveforms decode when they should and fail when they
+should, the carrier matters, commands survive their bit fields, and a run is the same whether its
+blocks go through the sessions one by one or are added up by iq.run()."""
 
 import math
 import os
@@ -157,7 +157,7 @@ class TestRun(unittest.TestCase):
             done = False
             while not done:
                 block = reader.next_block()
-                # Each Tag's block on its own, added up by the Reader, as from rfsim in msgmode
+                # Each Tag's block on its own, added up by the Reader
                 done = reader.on_blocks([t.reply(block)[0] for t in tags])
             reader.finish()
             for t in tags:

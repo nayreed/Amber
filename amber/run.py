@@ -11,8 +11,8 @@ to the scenario file. A scenario without a seed draws a new one for every run, a
 import argparse
 import os
 
-from . import iq, output
-from .hosts import build, load_scenario
+from . import iq
+from .hosts import load_scenario
 from .summary import summarize
 
 
@@ -25,18 +25,11 @@ def run(path: str, out_dir: str = None) -> str:
     """Run the scenario at path, write its files and print its results; returns the output directory."""
     s = load_scenario(path)
     out_dir = out_dir or default_output_dir(path)
-    if getattr(s, "phy", None) is not None:
-        iq.run(s, out_dir)
-        mode = ", IQ mode"
-    else:
-        env, bss, bsms = build(s)
-        env.run(until=s.SIM_TIME_MS)
-        output.write_run(out_dir, s, bss, bsms)
-        mode = ""
+    iq.run(s, out_dir)
 
     name = s.protocol.name if hasattr(s, "protocol") else "-"
     print(f"{path}: protocol {name}, {len(s.NODE_IDS)} Tags, {s.SIM_TIME_MS / 1000:g} s, "
-          f"seed {getattr(s, 'SEED', '-')}{mode}")
+          f"seed {getattr(s, 'SEED', '-')}")
     try:
         r = summarize(out_dir, s.SIM_TIME_MS)
     except ValueError:

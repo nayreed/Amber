@@ -6,8 +6,6 @@ from collections import Counter
 import numbers
 import simpy
 
-from .packet_analysis import apply_sic, thermal_noise_watts
-
 
 @dataclass
 class RxPacket:
@@ -50,7 +48,7 @@ class SlotResult:
 
     @property
     def empty(self) -> bool:
-        """Nothing decoded and nothing collided: no packet above sensitivity arrived."""
+        """Nothing decoded and nothing collided: no frame arrived."""
         return not self.decoded and self.collided == 0
 
     @property
@@ -94,9 +92,10 @@ class BSBehavior:
     """
     Schedule-driven base station.
 
-    In message mode the carrier is always on (implicit): nodes harvest energy all the time. In IQ
-    mode (amber.iq) the carrier is a real signal, also always on. The schedule only handles
-    communication.
+    The carrier is a real signal and always on (amber.iq): nodes harvest energy all the time. The
+    schedule only handles communication. What the base station receives is what the Reader decoded
+    from the sum of the Tags' waveforms, handed over by amber.iq; a reception with node id -1 is a
+    preamble heard but not decoded (a collision).
 
     Schedule entries (mode, duration_ms, slot_id, payload):
 
@@ -115,13 +114,9 @@ class BSBehavior:
         backscatter_modules: List[Any] = None,  # List of BackscatterModule instances
         loop: bool = True,
         keep_logs: bool = True,  # if False, keep only counters and don't store packets in memory
-        # SIC parameters. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
-        # IQ mode uses only enable_sic.
-        required_sinr_db: float = 3.0,
+        # Receiver: successive interference cancellation, and the noise figure amber.iq reads
         enable_sic: bool = True,
-        cancellation_factor: float = 0.9,
         noise_figure_db: float = 6.0,
-        bandwidth_hz: float = 100e6,
         # Callbacks
         on_rx: Optional[Callable[[RxPacket], None]] = None,
         on_tx: Optional[Callable[[TxPacket], None]] = None,
@@ -139,11 +134,9 @@ class BSBehavior:
         self.on_rx = on_rx
         self.on_tx = on_tx
 
-        # SIC parameters
-        self.required_sinr_db = required_sinr_db
+        # Receiver
         self.enable_sic = enable_sic
-        self.cancellation_factor = cancellation_factor
-        self.noise_w = thermal_noise_watts(bandwidth_hz, noise_figure_db)
+        self.noise_figure_db = noise_figure_db
 
         # State
         self.mode = "idle"
@@ -184,11 +177,7 @@ class BSBehavior:
         self.best_sector_idx: int = -1
         self.subcarrier_shift: int = 0
 
-        # IQ mode (amber.iq): the physics has already decided what was decoded. A reception with
-        # node id -1 is a preamble heard but not decoded (a collision).
-        self.phy_decides: bool = False
-
-        # Buffer for collision detection (filled during RX window)
+        # Receptions of the current RX window, filled by amber.iq
         self._rx_buffer: List[Dict[str, Any]] = []
 
         # Schedule tracking
@@ -308,7 +297,7 @@ class BSBehavior:
                 if it.cause == "receive_data":
                     self._buffer_rx()
 
-        # RX window ended - process buffer with collision detection
+        # RX window ended - record what the Reader decoded in it
         decoded_before, collided_before = len(self.decoded_this_frame), self.total_collided
         self._process_rx_buffer()
         self.slot_results.append(SlotResult(
@@ -320,7 +309,7 @@ class BSBehavior:
         ))
 
     def _buffer_rx(self):
-        """Buffer incoming transmission for later collision check."""
+        """Buffer an incoming reception until the RX window ends."""
         self._rx_buffer.append({
             "time_ms": self.env.now,
             "node_id": self.received_tag_id,
@@ -330,101 +319,13 @@ class BSBehavior:
             "subcarrier_shift": self.subcarrier_shift,
         })
 
-    def _process_rx_buffer(self, collision_window_ms: float = 5.0):
-        """Process buffered receptions with SIC-based collision resolution.
-
-        Parameters
-        ----------
-        collision_window_ms : float, optional
-            Packets on same subcarrier within this time window collide, by default 5.0
-        """        
-        if not self._rx_buffer:
-            return
-        # Below the phy_decides branch: the 5 ms window and SINR/SIC formula. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
-        if self.phy_decides:
-            for rx in self._rx_buffer:
-                self._record_rx(rx, collided=rx["node_id"] < 0, check_sensitivity=False)
-            return
-
-        # Group by subcarrier_shift
-        by_subcarrier: Dict[int, List[Dict]] = {}
+    def _process_rx_buffer(self):
+        """Record the receptions of the RX window that has just ended. The Reader has already
+        decoded them (amber.iq): a reception with node id -1 is a collision."""
         for rx in self._rx_buffer:
-            sc = rx["subcarrier_shift"]
-            if sc not in by_subcarrier:
-                by_subcarrier[sc] = []
-            by_subcarrier[sc].append(rx)
+            self._record_rx(rx, collided=rx["node_id"] < 0)
 
-        # Process each subcarrier group
-        for rx_list in by_subcarrier.values():
-            # Sort by time
-            rx_list.sort(key=lambda x: x["time_ms"])
-
-            # Find collision groups (packets within collision_window_ms of each other)
-            collision_groups: List[List[int]] = []
-            used = set()
-
-            for i, rx in enumerate(rx_list):
-                if i in used:
-                    continue
-
-                # Find all packets that collide with this one
-                group = [i]
-                for j, other in enumerate(rx_list):
-                    if j != i and j not in used:
-                        if abs(rx["time_ms"] - other["time_ms"]) <= collision_window_ms:
-                            group.append(j)
-
-                if len(group) > 1:
-                    # This is a collision group - apply SIC
-                    collision_groups.append(group)
-                    used.update(group)
-                else:
-                    # Single packet - no collision
-                    used.add(i)
-
-            # Process collision groups with SIC
-            decoded_indices_global = set()
-            for group in collision_groups:
-                powers_dbm = [rx_list[i]["rssi_dbm"] for i in group]
-
-                if self.enable_sic:
-                    decoded_local, _ = apply_sic(
-                        powers_dbm=powers_dbm,
-                        noise_w=self.noise_w,
-                        required_sinr_db=self.required_sinr_db,
-                        cancellation_factor=self.cancellation_factor,
-                    )
-                else:
-                    # Without SIC, only strongest can be decoded (capture effect)
-                    decoded_local, _ = apply_sic(
-                        powers_dbm=powers_dbm,
-                        noise_w=self.noise_w,
-                        required_sinr_db=self.required_sinr_db,
-                        cancellation_factor=0.0,
-                    )
-                    decoded_local = decoded_local[:1] if decoded_local else []
-
-                # Map local indices back to global
-                for local_idx in decoded_local:
-                    decoded_indices_global.add(group[local_idx])
-
-            # Mark all packets as decoded or collided
-            for i, rx in enumerate(rx_list):
-                # Check if this packet was in a collision group
-                in_collision = any(i in g for g in collision_groups)
-
-                if in_collision:
-                    collided = i not in decoded_indices_global
-                else:
-                    collided = False  # Single packet, no collision
-
-                self._record_rx(rx, collided, check_sensitivity=True)
-
-        # Buffer is now processed - acks will be sent in the next TX slot
-        # nodes_pending_ack is populated here, cleared after acks are sent
-
-
-    def _record_rx(self, rx: Dict[str, Any], collided: bool, check_sensitivity: bool):
+    def _record_rx(self, rx: Dict[str, Any], collided: bool):
         """Log one reception and, when decoded, act on it."""
         # Validate sector. A collision in IQ mode has none: the Reader cannot know who sent it.
         anonymous = collided and rx["node_id"] < 0
@@ -434,11 +335,6 @@ class BSBehavior:
                 return
             if rx["sector_idx"] >= len(self.base_station.sectors):
                 print(f"Warning: Received packet with out-of-range sector index {rx['sector_idx']} from node {rx['node_id']}")
-                return
-
-            # Check sensitivity. MESSAGE MODE: to be removed once IQ mode has been checked against it side by side.
-            sector = self.base_station.sectors[rx["sector_idx"]]
-            if check_sensitivity and rx["rssi_dbm"] < sector.sensitivity_dbm:
                 return
 
         # Check if matched expected
@@ -523,38 +419,6 @@ class BSBehavior:
             slot_start = self._frame_start_ms + frame_offset * self._frame_duration_ms + time_in_frame
             if mode == "rx" and slot_start >= start_after_ms:
                 rx_slots.append((slot_start, slot_start + duration_ms))
-        return rx_slots
-
-        # Start from current position in schedule
-        idx = self._schedule_idx
-        frame_offset = 0  # How many full frames ahead we are
-
-        # Scan up to 2 full frames to find enough RX slots (handles edge cases)
-        max_iterations = schedule_len * 2
-        iterations = 0
-
-        # while len(rx_slots) < num_slots and iterations < max_iterations:
-        while iterations < max_iterations:
-            iterations += 1
-
-            # Move to next entry
-            idx = (idx + 1) % schedule_len
-            if idx == 0:
-                frame_offset += 1
-
-            entry = self.schedule[idx]
-            mode = entry[0]
-            duration_ms = entry[1]
-
-            # Calculate absolute time for this entry
-            # Time within frame for this entry
-            time_in_frame = sum(self.schedule[i][1] for i in range(idx))
-            slot_start = self._frame_start_ms + frame_offset * self._frame_duration_ms + time_in_frame
-            slot_end = slot_start + duration_ms
-
-            if mode == "rx" and slot_start >= start_after_ms:
-                rx_slots.append((slot_start, slot_end))
-
         return rx_slots
 
     def _do_tx(self, duration_ms: int, slot_id: str, payload: Dict):

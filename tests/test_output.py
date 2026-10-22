@@ -8,6 +8,7 @@ import dataclasses
 import glob
 import io
 import os
+import sys
 import tempfile
 import types
 import unittest
@@ -17,6 +18,9 @@ from amber import run as amber_run
 from amber.backscatter import RxRecord, TxRecord
 from amber.bsengine import RxPacket, TxPacket
 from amber.hosts import load_scenario
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from helpers import shortened  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCENARIO_DIR = os.path.join(HERE, "scenarios")
@@ -41,8 +45,9 @@ def quiet_run(path, out=None):
 class RunTest(unittest.TestCase):
     def test_every_demo(self):
         for path in sorted(glob.glob(os.path.join(DEMO_DIR, "*", "*.toml"))):
-            with self.subTest(os.path.relpath(path, DEMO_DIR)), tempfile.TemporaryDirectory() as out:
-                _, printed = quiet_run(path, out)
+            with self.subTest(os.path.relpath(path, DEMO_DIR)), shortened(path, 4001) as short, \
+                    tempfile.TemporaryDirectory() as out:
+                _, printed = quiet_run(short, out)
                 self.assertIn("sent=", printed)
                 s = load_scenario(path)
                 for bs_id in s.BS_IDS:
@@ -66,12 +71,14 @@ class RunTest(unittest.TestCase):
 
     def test_protocol_files(self):
         with tempfile.TemporaryDirectory() as out:
-            quiet_run(os.path.join(SCENARIO_DIR, "adaptive_aloha.toml"), out)
+            with shortened(os.path.join(SCENARIO_DIR, "adaptive_aloha.toml"), 3001) as path:
+                quiet_run(path, out)
             adaptation = rows(os.path.join(out, "adaptation.csv"))
             self.assertEqual(adaptation[0], ["time_s", "n_slots", "heard", "collided"])
             self.assertGreater(len(adaptation), 1)
         with tempfile.TemporaryDirectory() as out:
-            quiet_run(os.path.join(SCENARIO_DIR, "registration.toml"), out)
+            with shortened(os.path.join(SCENARIO_DIR, "registration.toml"), 2001) as path:
+                quiet_run(path, out)
             self.assertFalse(os.path.exists(os.path.join(out, "adaptation.csv")))
 
 

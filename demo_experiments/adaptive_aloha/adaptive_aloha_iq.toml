@@ -1,6 +1,3 @@
-# adaptive_aloha.toml in IQ mode (amber.iq): the same scenario, with the carrier, commands and reflections as
-# real waveforms. Message mode (adaptive_aloha.toml) stays for side-by-side runs until it is removed.
-
 # Adaptive framed-slotted ALOHA (formerly the custom_protocol demo): 12 hybrid Tags placed at
 # random 5 to 40 m around the base station, SIC on. Seeded with 7, as the original demo was.
 

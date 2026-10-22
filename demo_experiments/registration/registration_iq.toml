@@ -1,6 +1,3 @@
-# registration.toml in IQ mode (amber.iq): the same scenario, with the carrier, commands and reflections as
-# real waveforms. Message mode (registration.toml) stays for side-by-side runs until it is removed.
-
 # Registration, Amber's built-in protocol: 4 hybrid Tags start unregistered, answer send_id in a
 # random slot, are acked, then answer send_data, with SIC. No seed: every run is a new sample.
 
