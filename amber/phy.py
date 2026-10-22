@@ -135,15 +135,16 @@ def manchester(bits: Sequence[int]) -> List[int]:
 
 @dataclass(frozen=True)
 class PhyConfig:
-    """The bit rates of the waveforms, set by the optional [phy] table of a scenario.
+    """The link a scenario runs on, from its [phy] table, which every scenario has and which states every value;
+    nothing here has a default, so the scenario file is the only source.
 
     r2d_kbps        Reader-to-Tag bit rate (OOK, Manchester: two chips per bit)
     d2r_kbps        Tag-to-Reader bit rate (BPSK backscatter, Manchester)
     subcarrier_khz  the subcarrier step: a Tag with subcarrier_shift s reflects on (s + 1) times it
     """
-    r2d_kbps: int = 80
-    d2r_kbps: int = 60
-    subcarrier_khz: int = 240
+    r2d_kbps: int
+    d2r_kbps: int
+    subcarrier_khz: int
 
     def __post_init__(self):
         for name, kbps in (("r2d_kbps", self.r2d_kbps), ("d2r_kbps", self.d2r_kbps)):

@@ -15,7 +15,7 @@ from amber.session import ReaderSession, TagSession
 
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
 IQ_SCENARIO = os.path.join(SCENARIO_DIR, "gen2_q.toml")
-CFG = phy.PhyConfig()
+CFG = phy.PhyConfig(r2d_kbps=80, d2r_kbps=60, subcarrier_khz=240)
 NOISE_W = phy.thermal_noise_w(6.0)
 
 
@@ -108,7 +108,7 @@ class TestPhy(unittest.TestCase):
 
     def test_rates_must_fit_the_millisecond(self):
         with self.assertRaises(ValueError):
-            phy.PhyConfig(r2d_kbps=7)
+            phy.PhyConfig(r2d_kbps=7, d2r_kbps=60, subcarrier_khz=240)
 
 
 class TestCommands(unittest.TestCase):

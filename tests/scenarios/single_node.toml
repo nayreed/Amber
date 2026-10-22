@@ -14,6 +14,12 @@ data_slots = 2
 tx_ms = 5
 rx_ms = 10
 
+[phy]
+# The link this scenario runs on, as the Reader and every Tag use it: bit rates and subcarrier step
+r2d_kbps = 80
+d2r_kbps = 60
+subcarrier_khz = 240
+
 [[base_station]]
 id = 0
 x = 0

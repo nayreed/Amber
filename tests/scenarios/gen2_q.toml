@@ -15,6 +15,12 @@ c = 0.3
 tx_ms = 1
 slot_ms = 10
 
+[phy]
+# The link this scenario runs on, as the Reader and every Tag use it: bit rates and subcarrier step
+r2d_kbps = 80
+d2r_kbps = 60
+subcarrier_khz = 240
+
 [[base_station]]
 id = 0
 x = 0

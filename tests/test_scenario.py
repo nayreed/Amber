@@ -46,13 +46,12 @@ class SeedTest(unittest.TestCase):
         self.assertFalse(fixed.seed_drawn)
         self.assertEqual(fixed.SEED, 5)
 
-    def test_phy_is_optional_and_only_sets_bit_rates(self):
+    def test_phy_states_the_whole_link(self):
         data = base_data()
-        data.pop("phy", None)
-        self.assertEqual(scenario.Scenario(BASE, data).phy, phy.PhyConfig())
-        data["phy"] = {"r2d_kbps": 40}
-        self.assertEqual(scenario.Scenario(BASE, data).phy, phy.PhyConfig(r2d_kbps=40))
-        data["phy"] = {"r2d_kbps": 7}
+        self.assertEqual(scenario.Scenario(BASE, data).phy, phy.PhyConfig(r2d_kbps=80, d2r_kbps=60, subcarrier_khz=240))
+        data["phy"]["r2d_kbps"] = 40
+        self.assertEqual(scenario.Scenario(BASE, data).phy.r2d_kbps, 40)
+        data["phy"]["r2d_kbps"] = 7
         with self.assertRaisesRegex(ValueError, "r2d_kbps = 7"):
             scenario.Scenario(BASE, data)
 
@@ -172,7 +171,9 @@ class ErrorTest(unittest.TestCase):
             (set_(3.0, "reader", "required_sinr_db"), "reader has no key required_sinr_db"),
             (set_(0.9, "reader", "cancellation_factor"), "reader has no key cancellation_factor"),
             (set_(100e6, "reader", "bandwidth_hz"), "reader has no key bandwidth_hz"),
-            (lambda d: d.setdefault("phy", {}).update(r2d_kbit=80), "phy has no key r2d_kbit"),
+            (drop("phy"), r"phy is required"),
+            (drop("phy", "d2r_kbps"), r"phy\.d2r_kbps is required"),
+            (set_(80, "phy", "r2d_kbit"), "phy has no key r2d_kbit"),
             (set_("yes", "reader", "enable_sic"), r"reader\.enable_sic: must be true or false"),
             (drop("base_station"), "base_station is required"),
             (set_([], "base_station"), r"base_station: must be one or more \[\[base_station\]\] tables"),

@@ -80,9 +80,9 @@ new one, and the rules it must follow to run on OAI.
 ## Real waveforms
 
 The Reader and the Tags always exchange real waveforms; there is no mode in which Amber decides
-with formulas what is received, and nothing in a scenario file switches it on. The optional `[phy]`
-table only sets the bit rates (`r2d_kbps`, `d2r_kbps`, `subcarrier_khz`); without it the defaults
-of `amber.phy.PhyConfig` apply. The design follows 3GPP Rel-19
+with formulas what is received, and nothing selects one. Every scenario has a `[phy]` table that
+states the link it runs on (`r2d_kbps`, `d2r_kbps`, `subcarrier_khz`), all required and with no
+defaults, so the file alone says what is simulated. The design follows 3GPP Rel-19
 Ambient IoT for a monostatic Reader and backscatter Tags:
 
 - The Reader's carrier is a signal (1.92 Msps), always on for the whole run. A command keys it
