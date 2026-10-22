@@ -135,7 +135,7 @@ def manchester(bits: Sequence[int]) -> List[int]:
 
 @dataclass(frozen=True)
 class PhyConfig:
-    """The [phy] table of a scenario in IQ mode.
+    """The bit rates of the waveforms, set by the optional [phy] table of a scenario.
 
     r2d_kbps        Reader-to-Tag bit rate (OOK, Manchester: two chips per bit)
     d2r_kbps        Tag-to-Reader bit rate (BPSK backscatter, Manchester)

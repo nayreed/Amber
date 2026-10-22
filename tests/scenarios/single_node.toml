@@ -14,11 +14,6 @@ data_slots = 2
 tx_ms = 5
 rx_ms = 10
 
-[phy]
-r2d_kbps = 80
-d2r_kbps = 60
-subcarrier_khz = 240
-
 [[base_station]]
 id = 0
 x = 0

@@ -16,11 +16,6 @@ max_slots = 32
 tx_ms = 5
 slot_ms = 8
 
-[phy]
-r2d_kbps = 80
-d2r_kbps = 60
-subcarrier_khz = 240
-
 [[base_station]]
 id = 0
 x = 0

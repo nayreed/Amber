@@ -26,9 +26,10 @@ tables:
                     bandwidth_hz, noise_figure_db, combine_mode
 [energy]            the energy trace (EnvEnergySource), needed by "external" and "hybrid" Tags:
                     trace (path relative to the scenario file, required), column, resistance
-[phy]               required: rfsim carries real waveforms (see amber.iq) and the physics decides
-                    what is received; r2d_kbps, d2r_kbps, subcarrier_khz (amber.phy.PhyConfig).
-                    Needs exactly one base station.
+[phy]               optional: the bit rates of the waveforms every scenario runs on (see
+                    amber.iq), r2d_kbps, d2r_kbps, subcarrier_khz (amber.phy.PhyConfig, which
+                    holds the defaults). It does not switch anything on. A scenario needs
+                    exactly one base station.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -281,7 +282,7 @@ class Scenario:
 
         self._energy = self._read_energy(top.table("energy")) if top.has("energy") else None
 
-        t = top.table("phy", required=True)
+        t = top.table("phy")
         values = t.fields({"r2d_kbps": "int", "d2r_kbps": "int", "subcarrier_khz": "int"})
         t.done()
         try:
@@ -289,7 +290,7 @@ class Scenario:
         except ValueError as e:
             raise ValueError(f"{path}: {e}") from None
         if len(self._base_stations) != 1:
-            raise ValueError(f"{path}: [phy] needs exactly one base station, got {len(self._base_stations)}")
+            raise ValueError(f"{path}: a scenario needs exactly one base station, got {len(self._base_stations)}")
 
         defaults = top.take("tag_defaults", "table", {})
         for key in defaults:
