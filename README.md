@@ -112,6 +112,16 @@ and adds the Tags' signals up, with the same files byte for byte. A scenario nee
 station. `amber/link.py`, `amber/phy` and `amber/mac` describe the link in full, and `amber/iq.py`
 the blocks of samples the Reader and the Tags exchange.
 
+## Network and topology
+
+A scenario's optional `[network]` table says where the link runs, in the terms of the four
+topologies of the Rel-19 A-IoT study: the 5G cell that shares the air (`cell`), who sends R2D
+(`r2d`), who receives D2R (`d2r`), who sends the carrier the Tags reflect (`cw`), and whether a UE
+forwards what it reads to the gNB (`relay`). Without it, a standalone Reader does all three, with
+no 5G. `amber.scenario.Network` lists the values and maps them to topologies 1 to 4.
+`python -m amber.run` simulates the A-IoT link only; OAI's `amber-compose` builds the room the
+table describes, and says which combinations it cannot build yet.
+
 ## Modules
 
 | Module | Contents |

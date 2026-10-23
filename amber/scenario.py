@@ -36,6 +36,14 @@ tables:
                     modulation, timing_error, tag_snr_db; all required. rfsim carries real
                     waveforms (see amber.iq) and the physics decides what is received. Needs
                     exactly one base station.
+[network]           the network the A-IoT link runs in, in the terms of the four topologies of
+                    the Rel-19 A-IoT study (see Network); without it, a standalone Reader:
+    cell            the 5G cell that shares the air, by name ("n28-25prb"); absent: no 5G
+    r2d             who sends R2D: "reader" (default), "gnb" or "ue"
+    d2r             who receives D2R: "reader" (default), "gnb" or "ue"
+    cw              who sends the carrier the Tags reflect: "reader" (default), "gnb-dl",
+                    "gnb-ul", "ue-ul", "cw-node-dl" or "cw-node-ul"
+    relay           the UE forwards what it reads to the gNB over 5G (default false)
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -79,7 +87,41 @@ _ABSENT = object()
 _READER_OPTIONS = {"enable_sic": "bool", "noise_figure_db": "number", "cw_leak_dbm": "number",
                    "phase_noise_floor_dbc_hz": "number", "phase_noise_corner_hz": "number"}
 _ENERGY_MODES = ("wpt", "external", "hybrid")
-_TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "tag_defaults", "tag_group")
+_TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "network", "tag_defaults", "tag_group")
+_CELLS = ("n28-25prb",)
+_R2D_D2R = ("reader", "gnb", "ue")
+_CW = ("reader", "gnb-dl", "gnb-ul", "ue-ul", "cw-node-dl", "cw-node-ul")
+
+
+class Network(NamedTuple):
+    """Where the A-IoT link runs: which node sends R2D, which receives D2R, which sends the carrier
+    wave (CW), and the 5G cell sharing the air. The four topologies of the Rel-19 study (CW options
+    after TR 38.769) are:
+
+        1  r2d = d2r = "gnb": the gNB is the Reader
+        2  r2d = d2r = "ue", relay = true: the UE reads the Tags and forwards over 5G
+        3  r2d = "ue", d2r = "gnb" (downlink assistance) or r2d = "gnb", d2r = "ue" (uplink assistance)
+        4  r2d = d2r = "ue", relay = false: the UE reads the Tags for itself
+
+    With the defaults a standalone Reader sends R2D and the carrier and receives D2R. amber.run
+    simulates the A-IoT link only; OAI's amber-compose builds the rest."""
+    cell: Optional[str] = None
+    r2d: str = "reader"
+    d2r: str = "reader"
+    cw: str = "reader"
+    relay: bool = False
+
+    @property
+    def topology(self) -> Optional[int]:
+        """The study's topology number, or None for a standalone Reader."""
+        ends = {self.r2d, self.d2r}
+        if ends == {"reader"}:
+            return None
+        if ends == {"gnb"}:
+            return 1
+        if ends == {"ue"}:
+            return 2 if self.relay else 4
+        return 3
 _PLACEMENT = ("positions", "count", "layout", "ids")
 
 
@@ -293,6 +335,8 @@ class Scenario:
 
         self._energy = self._read_energy(top.table("energy")) if top.has("energy") else None
 
+        self.network: Network = self._read_network(top.table("network"))
+
         t = top.table("phy", required=True)
         values = {key: t.take(key, kind, required=True) for key, kind in _LINK_FIELDS.items()}
         values["r_sfs"] = tuple(t.take("r_sfs", "list", required=True))
@@ -325,6 +369,27 @@ class Scenario:
             raise ValueError(f"{path}: reader: {e}") from None
 
     # ---------------- reading ----------------
+
+    def _read_network(self, t: _Table) -> Network:
+        def choice(key: str, allowed: Sequence[str], default: Optional[str]) -> Optional[str]:
+            value = t.take(key, "str", default)
+            if value is not None and value not in allowed:
+                raise t.error(key, f"must be one of {', '.join(map(repr, allowed))}, got {value!r}")
+            return value
+
+        net = Network(cell=choice("cell", _CELLS, None), r2d=choice("r2d", _R2D_D2R, "reader"),
+                      d2r=choice("d2r", _R2D_D2R, "reader"), cw=choice("cw", _CW, "reader"),
+                      relay=t.take("relay", "bool", False))
+        t.done()
+        if ("reader" in (net.r2d, net.d2r)) and net.r2d != net.d2r:
+            raise t.error("r2d", "a standalone Reader both sends R2D and receives D2R")
+        if (net.cw == "reader") != (net.r2d == "reader"):
+            raise t.error("cw", '"reader" is the standalone Reader\'s own carrier: it goes with r2d = d2r = "reader"')
+        if net.cell is None and any(n.split("-")[0] in ("gnb", "ue") for n in (net.r2d, net.d2r, net.cw)):
+            raise t.error("cell", "a gNB or a UE in the A-IoT link needs the 5G cell it belongs to")
+        if net.relay and (net.r2d, net.d2r) != ("ue", "ue"):
+            raise t.error("relay", 'only a UE that reads the Tags (r2d = d2r = "ue") relays')
+        return net
 
     def _array(self, top: _Table, key: str) -> List[Dict[str, Any]]:
         """An array of tables, which a scenario must have at least one of."""
