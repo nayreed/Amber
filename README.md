@@ -107,7 +107,8 @@ no mode in which Amber decides with formulas what is received. The link is 3GPP 
   the Reader searches the sum for D2R frames: two Tags on one occasion and shift really collide,
   and with `enable_sic` the Reader subtracts what it decoded and searches again.
 
-`python -m amber.run` runs it on one machine; on OAI, rfsim carries the samples and adds the Tags' signals up, with the same files byte for byte. A scenario needs exactly one base
+`python -m amber.run` runs it on one machine; on OAI, rfsim (or `rfsim_hub`) carries the samples
+and adds the Tags' signals up, with the same files byte for byte. A scenario needs exactly one base
 station. `amber/link.py`, `amber/phy` and `amber/mac` describe the link in full, and `amber/iq.py`
 the blocks of samples the Reader and the Tags exchange.
 

@@ -22,6 +22,11 @@ then 128 samples of control that are not on the air. The Reader's control says w
 the block is ({idle, ms n, end}); each Tag marks its own place in the Tags' control (hello, up,
 bye), so the Reader knows every Tag is there even though their signals add up.
 
+An air-only block (AIR_BLOCK_BYTES, 5760 samples) has no control. It is for rfsim_hub (OAI's
+radio/rfsimulator/hub), where the Reader and the Tags are all clients: the hub starts everyone
+together at sample 0, block n is millisecond n, and both sides stop after the scenario's SIM_TIME_MS.
+On air-only blocks the Reader's and every Tag's files are the same as with control blocks.
+
 run() runs a scenario on one machine, adding the Tags' blocks as rfsim does.
 """
 
@@ -45,6 +50,7 @@ AIR_SAMPLES = rparams.SAMPLES_PER_MS              # 5760
 CONTROL_SAMPLES = 128
 BLOCK_SAMPLES = AIR_SAMPLES + CONTROL_SAMPLES
 BLOCK_BYTES = BLOCK_SAMPLES * 4                   # int16 I and Q
+AIR_BLOCK_BYTES = AIR_SAMPLES * 4                 # air only, no control: through rfsim_hub
 CONTROL_INT16 = 2 * CONTROL_SAMPLES               # 256 control values per block
 MAX_TAGS = CONTROL_INT16
 
@@ -94,9 +100,12 @@ def up_scale(noise_w: float) -> float:
     return ADC_NOISE_COUNTS / math.sqrt(noise_w / 2)
 
 
-def check_block_bytes(block_bytes: int):
-    if block_bytes != BLOCK_BYTES:
-        raise ValueError(f"IQ needs amber.block_bytes = {BLOCK_BYTES}, got {block_bytes}")
+def check_block_bytes(block_bytes: int) -> bool:
+    """True if the blocks carry control (BLOCK_BYTES), False if they are air only (AIR_BLOCK_BYTES)."""
+    if block_bytes not in (BLOCK_BYTES, AIR_BLOCK_BYTES):
+        raise ValueError(f"IQ needs amber.block_bytes = {BLOCK_BYTES} (with control) or {AIR_BLOCK_BYTES} (air only), "
+                         f"got {block_bytes}")
+    return block_bytes == BLOCK_BYTES
 
 
 def split_block(block: bytes) -> Tuple[np.ndarray, np.ndarray]:
@@ -111,7 +120,7 @@ def join_block(air: np.ndarray, control: np.ndarray) -> bytes:
 
 def add_blocks(blocks: Sequence[bytes]) -> bytes:
     """The sum of the blocks, clipped at the 16-bit limits like rfsim's sum (a saturated ADC)."""
-    total = np.zeros(BLOCK_SAMPLES * 2, dtype=np.int64)
+    total = np.zeros(len(blocks[0]) // 2, dtype=np.int64)
     for b in blocks:
         total += np.frombuffer(b, dtype="<i2")
     return np.clip(total, -32768, 32767).astype("<i2").tobytes()
@@ -215,8 +224,8 @@ class IqReaderSession:
     """The Reader: one block out and the sum of the Tags' blocks back, per millisecond."""
 
     def __init__(self, scenario: Any, block_bytes: int, output_dir: str):
-        check_block_bytes(block_bytes)
-        if len(scenario.NODE_IDS) > MAX_TAGS:
+        self.control = check_block_bytes(block_bytes)
+        if self.control and len(scenario.NODE_IDS) > MAX_TAGS:
             raise ValueError(f"IQ runs at most {MAX_TAGS} Tags, the scenario has {len(scenario.NODE_IDS)}")
         self.scenario = scenario
         self.cfg: LinkConfig = scenario.phy
@@ -265,6 +274,10 @@ class IqReaderSession:
             self.record.rx.append((h.r2d_end / AIR_SAMPLES, name, "collision", -1, -1, "", "", "", ""))
 
     def next_block(self) -> bytes:
+        if not self.control:  # the hub has started every Tag with the Reader: millisecond n is block n
+            if self._ms is None:
+                self._ms = 0
+            return to_counts(self.link.next_block(), TX_COUNTS).astype("<i2").tobytes()
         control = np.zeros(CONTROL_INT16, dtype=np.int64)
         air = np.zeros(AIR_SAMPLES, dtype=np.complex128)
         if self._ms is None:
@@ -281,6 +294,10 @@ class IqReaderSession:
     def on_block(self, block: bytes) -> bool:
         """Take what the Tags sent back for the last block: the sum of their signals, as rfsim
         reads it. True once the run is over."""
+        if not self.control:
+            self.link.receive(from_counts(np.frombuffer(block, dtype="<i2"), self.scale))
+            self._ms += 1
+            return self._ms == self.scenario.SIM_TIME_MS
         air, control = split_block(block)
         marks = {node: int(control[i]) for node, i in self._index.items()}
         if self._ms is None:
@@ -326,7 +343,7 @@ class IqTagSession:
     """One Tag: it receives the Reader's waveform and answers with its reflection."""
 
     def __init__(self, scenario: Any, node_id: int, block_bytes: int, output_dir: str):
-        check_block_bytes(block_bytes)
+        self.control = check_block_bytes(block_bytes)
         self.scenario = scenario
         self.cfg: LinkConfig = scenario.phy
         self.host = TagHost(scenario, node_id)
@@ -347,6 +364,11 @@ class IqTagSession:
         self._next_ms = 0
 
     def reply(self, block: bytes) -> Tuple[bytes, bool]:
+        if not self.control:  # block n is millisecond n; the run ends after SIM_TIME_MS
+            ms = self._next_ms
+            air = self._step(ms, from_counts(np.frombuffer(block, dtype="<i2"), TX_COUNTS))
+            self._next_ms += 1
+            return to_counts(air, self.scale).astype("<i2").tobytes(), self._next_ms == self.scenario.SIM_TIME_MS
         air_in, control_in = split_block(block)
         kind = int(control_in[0])
         control = np.zeros(CONTROL_INT16, dtype=np.int64)
@@ -381,12 +403,12 @@ class IqTagSession:
         output.write_tag_files(self.output_dir, self.node_id, self.bsm)
 
 
-def run(scenario: Any, output_dir: str) -> Tuple[IqReaderSession, List[IqTagSession]]:
-    """Run a scenario on one machine, adding the Tags' blocks as rfsim does, and write its files.
-    Returns the sessions."""
+def run(scenario: Any, output_dir: str, block_bytes: int = BLOCK_BYTES) -> Tuple[IqReaderSession, List[IqTagSession]]:
+    """Run a scenario on one machine, adding the Tags' blocks as rfsim (or rfsim_hub, for air-only
+    blocks) does, and write its files. Returns the sessions."""
     os.makedirs(output_dir, exist_ok=True)
-    reader = IqReaderSession(scenario, BLOCK_BYTES, output_dir)
-    tags = [IqTagSession(scenario, n, BLOCK_BYTES, output_dir) for n in scenario.NODE_IDS]
+    reader = IqReaderSession(scenario, block_bytes, output_dir)
+    tags = [IqTagSession(scenario, n, block_bytes, output_dir) for n in scenario.NODE_IDS]
     done = False
     while not done:
         block = reader.next_block()

@@ -222,5 +222,36 @@ class TestRun(unittest.TestCase):
                 iq.IqReaderSession(s, iq.BLOCK_BYTES, out)
 
 
+class TestAirOnly(unittest.TestCase):
+    """Air-only blocks, for rfsim_hub: no control, and the same files as blocks with control."""
+
+    def test_sizes(self):
+        self.assertEqual(iq.AIR_BLOCK_BYTES, 5760 * 4)
+        self.assertFalse(iq.check_block_bytes(iq.AIR_BLOCK_BYTES))
+        self.assertTrue(iq.check_block_bytes(iq.BLOCK_BYTES))
+
+    def test_block_n_is_millisecond_n_and_both_sides_stop_together(self):
+        with tempfile.TemporaryDirectory() as out:
+            s = load(7)
+            reader = iq.IqReaderSession(s, iq.AIR_BLOCK_BYTES, out)
+            tag = iq.IqTagSession(s, s.NODE_IDS[0], iq.AIR_BLOCK_BYTES, out)
+            ends = []
+            for ms in range(7):
+                block = reader.next_block()
+                self.assertEqual(len(block), iq.AIR_BLOCK_BYTES)
+                answer, tag_done = tag.reply(block)
+                self.assertEqual(len(answer), iq.AIR_BLOCK_BYTES)
+                ends.append((reader.on_block(answer), tag_done))
+            self.assertEqual(ends, [(False, False)] * 6 + [(True, True)])
+
+    def test_same_files_as_with_control(self):
+        for name in ("single_node.toml", "registration.toml"):
+            with self.subTest(name), tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+                s = lambda: scenario.load(os.path.join(SCENARIO_DIR, name), {"run.sim_time_ms": 600})
+                iq.run(s(), a)
+                iq.run(s(), b, iq.AIR_BLOCK_BYTES)
+                self.assertEqual(read_files(a), read_files(b))
+
+
 if __name__ == "__main__":
     unittest.main()
