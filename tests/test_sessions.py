@@ -16,7 +16,7 @@ import unittest
 
 from amber import iq, scenario
 from amber import run as amber_run
-from amber.session import ReaderSession, TagSession
+from amber.session import CarrierSession, ReaderSession, TagSession
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from helpers import SCENARIO_DIR, SHORT_MS, records, run_one_machine, run_sessions, shortened  # noqa: E402
@@ -104,6 +104,14 @@ class SessionTest(unittest.TestCase):
                 ReaderSession(path, iq.BLOCK_BYTES, ".")
             with self.assertRaisesRegex(ValueError, "need a seed"):
                 TagSession(path, 0, iq.BLOCK_BYTES, ".")
+
+
+class CarrierSessionTest(unittest.TestCase):
+    def test_amber_reader_runs_the_carrier_node_of_the_network(self):
+        with shortened(os.path.join(SCENARIO_DIR, "registration.toml"), 100) as path:
+            with open(path, "a") as f:
+                f.write('\n[network]\ncell = "n28-25prb"\nr2d = "gnb"\nd2r = "gnb"\ncw = "cw-node-ul"\n')
+            self.assertIsInstance(CarrierSession(path, iq.AIR_BLOCK_BYTES, "."), iq.IqCarrierSession)
 
 
 if __name__ == "__main__":

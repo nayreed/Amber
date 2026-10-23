@@ -27,6 +27,9 @@ radio/rfsimulator/hub), where the Reader and the Tags are all clients: the hub s
 together at sample 0, block n is millisecond n, and both sides stop after the scenario's SIM_TIME_MS.
 On air-only blocks the Reader's and every Tag's files are the same as with control blocks.
 
+A carrier node (IqCarrierSession) sends only the carrier, for a room whose [network] has the carrier
+come from a node of its own (cw = "cw-node-dl" or "cw-node-ul") through rfsim_hub.
+
 run() runs a scenario on one machine, adding the Tags' blocks as rfsim does.
 """
 
@@ -249,6 +252,42 @@ class IqReaderSession:
 
     def finish(self):
         output.write_reader_files(self.output_dir, self.protocol, self.record, TX_COLUMNS, RX_COLUMNS)
+
+
+# ----------------------------------------------------------------------------------------------
+# A carrier node
+# ----------------------------------------------------------------------------------------------
+
+# The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
+CARRIER_NODES = ("cw-node-dl", "cw-node-ul")
+
+
+class IqCarrierSession:
+    """A carrier node: it sends only the carrier the Tags reflect, unmodulated, at TX_COUNTS, so a
+    Tag receives it at the scenario's incident power, as it would Amber's Reader's carrier. It is for
+    a scenario whose [network] cw is a carrier node, in an rfsim_hub room (air-only blocks): the hub
+    puts the carrier where the network has it. What the node hears is not used."""
+
+    def __init__(self, scenario: Any, block_bytes: int, output_dir: str):
+        if check_block_bytes(block_bytes):
+            raise ValueError(f"a carrier node runs in an rfsim_hub room, with air-only blocks of {AIR_BLOCK_BYTES} bytes")
+        if scenario.network.cw not in CARRIER_NODES:
+            raise ValueError(f"the scenario's carrier is {scenario.network.cw!r}, not a carrier node {CARRIER_NODES}")
+        self.scenario = scenario
+        self.output_dir = output_dir
+        self._block = to_counts(np.ones(AIR_SAMPLES, dtype=np.complex128), TX_COUNTS).astype("<i2").tobytes()
+        self._ms = 0
+
+    def next_block(self) -> bytes:
+        return self._block
+
+    def on_block(self, block: bytes) -> bool:
+        """True once the scenario's SIM_TIME_MS have been sent."""
+        self._ms += 1
+        return self._ms == self.scenario.SIM_TIME_MS
+
+    def finish(self):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------
