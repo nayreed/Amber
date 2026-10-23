@@ -12,7 +12,6 @@ import unittest
 from amber import iq, scenario
 from amber.backscatter import AiotTag
 from amber.hosts import SHARED_PHASE, PhasedEnvironment
-from amber.link import LinkConfig
 
 try:
     import tomllib
@@ -160,7 +159,7 @@ class LinkTest(unittest.TestCase):
         s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"))
         links = s.iq_links()
         self.assertEqual(sorted(links), s.NODE_IDS)
-        for sector, shift, power_dbm in links.values():
+        for sector, _shift, power_dbm in links.values():
             self.assertTrue(0 <= sector < 3)
             self.assertTrue(-200 < power_dbm < 0)
 
@@ -273,6 +272,44 @@ class ErrorTest(unittest.TestCase):
             scenario.load(BASE, {"tag_group.3.count": 2})
         with self.assertRaisesRegex(ValueError, "is inside a value"):
             scenario.load(BASE, {"run.seed.x": 1})
+
+
+class NetworkTest(unittest.TestCase):
+    """[network] names who sends R2D, who receives D2R and who sends the carrier; it maps onto the
+    four topologies of the Rel-19 study."""
+
+    def network(self, **values):
+        data = base_data()
+        data["network"] = values
+        return scenario.Scenario(BASE, data).network
+
+    def test_default_is_a_standalone_reader(self):
+        net = scenario.Scenario(BASE, base_data()).network
+        self.assertEqual((net.cell, net.r2d, net.d2r, net.cw, net.relay), (None, "reader", "reader", "reader", False))
+        self.assertIsNone(net.topology)
+
+    def test_topologies(self):
+        cell = "n28-25prb"
+        self.assertEqual(self.network(cell=cell, r2d="gnb", d2r="gnb", cw="cw-node-ul").topology, 1)
+        self.assertEqual(self.network(cell=cell, r2d="ue", d2r="ue", cw="ue-ul", relay=True).topology, 2)
+        self.assertEqual(self.network(cell=cell, r2d="ue", d2r="gnb", cw="ue-ul").topology, 3)
+        self.assertEqual(self.network(cell=cell, r2d="gnb", d2r="ue", cw="gnb-dl").topology, 3)
+        self.assertEqual(self.network(cell=cell, r2d="ue", d2r="ue", cw="ue-ul").topology, 4)
+        self.assertIsNone(self.network(cell=cell).topology)
+
+    def test_refused(self):
+        cases = [
+            (dict(cell="n78"), r"network\.cell: must be one of 'n28-25prb'"),
+            (dict(r2d="gnb"), r"network\.r2d: a standalone Reader both sends R2D and receives D2R"),
+            (dict(cell="n28-25prb", r2d="gnb", d2r="gnb"), r"network\.cw: \"reader\" is the standalone Reader's own carrier"),
+            (dict(r2d="gnb", d2r="gnb", cw="gnb-dl"), r"network\.cell: a gNB or a UE in the A-IoT link needs"),
+            (dict(cell="n28-25prb", r2d="gnb", d2r="gnb", cw="cw-node-ul", relay=True), r"network\.relay: only a UE"),
+            (dict(cell="n28-25prb", relay="yes"), r"network\.relay: must be true or false"),
+            (dict(cells="n28-25prb"), "network has no key cells"),
+        ]
+        for values, message in cases:
+            with self.subTest(values=values), self.assertRaisesRegex(ValueError, message):
+                self.network(**values)
 
 
 if __name__ == "__main__":

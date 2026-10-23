@@ -2,8 +2,8 @@
 """The Tag host: each Tag owns a SimPy environment for its energy (capacitor, controller and
 sensing) and advances it one millisecond at a time. amber.iq drives it, one block of IQ samples
 per millisecond, as amber-tag does in its OAI container (through amber.session) and as
-python -m amber.run does on one machine. The Reader needs no SimPy: its protocol is a policy over
-38.391 messages that amber.iq runs on the waveforms.
+python -m amber.run does on one machine. The Reader needs no SimPy: its protocol, in the A-IoT MAC
+library (amber.mac), chooses 38.391 messages that amber.iq runs on the waveforms.
 
 Per millisecond n, a Tag:
   1. TagHost.deliver(n)    advances its environment to n;

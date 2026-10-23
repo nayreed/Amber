@@ -58,7 +58,7 @@ def run_sessions(scenario, out):
         block = reader.next_block()
         answers, tags_done = [], []
         for tag in tags:
-            scramble_global_random(tag.node_id, reader.ctx.now_ms)
+            scramble_global_random(tag.node_id, reader.link.t / iq.AIR_SAMPLES)
             answer, tag_done = tag.reply(block)
             answers.append(answer)
             tags_done.append(tag_done)

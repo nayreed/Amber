@@ -7,7 +7,7 @@ The Reader writes:
                   decode): time (ms), the R2D it answered, kind (msg1 / data / collision), the
                   Tag's node id and value from the Data SDU, the Random ID or AS ID, R_SFS,
                   time slot and RSSI
-plus the files its protocol adds (Protocol.outputs), such as adaptation.csv or q.csv.
+plus its protocol's table, if it keeps one (Protocol.outputs): adaptation.csv or q.csv.
 Each Tag writes:
   tag<id>_tx.csv  every D2R it started (amber.backscatter.TxRecord)
   tag<id>_rx.csv  every R2D Data SDU it received (RxRecord)
