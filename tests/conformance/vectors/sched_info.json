@@ -1,0 +1,2047 @@
+{
+ "file": "sched_info.json",
+ "title": "38.391 Table 6.2.1.6-1: D2R Scheduling Info to PHY parameters",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "sched_info-constant-001",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_TIME_RESOURCE"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "sched_info-constant-002",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_BIT_DURATION"
+   },
+   "expect": {
+    "value": 3
+   }
+  },
+  {
+   "id": "sched_info-constant-003",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_FREQ_BROADCAST"
+   },
+   "expect": {
+    "value": 8
+   }
+  },
+  {
+   "id": "sched_info-constant-004",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_FREQ_UNICAST"
+   },
+   "expect": {
+    "value": 3
+   }
+  },
+  {
+   "id": "sched_info-constant-005",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_BLOCK_REPETITION"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "sched_info-constant-006",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_CHANNEL_CODING"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "sched_info-constant-007",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_INTERVAL_BITS"
+   },
+   "expect": {
+    "value": 2
+   }
+  },
+  {
+   "id": "sched_info-constant-008",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_SEQUENCE_LENGTH"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "sched_info-constant-009",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_ADDITIONAL_MIDAMBLE"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "sched_info-constant-010",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BITS_D2R_TBS"
+   },
+   "expect": {
+    "value": 7
+   }
+  },
+  {
+   "id": "sched_info-constant-011",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BIT_DURATION_TAU"
+   },
+   "expect": {
+    "value": [
+     "2",
+     "1",
+     "1/2",
+     "1/4",
+     "1/8",
+     "1/16",
+     "1/32",
+     "1/96"
+    ]
+   },
+   "note": "codepoint order = value order (2, 1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/96) x tau; also \u00a76.2.1.6 text on codepoints"
+  },
+  {
+   "id": "sched_info-constant-012",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_RSFS_VALUES"
+   },
+   "expect": {
+    "value": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ]
+   }
+  },
+  {
+   "id": "sched_info-constant-013",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_BLOCK_REPETITION"
+   },
+   "expect": {
+    "value": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "id": "sched_info-constant-014",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_D2R_TBS_RANGE_BYTES"
+   },
+   "expect": {
+    "value": [
+     1,
+     125
+    ]
+   }
+  },
+  {
+   "id": "sched_info-constant-015",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "name": "SCHED_INTERVAL_BITS_BASE"
+   },
+   "expect": {
+    "value": [
+     48,
+     96,
+     168,
+     240
+    ]
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-001",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "t_bit_tau": "2"
+   },
+   "expect": {
+    "s": 1
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-002",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 1,
+    "t_bit_tau": "1"
+   },
+   "expect": {
+    "s": 2
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-003",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 2,
+    "t_bit_tau": "1/2"
+   },
+   "expect": {
+    "s": 4
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-004",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "t_bit_tau": "1/4"
+   },
+   "expect": {
+    "s": 8
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-005",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "t_bit_tau": "1/8"
+   },
+   "expect": {
+    "s": 16
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-006",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 5,
+    "t_bit_tau": "1/16"
+   },
+   "expect": {
+    "s": 32
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-007",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 6,
+    "t_bit_tau": "1/32"
+   },
+   "expect": {
+    "s": 64
+   }
+  },
+  {
+   "id": "sched_info-sched_scale-008",
+   "kind": "sched_scale",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "t_bit_tau": "1/96"
+   },
+   "expect": {
+    "s": 192
+   }
+  },
+  {
+   "id": "sched_info-sched_decode-001",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "2",
+    "i_bit": 48,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-002",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "2",
+    "i_bit": 96,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-003",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "2",
+    "i_bit": 168,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-004",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "2",
+    "i_bit": 240,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-005",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 1,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1",
+    "i_bit": 96,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-006",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 1,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1",
+    "i_bit": 192,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-007",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 1,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1",
+    "i_bit": 336,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-008",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 1,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1",
+    "i_bit": 480,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-009",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 2,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/2",
+    "i_bit": 192,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-010",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 2,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/2",
+    "i_bit": 384,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-011",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 2,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/2",
+    "i_bit": 672,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-012",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 2,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/2",
+    "i_bit": 960,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-013",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/4",
+    "i_bit": 384,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-014",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/4",
+    "i_bit": 768,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-015",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/4",
+    "i_bit": 1344,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-016",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/4",
+    "i_bit": 1920,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8,
+     16
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-017",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/8",
+    "i_bit": 768,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-018",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/8",
+    "i_bit": 1536,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-019",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/8",
+    "i_bit": 2688,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-020",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/8",
+    "i_bit": 3840,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4,
+     8
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-021",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 5,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/16",
+    "i_bit": 1536,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-022",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 5,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/16",
+    "i_bit": 3072,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-023",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 5,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/16",
+    "i_bit": 5376,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-024",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 5,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/16",
+    "i_bit": 7680,
+    "r_sfs_allowed": [
+     1,
+     2,
+     4
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-025",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 6,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/32",
+    "i_bit": 3072,
+    "r_sfs_allowed": [
+     1,
+     2
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-026",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 6,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/32",
+    "i_bit": 6144,
+    "r_sfs_allowed": [
+     1,
+     2
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-027",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 6,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/32",
+    "i_bit": 10752,
+    "r_sfs_allowed": [
+     1,
+     2
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-028",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 6,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/32",
+    "i_bit": 15360,
+    "r_sfs_allowed": [
+     1,
+     2
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-029",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "interval_cp": 0
+   },
+   "expect": {
+    "t_bit_tau": "1/96",
+    "i_bit": 9216,
+    "r_sfs_allowed": [
+     1
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-030",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "interval_cp": 1
+   },
+   "expect": {
+    "t_bit_tau": "1/96",
+    "i_bit": 18432,
+    "r_sfs_allowed": [
+     1
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-031",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "interval_cp": 2
+   },
+   "expect": {
+    "t_bit_tau": "1/96",
+    "i_bit": 32256,
+    "r_sfs_allowed": [
+     1
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_decode-032",
+   "kind": "sched_decode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "interval_cp": 3
+   },
+   "expect": {
+    "t_bit_tau": "1/96",
+    "i_bit": 46080,
+    "r_sfs_allowed": [
+     1
+    ]
+   },
+   "note": "I_bit = {48,96,168,240}[interval_cp] x S"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-001",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "bitmap": "00010000"
+   },
+   "expect": {
+    "r_sfs_set": [
+     8
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1; 38.191 9A uses 0001 0000 = R_SFS 8"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-002",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "bitmap": "11111111"
+   },
+   "expect": {
+    "r_sfs_set": [
+     1,
+     2,
+     4,
+     8,
+     16,
+     32,
+     64,
+     128
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-003",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 0,
+    "bitmap": "10000001"
+   },
+   "expect": {
+    "r_sfs_set": [
+     1,
+     128
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-004",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 7,
+    "bitmap": "10000000"
+   },
+   "expect": {
+    "r_sfs_set": [
+     1
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-005",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 4,
+    "bitmap": "11110000"
+   },
+   "expect": {
+    "r_sfs_set": [
+     1,
+     2,
+     4,
+     8
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1"
+  },
+  {
+   "id": "sched_info-sched_freq_bitmap-006",
+   "kind": "sched_freq_bitmap",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {
+    "bit_duration_cp": 3,
+    "bitmap": "11111000"
+   },
+   "expect": {
+    "r_sfs_set": [
+     1,
+     2,
+     4,
+     8,
+     16
+    ],
+    "valid": true
+   },
+   "note": "leftmost bit = R_SFS 1; only the R_SFS values listed for that bit duration may be set to 1"
+  },
+  {
+   "id": "sched_info-sched_combo_count-001",
+   "kind": "sched_combo_count",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+   ],
+   "input": {},
+   "expect": {
+    "allowed_pairs": 36
+   },
+   "note": "8+7+6+5+4+3+2+1 allowed (T_bit, R_SFS) pairs; this equals the number of filled cells in 38.191 Table 5.3.2.3-1"
+  },
+  {
+   "id": "sched_info-sched_tchip_set-001",
+   "kind": "sched_tchip_set",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
+   ],
+   "input": {},
+   "expect": {
+    "t_chip_tau": [
+     "1",
+     "1/2",
+     "1/4",
+     "1/8",
+     "1/16",
+     "1/32",
+     "1/64",
+     "1/128",
+     "1/192"
+    ]
+   },
+   "note": "Every allowed pair gives T_chip = T_bit/(2 R_SFS) in {tau/2^k, k=0..7} or tau/192; those are exactly the rows of 38.291 Tables 7.1.2-1 and 7.1.2-3"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-001",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1",
+    "t_chip_us": "400/3",
+    "shift_khz": "15/4",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-002",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/2",
+    "t_chip_us": "200/3",
+    "shift_khz": "15/2",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-003",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/4",
+    "t_chip_us": "100/3",
+    "shift_khz": "15",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-004",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 8
+   },
+   "expect": {
+    "t_chip_tau": "1/8",
+    "t_chip_us": "50/3",
+    "shift_khz": "30",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-005",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 16
+   },
+   "expect": {
+    "t_chip_tau": "1/16",
+    "t_chip_us": "25/3",
+    "shift_khz": "60",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-006",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 32
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-007",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 64
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-008",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "2",
+    "r_sfs": 128
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "15"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-009",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/2",
+    "t_chip_us": "200/3",
+    "shift_khz": "15/2",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-010",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/4",
+    "t_chip_us": "100/3",
+    "shift_khz": "15",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-011",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/8",
+    "t_chip_us": "50/3",
+    "shift_khz": "30",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-012",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 8
+   },
+   "expect": {
+    "t_chip_tau": "1/16",
+    "t_chip_us": "25/3",
+    "shift_khz": "60",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-013",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 16
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-014",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 32
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-015",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1",
+    "r_sfs": 64
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "30"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-016",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/4",
+    "t_chip_us": "100/3",
+    "shift_khz": "15",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-017",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/8",
+    "t_chip_us": "50/3",
+    "shift_khz": "30",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-018",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/16",
+    "t_chip_us": "25/3",
+    "shift_khz": "60",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-019",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 8
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-020",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 16
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-021",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/2",
+    "r_sfs": 32
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "60"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-022",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/4",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/8",
+    "t_chip_us": "50/3",
+    "shift_khz": "30",
+    "nominal_bw_khz": "120"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-023",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/4",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/16",
+    "t_chip_us": "25/3",
+    "shift_khz": "60",
+    "nominal_bw_khz": "120"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-024",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/4",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "120"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-025",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/4",
+    "r_sfs": 8
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "120"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-026",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/4",
+    "r_sfs": 16
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "120"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-027",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/8",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/16",
+    "t_chip_us": "25/3",
+    "shift_khz": "60",
+    "nominal_bw_khz": "240"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-028",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/8",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "240"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-029",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/8",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "240"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-030",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/8",
+    "r_sfs": 8
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "240"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-031",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/16",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/32",
+    "t_chip_us": "25/6",
+    "shift_khz": "120",
+    "nominal_bw_khz": "480"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-032",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/16",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "480"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-033",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/16",
+    "r_sfs": 4
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "480"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-034",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/32",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/64",
+    "t_chip_us": "25/12",
+    "shift_khz": "240",
+    "nominal_bw_khz": "960"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-035",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/32",
+    "r_sfs": 2
+   },
+   "expect": {
+    "t_chip_tau": "1/128",
+    "t_chip_us": "25/24",
+    "shift_khz": "480",
+    "nominal_bw_khz": "960"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  },
+  {
+   "id": "sched_info-d2r_chip_params-036",
+   "kind": "d2r_chip_params",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
+    "TS 38.191 V19.4.0 Annex E, p.30"
+   ],
+   "input": {
+    "t_bit_tau": "1/96",
+    "r_sfs": 1
+   },
+   "expect": {
+    "t_chip_tau": "1/192",
+    "t_chip_us": "25/36",
+    "shift_khz": "720",
+    "nominal_bw_khz": "2880"
+   },
+   "note": "shift = R_SFS/T_bit and nominal bandwidth = 4/T_bit are read back from 38.191 Table 5.3.2.3-1 (row = bandwidth, column = shift); they reproduce every cell, see rf_limits.json d2r_cbw"
+  }
+ ]
+}

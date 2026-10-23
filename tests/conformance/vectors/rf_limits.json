@@ -1,0 +1,1359 @@
+{
+ "file": "rf_limits.json",
+ "title": "Bands, channel tables, sensitivity and power limits",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "rf_limits-limit-001",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 7.2.2-1, \u00a77.2.2, p.15"
+   ],
+   "input": {
+    "name": "DEVICE_REFSENS_DBM"
+   },
+   "expect": {
+    "value": -34,
+    "unit": "dBm",
+    "relation": "detection_rate>=0.9 at power <= value"
+   }
+  },
+  {
+   "id": "rf_limits-limit-002",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a77.2.2, p.15"
+   ],
+   "input": {
+    "name": "DEVICE_REFSENS_MIN_DETECTION_RATE"
+   },
+   "expect": {
+    "value": 0.9,
+    "unit": "ratio",
+    "relation": ">="
+   }
+  },
+  {
+   "id": "rf_limits-limit-003",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 7.2.3-1, p.15"
+   ],
+   "input": {
+    "name": "DEVICE_EIS_PARTIAL_SPHERE_DBM"
+   },
+   "expect": {
+    "value": -28.5,
+    "unit": "dBm",
+    "relation": "within +/-45 deg"
+   }
+  },
+  {
+   "id": "rf_limits-limit-004",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 7.2.3-1, p.15"
+   ],
+   "input": {
+    "name": "DEVICE_EIS_PARTIAL_SPHERE_ANGLE_DEG"
+   },
+   "expect": {
+    "value": 45,
+    "unit": "deg",
+    "relation": "+/-"
+   }
+  },
+  {
+   "id": "rf_limits-limit-005",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 7.3-1, \u00a77.3, p.15"
+   ],
+   "input": {
+    "name": "DEVICE_MAX_INPUT_DBM"
+   },
+   "expect": {
+    "value": -4,
+    "unit": "dBm",
+    "relation": "detection_rate>=0.9 at power <= value"
+   }
+  },
+  {
+   "id": "rf_limits-limit-006",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.1.1.1-1, p.13"
+   ],
+   "input": {
+    "name": "BACKSCATTER_LOSS_MAX_OOK_DB_AT_CW_-27DBM"
+   },
+   "expect": {
+    "value": 10,
+    "unit": "dB",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-007",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.1.1.1-1, p.13"
+   ],
+   "input": {
+    "name": "BACKSCATTER_LOSS_MAX_BPSK_DB_AT_CW_-27DBM"
+   },
+   "expect": {
+    "value": 6,
+    "unit": "dB",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-008",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.1.1.1-1, p.13"
+   ],
+   "input": {
+    "name": "BACKSCATTER_LOSS_MAX_OOK_DB_AT_CW_-10DBM"
+   },
+   "expect": {
+    "value": 15,
+    "unit": "dB",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-009",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.1.1.1-1, p.13"
+   ],
+   "input": {
+    "name": "BACKSCATTER_LOSS_MAX_BPSK_DB_AT_CW_-10DBM"
+   },
+   "expect": {
+    "value": 11,
+    "unit": "dB",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-010",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 Table 7.2.2-1, p.26 (200 kHz, BPSK, FEC 1/3, 15 kHz DSB)"
+   ],
+   "input": {
+    "name": "BS_REFSENS_A-FR1-A1-1_DBM"
+   },
+   "expect": {
+    "value": -95.2,
+    "unit": "dBm",
+    "relation": "BLER<=10%"
+   }
+  },
+  {
+   "id": "rf_limits-limit-011",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 Table 7.2.2-1, p.26 (200 kHz, OOK, FEC 1/3)"
+   ],
+   "input": {
+    "name": "BS_REFSENS_A-FR1-A1-2_DBM"
+   },
+   "expect": {
+    "value": -92.2,
+    "unit": "dBm",
+    "relation": "BLER<=10%"
+   }
+  },
+  {
+   "id": "rf_limits-limit-012",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 Table 7.2.2-1, p.26 (3520 kHz, BPSK, no FEC, 2880 kHz DSB)"
+   ],
+   "input": {
+    "name": "BS_REFSENS_A-FR1-A1-3_DBM"
+   },
+   "expect": {
+    "value": -72.4,
+    "unit": "dBm",
+    "relation": "BLER<=10%"
+   }
+  },
+  {
+   "id": "rf_limits-limit-013",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 Table 7.2.2-1, p.26 (3520 kHz, OOK, no FEC)"
+   ],
+   "input": {
+    "name": "BS_REFSENS_A-FR1-A1-4_DBM"
+   },
+   "expect": {
+    "value": -69.4,
+    "unit": "dBm",
+    "relation": "BLER<=10%"
+   }
+  },
+  {
+   "id": "rf_limits-limit-014",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 Table 7.2.2-1 note, p.26"
+   ],
+   "input": {
+    "name": "BS_REFSENS_CW_AT_ANTENNA_DBM"
+   },
+   "expect": {
+    "value": -38,
+    "unit": "dBm",
+    "relation": "assumed CW level, no phase-noise cancellation"
+   }
+  },
+  {
+   "id": "rf_limits-limit-015",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.194 V19.3.0 \u00a77.2.2, p.26"
+   ],
+   "input": {
+    "name": "BS_REFSENS_MAX_BLER"
+   },
+   "expect": {
+    "value": 0.1,
+    "unit": "ratio",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-016",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.2.2.2-2, p.14"
+   ],
+   "input": {
+    "name": "SPURIOUS_30MHZ_1GHZ_DBM_100KHZ"
+   },
+   "expect": {
+    "value": -36,
+    "unit": "dBm",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-017",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.2.2.2-2, p.14"
+   ],
+   "input": {
+    "name": "SPURIOUS_1GHZ_5GHZ_DBM_1MHZ"
+   },
+   "expect": {
+    "value": -30,
+    "unit": "dBm",
+    "relation": "<="
+   }
+  },
+  {
+   "id": "rf_limits-limit-018",
+   "kind": "limit",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.2.1.2-1, p.13-14"
+   ],
+   "input": {
+    "name": "SEM_LIMIT_DBC"
+   },
+   "expect": {
+    "value": 10,
+    "unit": "dBc",
+    "relation": "within +/-0.5*CBW - F_OOB, incident CW -5 dBm"
+   }
+  },
+  {
+   "id": "rf_limits-limit-019",
+   "kind": "limit",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79A.2.1, p.21",
+    "TS 38.191 V19.4.0 Table 7.2.2-1"
+   ],
+   "input": {
+    "name": "RRM_9A_CW_AND_R2D_POWER_DBM"
+   },
+   "expect": {
+    "value": -24,
+    "unit": "dBm",
+    "relation": "=",
+    "derivation": "REFSENS -34 dBm + 10 dB"
+   },
+   "note": "9A: CW incident power and received R2D power are each 10 dB above the minimum reference sensitivity"
+  },
+  {
+   "id": "rf_limits-limit-020",
+   "kind": "limit",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.1.1.1-1"
+   ],
+   "input": {
+    "name": "BACKSCATTER_POWER_MIN_OOK_AT_CW_-27DBM"
+   },
+   "expect": {
+    "value": -37,
+    "unit": "dBm",
+    "relation": ">=",
+    "derivation": "backscatter loss = P_cw - P_bs <= 10 dB"
+   }
+  },
+  {
+   "id": "rf_limits-bs_oob_boundary-001",
+   "kind": "bs_oob_boundary",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.2.2.2-1, p.14"
+   ],
+   "input": {
+    "d2r_cbw_khz": "<1400"
+   },
+   "expect": {
+    "f_oob": "max(500 kHz, 10*CBW)"
+   }
+  },
+  {
+   "id": "rf_limits-bs_oob_boundary-002",
+   "kind": "bs_oob_boundary",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 6.2.2.2-1, p.14"
+   ],
+   "input": {
+    "d2r_cbw_khz": ">=1400"
+   },
+   "expect": {
+    "f_oob": "7.5 MHz"
+   }
+  },
+  {
+   "id": "rf_limits-band-001",
+   "kind": "band",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.2-1, p.9"
+   ],
+   "input": {
+    "band": "n5"
+   },
+   "expect": {
+    "ul_mhz": [
+     824,
+     849
+    ],
+    "dl_mhz": [
+     869,
+     894
+    ],
+    "duplex": "FDD"
+   }
+  },
+  {
+   "id": "rf_limits-band-002",
+   "kind": "band",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.2-1, p.9"
+   ],
+   "input": {
+    "band": "n8"
+   },
+   "expect": {
+    "ul_mhz": [
+     880,
+     915
+    ],
+    "dl_mhz": [
+     925,
+     960
+    ],
+    "duplex": "FDD"
+   }
+  },
+  {
+   "id": "rf_limits-band-003",
+   "kind": "band",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.2-1, p.9"
+   ],
+   "input": {
+    "band": "n28"
+   },
+   "expect": {
+    "ul_mhz": [
+     703,
+     748
+    ],
+    "dl_mhz": [
+     758,
+     803
+    ],
+    "duplex": "FDD"
+   }
+  },
+  {
+   "id": "rf_limits-guardband-001",
+   "kind": "guardband",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.3-1, p.10"
+   ],
+   "input": {
+    "r2d_cbw_khz": 200
+   },
+   "expect": {
+    "min_guardband_khz": 2.5
+   }
+  },
+  {
+   "id": "rf_limits-guardband-002",
+   "kind": "guardband",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.3-1, p.10"
+   ],
+   "input": {
+    "r2d_cbw_khz": 400
+   },
+   "expect": {
+    "min_guardband_khz": 12.5
+   }
+  },
+  {
+   "id": "rf_limits-guardband-003",
+   "kind": "guardband",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.3-1, p.10"
+   ],
+   "input": {
+    "r2d_cbw_khz": 600
+   },
+   "expect": {
+    "min_guardband_khz": 22.5
+   }
+  },
+  {
+   "id": "rf_limits-guardband-004",
+   "kind": "guardband",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.3-1, p.10"
+   ],
+   "input": {
+    "r2d_cbw_khz": 800
+   },
+   "expect": {
+    "min_guardband_khz": 32.5
+   }
+  },
+  {
+   "id": "rf_limits-constant-001",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.5-1, p.10"
+   ],
+   "input": {
+    "name": "R2D_CBW_KHZ_SCS15_BANDS_N5_N8_N28"
+   },
+   "expect": {
+    "value": [
+     200,
+     400,
+     600,
+     800
+    ]
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_range-001",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n5",
+    "link": "ul"
+   },
+   "expect": {
+    "first": 164800,
+    "last": 169800,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-001",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 164800
+   },
+   "expect": {
+    "mhz": 824.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-002",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 169800
+   },
+   "expect": {
+    "mhz": 849.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_range-002",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n5",
+    "link": "dl"
+   },
+   "expect": {
+    "first": 173800,
+    "last": 178800,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-003",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 173800
+   },
+   "expect": {
+    "mhz": 869.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-004",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 178800
+   },
+   "expect": {
+    "mhz": 894.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_range-003",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n8",
+    "link": "ul"
+   },
+   "expect": {
+    "first": 176000,
+    "last": 183000,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-005",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 176000
+   },
+   "expect": {
+    "mhz": 880.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-006",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 183000
+   },
+   "expect": {
+    "mhz": 915.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_range-004",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n8",
+    "link": "dl"
+   },
+   "expect": {
+    "first": 185000,
+    "last": 192000,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-007",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 185000
+   },
+   "expect": {
+    "mhz": 925.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-008",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 192000
+   },
+   "expect": {
+    "mhz": 960.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_range-005",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n28",
+    "link": "ul"
+   },
+   "expect": {
+    "first": 140600,
+    "last": 149600,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-009",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 140600
+   },
+   "expect": {
+    "mhz": 703.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-010",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 149600
+   },
+   "expect": {
+    "mhz": 748.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_range-006",
+   "kind": "arfcn_range",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.4.1.3-1, p.12"
+   ],
+   "input": {
+    "band": "n28",
+    "link": "dl"
+   },
+   "expect": {
+    "first": 151600,
+    "last": 160600,
+    "step": 2
+   }
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-011",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 151600
+   },
+   "expect": {
+    "mhz": 758.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-arfcn_to_mhz-012",
+   "kind": "arfcn_to_mhz",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a75.4.1.1, p.11-12",
+    "TS 38.191 V19.4.0 Table 5.4.1.1-1, p.12"
+   ],
+   "input": {
+    "n_ref": 160600
+   },
+   "expect": {
+    "mhz": 803.0
+   },
+   "note": "F_REF = 0 + 0.005 MHz x N_REF; edges of Table 5.2-1 are reproduced exactly"
+  },
+  {
+   "id": "rf_limits-d2r_cbw-001",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 3.75
+   },
+   "expect": {
+    "cbw_khz": 17
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-002",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 7.5
+   },
+   "expect": {
+    "cbw_khz": 25
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-003",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 15
+   },
+   "expect": {
+    "cbw_khz": 42
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-004",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 30
+   },
+   "expect": {
+    "cbw_khz": 75
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-005",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 60
+   },
+   "expect": {
+    "cbw_khz": 141
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-006",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 273
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-007",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 537
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-008",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 15,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1065
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-009",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 7.5
+   },
+   "expect": {
+    "cbw_khz": 33
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-010",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 15
+   },
+   "expect": {
+    "cbw_khz": 50
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-011",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 30
+   },
+   "expect": {
+    "cbw_khz": 83
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-012",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 60
+   },
+   "expect": {
+    "cbw_khz": 149
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-013",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 281
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-014",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 545
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-015",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 30,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1073
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-016",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 15
+   },
+   "expect": {
+    "cbw_khz": 66
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-017",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 30
+   },
+   "expect": {
+    "cbw_khz": 99
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-018",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 60
+   },
+   "expect": {
+    "cbw_khz": 165
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-019",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 297
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-020",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 561
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-021",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 60,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1089
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-022",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 120,
+    "shift_khz": 30
+   },
+   "expect": {
+    "cbw_khz": 132
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-023",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 120,
+    "shift_khz": 60
+   },
+   "expect": {
+    "cbw_khz": 198
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-024",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 120,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 330
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-025",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 120,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 594
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-026",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 120,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1122
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-027",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 240,
+    "shift_khz": 60
+   },
+   "expect": {
+    "cbw_khz": 264
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-028",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 240,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 396
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-029",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 240,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 660
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-030",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 240,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1188
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-031",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 480,
+    "shift_khz": 120
+   },
+   "expect": {
+    "cbw_khz": 528
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-032",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 480,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 792
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-033",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 480,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1320
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-034",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 960,
+    "shift_khz": 240
+   },
+   "expect": {
+    "cbw_khz": 1056
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-035",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 960,
+    "shift_khz": 480
+   },
+   "expect": {
+    "cbw_khz": 1584
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw-036",
+   "kind": "d2r_cbw",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1, p.11"
+   ],
+   "input": {
+    "nominal_bw_khz": 2880,
+    "shift_khz": 720
+   },
+   "expect": {
+    "cbw_khz": 3168
+   }
+  },
+  {
+   "id": "rf_limits-d2r_cbw_formula-001",
+   "kind": "d2r_cbw_formula",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.191 V19.4.0 Annex E, p.30",
+    "TS 38.191 V19.4.0 Table 5.3.2.3-1"
+   ],
+   "input": {
+    "formula": "ceil((2+2R)/T_bit * (1+|SFO|))",
+    "sfo": 0.1,
+    "nominal_bw": "4/T_bit",
+    "shift": "R_SFS/T_bit"
+   },
+   "expect": {
+    "cells_reproduced": 36
+   },
+   "note": "Annex E gives the formula but not the SFO used for the table. |SFO| = 0.1 (the top of the 0.01-0.1 range in 38.194 Annex B.1) reproduces all 36 cells."
+  }
+ ]
+}

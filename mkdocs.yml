@@ -52,11 +52,13 @@ nav:
   - Home: index.md
   - API Reference:
       - backscatter: api/backscatter.md
-      - bsengine: api/bsengine.md
       - capacitor: api/capacitor.md
       - controller: api/controller.md
       - energy: api/energy.md
+      - link: api/link.md
+      - mac: api/mac.md
       - output: api/output.md
+      - phy: api/phy.md
       - propagation: api/propagation.md
       - protocols: api/protocols.md
       - radiodevices: api/radiodevices.md

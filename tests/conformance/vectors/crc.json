@@ -1,0 +1,513 @@
+{
+ "file": "crc.json",
+ "title": "CRC attachment (A>24 -> CRC16, else CRC6; zero initial register)",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "crc-crc_parity-001",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "11111111",
+    "L": 6
+   },
+   "expect": {
+    "parity": "001001"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 9,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-002",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "11111111",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0001111011110000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 7920,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-003",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "0001001000110100",
+    "L": 6
+   },
+   "expect": {
+    "parity": "011001"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 25,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-004",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "0001001000110100",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0001001111000110"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 5062,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-005",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "101010111100110111101111",
+    "L": 6
+   },
+   "expect": {
+    "parity": "111101"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 61,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-006",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "101010111100110111101111",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0010000110100100"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 8612,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-007",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "11011110101011011011111011101111",
+    "L": 6
+   },
+   "expect": {
+    "parity": "001111"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 15,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-008",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "11011110101011011011111011101111",
+    "L": 16
+   },
+   "expect": {
+    "parity": "1100010001010111"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 50263,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-009",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "L": 6
+   },
+   "expect": {
+    "parity": "010110"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 22,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-010",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "L": 16
+   },
+   "expect": {
+    "parity": "1011111011011000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 48856,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-011",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "1011111011101111",
+    "L": 6
+   },
+   "expect": {
+    "parity": "011000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 24,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-012",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "1011111011101111",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0011000111000011"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 12739,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-013",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "00000000",
+    "L": 6
+   },
+   "expect": {
+    "parity": "000000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 0,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-014",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "00000000",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0000000000000000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 0,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_parity-015",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "000000000000000000000000",
+    "L": 6
+   },
+   "expect": {
+    "parity": "000000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 0,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc6"
+   }
+  },
+  {
+   "id": "crc-crc_parity-016",
+   "kind": "crc_parity",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "000000000000000000000000",
+    "L": 16
+   },
+   "expect": {
+    "parity": "0000000000000000"
+   },
+   "note": "Remainder of a(D)*D^L / g(D) with zero initial register, pi_0 first. Matches OAI crc_byte.c output.",
+   "xcheck": {
+    "oai_value": 0,
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "crc16"
+   }
+  },
+  {
+   "id": "crc-crc_attach-001",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "101010111100110111101111"
+   },
+   "expect": {
+    "bits": "101010111100110111101111111101",
+    "L": 6
+   },
+   "note": "A = 24: not > 24, so CRC6"
+  },
+  {
+   "id": "crc-crc_attach-002",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "1010101111001101111011111"
+   },
+   "expect": {
+    "bits": "10101011110011011110111110101001101101001",
+    "L": 16
+   },
+   "note": "A = 25: > 24, so CRC16"
+  },
+  {
+   "id": "crc-crc_attach-003",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "1"
+   },
+   "expect": {
+    "bits": "1100001",
+    "L": 6
+   },
+   "note": "A = 1, CRC6"
+  },
+  {
+   "id": "crc-crc_attach-004",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "1011010011101001000110"
+   },
+   "expect": {
+    "bits": "1011010011101001000110101100",
+    "L": 6
+   },
+   "note": "A = 22, CRC6 (not byte aligned)"
+  },
+  {
+   "id": "crc-crc_attach-005",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "1011111011101111"
+   },
+   "expect": {
+    "bits": "1011111011101111011000",
+    "L": 6
+   },
+   "note": "A = 16, the Msg1 Random ID size: CRC6"
+  },
+  {
+   "id": "crc-crc_attach-006",
+   "kind": "crc_attach",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.1.2.1, \u00a76.2.2.1, \u00a78.1"
+   ],
+   "input": {
+    "bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011"
+   },
+   "expect": {
+    "bits": "0000000100100011010001010110011110001001101010111100110111101111000000000001000100100010001100111011111011011000",
+    "L": 16
+   },
+   "note": "A = 96, TBS of the FRCs and 9A: CRC16"
+  },
+  {
+   "id": "crc-crc_property-001",
+   "kind": "crc_property",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "1"
+   },
+   "expect": {
+    "length": 7,
+    "prefix_is_input": true,
+    "divisible_by_generator": true
+   },
+   "note": "Spec's own definition: a(D)D^(A+L-1)+...+pi(D) leaves remainder 0 modulo g(D)"
+  },
+  {
+   "id": "crc-crc_property-002",
+   "kind": "crc_property",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "11011110101011011011111011101111"
+   },
+   "expect": {
+    "length": 48,
+    "prefix_is_input": true,
+    "divisible_by_generator": true
+   },
+   "note": "Spec's own definition: a(D)D^(A+L-1)+...+pi(D) leaves remainder 0 modulo g(D)"
+  },
+  {
+   "id": "crc-crc_property-003",
+   "kind": "crc_property",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011"
+   },
+   "expect": {
+    "length": 112,
+    "prefix_is_input": true,
+    "divisible_by_generator": true
+   },
+   "note": "Spec's own definition: a(D)D^(A+L-1)+...+pi(D) leaves remainder 0 modulo g(D)"
+  },
+  {
+   "id": "crc-crc_property-004",
+   "kind": "crc_property",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "bits": "10110101101011010110101101011010110"
+   },
+   "expect": {
+    "length": 51,
+    "prefix_is_input": true,
+    "divisible_by_generator": true
+   },
+   "note": "Spec's own definition: a(D)D^(A+L-1)+...+pi(D) leaves remainder 0 modulo g(D)"
+  }
+ ]
+}

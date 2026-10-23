@@ -1,5 +1,8 @@
-# Amber's broadcast demo: 3 Tags (WPT, WPT, hybrid) answer a broadcast send_data in one of two
-# slots, no SIC. No seed, as the demo has none: every run is a new sample.
+# Broadcast on 38.391: 3 Tags (WPT, WPT, hybrid), no SIC. Each frame is a CBRA paging with a new
+# Transaction ID offering 2 access occasions (occasions_exp = 1). Every Tag that hears it and has
+# energy sends a Msg1 on one of them, and the Reader answers each Msg1 it decodes with a Random ID
+# Response, which brings that Tag's data. Two Tags on the same occasion collide. No seed: every
+# run is a new sample.
 
 [run]
 sim_time_ms = 20001
@@ -9,14 +12,24 @@ protocol = "broadcast"
 enable_sic = false
 
 [reader.params]
-slots = 2
-tx_ms = 5
-rx_ms = 10
+occasions_exp = 1
 
 [phy]
-r2d_kbps = 80
-d2r_kbps = 60
-subcarrier_khz = 240
+# The Rel-19 A-IoT link (amber.link.LinkConfig; 38.291 and 38.391 parameters). Every key is required.
+m_chip_symb = 6          # R2D chips per OFDM symbol, 2/6/12/24 (38.291 §6.2.4)
+n_rb = 0                 # R2D PRBs; 0 = the smallest the m_chip_symb allows
+t_bit_tau = "1/8"        # D2R bit duration, in tau = 2/15 ms
+r_sfs = [1, 2, 4, 8]     # small frequency shift factors a paging offers
+x = 1                    # time slots of access occasions per paging / Access Trigger
+r_code = true            # D2R FEC (TBCC 1/3)
+r_block = 1              # D2R block repetition, 1 or 2
+l_amble = 31             # D2R preamble and midamble length, 7 or 31
+interval_cp = 0          # Interval Bits codepoint 0..3
+i_add = false            # additional D2R midamble
+d2r_tbs = 5              # D2R transport block in bytes: 2-byte header + node id + value
+modulation = "bpsk"      # the Tags' D2R modulation, "bpsk" or "ook" (not signalled)
+timing_error = 0.5       # a Tag's largest D2R start error, as a fraction of Te (38.191 §9.2.1)
+tag_snr_db = 10.0        # R2D SNR a Tag has at its sensitivity_dbm
 
 [[base_station]]
 id = 0
@@ -42,7 +55,7 @@ resistance = 5e3
 
 [tag_defaults]
 height = 1.5
-sensitivity_dbm = -100
+sensitivity_dbm = -34       # R2D sensitivity, 38.191 Table 7.2.2-1 device REFSENS
 efficiency = 0.7
 
 [tag_defaults.capacitor]

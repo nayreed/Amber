@@ -1,7 +1,7 @@
 # tests/test_seeds.py
 """Checks the seeds of four of Amber's demos as their TOML files have them: [run] seed decides a run,
-and changing it changes what the nodes draw but not where they stand (adaptive_aloha places its
-nodes from the layout's own seed)."""
+and changing it changes what the Reader and the Tags draw but not where the Tags stand
+(adaptive_aloha places its nodes from the layout's own seed)."""
 
 import functools
 import os
@@ -13,18 +13,17 @@ from amber import iq, scenario
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
 DEMOS = ("broadcast/broadcast", "broadcast/broadcast_sic", "unicast/unicast",
          "adaptive_aloha/adaptive_aloha")
-RUN_MS = 4000  # long enough for every demo to transmit
+RUN_MS = 1500  # long enough for the Tags to charge and answer
 
 
 @functools.lru_cache(maxsize=None)
 def run(name, seed):
-    s = scenario.load(os.path.join(DEMO_DIR, name + ".toml"), {"run.seed": seed})
-    s.SIM_TIME_MS = RUN_MS
+    s = scenario.load(os.path.join(DEMO_DIR, name + ".toml"), {"run.seed": seed, "run.sim_time_ms": RUN_MS})
     with tempfile.TemporaryDirectory() as out:
         reader, tags = iq.run(s, out)
-    bsms = [tag.host.bsm for tag in tags]
+    bsms = [tag.bsm for tag in tags]
     layout = [(bsm.node.id, bsm.node.x, bsm.node.y) for bsm in bsms]
-    return layout, [bs.rx_packets for bs in reader.host.bss], [bsm.tx_records for bsm in bsms]
+    return layout, list(reader.record.rx), [list(bsm.tx_records) for bsm in bsms]
 
 
 class SeedTest(unittest.TestCase):

@@ -1,0 +1,719 @@
+{
+ "file": "r2d.json",
+ "title": "R2D chip mapping, resource sizes, OFDM symbol timing",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "r2d-nrb_min-001",
+   "kind": "nrb_min",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "n_rb_min": 1
+   }
+  },
+  {
+   "id": "r2d-nrb_min-002",
+   "kind": "nrb_min",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "n_rb_min": 1
+   }
+  },
+  {
+   "id": "r2d-nrb_min-003",
+   "kind": "nrb_min",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "n_rb_min": 2
+   }
+  },
+  {
+   "id": "r2d-nrb_min-004",
+   "kind": "nrb_min",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "n_rb_min": 3
+   }
+  },
+  {
+   "id": "r2d-constant-001",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.2-1, p.9"
+   ],
+   "input": {
+    "name": "R2D_NRB_FOR_CBW_200KHZ_SCS15"
+   },
+   "expect": {
+    "value": 1
+   }
+  },
+  {
+   "id": "r2d-constant-002",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.2-1, p.9"
+   ],
+   "input": {
+    "name": "R2D_NRB_FOR_CBW_400KHZ_SCS15"
+   },
+   "expect": {
+    "value": 2
+   }
+  },
+  {
+   "id": "r2d-constant-003",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.2-1, p.9"
+   ],
+   "input": {
+    "name": "R2D_NRB_FOR_CBW_600KHZ_SCS15"
+   },
+   "expect": {
+    "value": 3
+   }
+  },
+  {
+   "id": "r2d-constant-004",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 5.3.1.2-1, p.9"
+   ],
+   "input": {
+    "name": "R2D_NRB_FOR_CBW_800KHZ_SCS15"
+   },
+   "expect": {
+    "value": 4
+   }
+  },
+  {
+   "id": "r2d-r2d_chip_layout-001",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "chips": "110010001010101010101010100110100110101001011001101010011001100101101001010101101010011010010110011001100101010110100101100101010110010101011010101010101010101010011010100110100110101001101010010110100101011001010101011001011001011010101111",
+    "n_chips": 240,
+    "n_pad": 0,
+    "n_ofdm_symbols": 118
+   },
+   "note": "TBS 96 (CRC16), 38.194 B.2 / 38.191 9A shape. 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). "
+  },
+  {
+   "id": "r2d-r2d_chip_layout-002",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "chips": "110010001010101010101010100110100110101001011001101010011001100101101001010101101010011010010110011001100101010110100101100101010110010101011010101010101010101010011010100110100110101001101010010110100101011001010101011001011001011010101111xx",
+    "n_chips": 242,
+    "n_pad": 2,
+    "n_ofdm_symbols": 41
+   },
+   "note": "TBS 96 (CRC16), 38.194 B.2 / 38.191 9A shape. 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). "
+  },
+  {
+   "id": "r2d-r2d_chip_layout-003",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "chips": "110010001010101010101010100110100110101001011001101010011001100101101001010101101010011010010110011001100101010110100101100101010110010101011010101010101010101010011010100110100110101001101010010110100101011001010101011001011001011010101111xxxxxxxx",
+    "n_chips": 248,
+    "n_pad": 8,
+    "n_ofdm_symbols": 22
+   },
+   "note": "TBS 96 (CRC16), 38.194 B.2 / 38.191 9A shape. 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). "
+  },
+  {
+   "id": "r2d-r2d_chip_layout-004",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "chips": "11001000101010101010101010011011100110101001011001101011100110011001011010010111010110101001101001011011011001100101010110100111011001010101100101010111101010101010101010101011011010100110100110101011011010100101101001010111100101010101100101100111011010101111xxxxxxxxxx11",
+    "n_chips": 272,
+    "n_pad": 12,
+    "n_ofdm_symbols": 13
+   },
+   "note": "TBS 96 (CRC16), 38.194 B.2 / 38.191 9A shape. 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). M=24: the two last chips of each symbol are forced to 1 (\u00a76.2.5), so N_pad counts those two."
+  },
+  {
+   "id": "r2d-r2d_chip_layout-005",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "1011111011101111",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "chips": "110010001010011001010101011001010110010101011001011010101111",
+    "n_chips": 60,
+    "n_pad": 0,
+    "n_ofdm_symbols": 28
+   },
+   "note": "TBS 16 (CRC6). 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). "
+  },
+  {
+   "id": "r2d-r2d_chip_layout-006",
+   "kind": "r2d_chip_layout",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.2-\u00a76.2.6, p.14-15",
+    "TS 38.291 V19.3.0 Table 4.3.3.3-1"
+   ],
+   "input": {
+    "tb_bits": "1011111011101111",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "chips": "1100100010100110010101010110011101011001010101100101101110101111xxxxxxxxxxxxxx11",
+    "n_chips": 80,
+    "n_pad": 16,
+    "n_ofdm_symbols": 5
+   },
+   "note": "TBS 16 (CRC6). 'x' = padding chip with free value ('any values which do not result in another R-TAS SIP'). M=24: the two last chips of each symbol are forced to 1 (\u00a76.2.5), so N_pad counts those two."
+  },
+  {
+   "id": "r2d-r2d_duration-001",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 0
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-002",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 0
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-003",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 0
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-004",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 1
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-005",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 1
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-006",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 1
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-007",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 2
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-008",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 2
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-009",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 2
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-010",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 3
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-011",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 3
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-012",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 3
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-013",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 4
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-014",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 4
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-015",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 4
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-016",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 5
+   },
+   "expect": {
+    "duration_tc": 1825792,
+    "duration_us": "44575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-017",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 5
+   },
+   "expect": {
+    "duration_tc": 5757952,
+    "duration_us": "140575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-018",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 5
+   },
+   "expect": {
+    "duration_tc": 16571392,
+    "duration_us": "404575/48"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-019",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 13,
+    "l0": 6
+   },
+   "expect": {
+    "duration_tc": 1824768,
+    "duration_us": "7425/8"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-020",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 41,
+    "l0": 6
+   },
+   "expect": {
+    "duration_tc": 5756928,
+    "duration_us": "23425/8"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_duration-021",
+   "kind": "r2d_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15",
+    "TS 38.291 V19.3.0 \u00a74.3.1"
+   ],
+   "input": {
+    "n_ofdm_symbols": 118,
+    "l0": 6
+   },
+   "expect": {
+    "duration_tc": 16570368,
+    "duration_us": "67425/8"
+   },
+   "note": "Sum over l=0..n-1 of (N_u + N_CP,l) Tc; N_CP = 160k when l mod 7 = l0 else 144k. l0 is 'a value from {0..6}' chosen by the transmitter, so all seven are given."
+  },
+  {
+   "id": "r2d-r2d_chip_duration-001",
+   "kind": "r2d_chip_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.2, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "us": "100/3"
+   },
+   "note": "T_chip = 1/(M*delta_f)"
+  },
+  {
+   "id": "r2d-r2d_chip_duration-002",
+   "kind": "r2d_chip_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.2, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "us": "100/9"
+   },
+   "note": "T_chip = 1/(M*delta_f)"
+  },
+  {
+   "id": "r2d-r2d_chip_duration-003",
+   "kind": "r2d_chip_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.2, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "us": "50/9"
+   },
+   "note": "T_chip = 1/(M*delta_f)"
+  },
+  {
+   "id": "r2d-r2d_chip_duration-004",
+   "kind": "r2d_chip_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.2, p.9"
+   ],
+   "input": {
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "us": "25/9"
+   },
+   "note": "T_chip = 1/(M*delta_f)"
+  },
+  {
+   "id": "r2d-r2d_chip_duration-005",
+   "kind": "r2d_chip_duration",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.2, p.9"
+   ],
+   "input": {
+    "m_chip_symb": "SIP"
+   },
+   "expect": {
+    "us": "50/3"
+   },
+   "note": "SIP: 4 chips per OFDM symbol, 1/(4*delta_f)"
+  },
+  {
+   "id": "r2d-spec_inconsistency-001",
+   "kind": "spec_inconsistency",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.194 V19.3.0 Annex B.2, p.36",
+    "TS 38.291 V19.3.0 \u00a76.2.5, p.14"
+   ],
+   "input": {
+    "frc": "A-FR1-B1-3 and A-FR1-B1-4 (M=24), TBS 96, CRC16"
+   },
+   "expect": {
+    "annex_b2_padding_last_symbol": 8,
+    "section_6_2_5_n_pad": 12,
+    "annex_b2_other_columns": {
+     "M6": 2,
+     "M12": 8
+    }
+   },
+   "note": "TS 38.194 Annex B.2 lists 8 padding chips for M=24. 8 is what you get if the \u00a76.2.5 rule that forces the last two chips of every M=24 symbol to 1 is ignored (232 chips mod 24 = 16, pad 8). Applying the rule gives 12 (r2d_chip_layout above). The M=6 and M=12 values (2, 8) agree with the text. Both numbers are recorded; the harness reports this as a NOTE, not a pass or fail. The max-input FRC (38.191 B.2.2) separately lists 'padding per OFDM symbol: 2', which is consistent with the rule."
+  }
+ ]
+}

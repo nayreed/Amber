@@ -1,16 +1,18 @@
 # amber/output.py
 """The CSV files of a run, and the one function that writes them.
 
-The Reader writes, for each base station:
-  reader_bs<id>_rx.csv   every packet it received (RxPacket), collided ones included
-  reader_bs<id>_tx.csv   every command it sent (TxPacket)
+The Reader writes:
+  reader_tx.csv   every R2D message it sent: start and end (ms), the message and its main fields
+  reader_rx.csv   every D2R it decoded, and every collision (a preamble found whose frame did not
+                  decode): time (ms), the R2D it answered, kind (msg1 / data / collision), the
+                  Tag's node id and value from the Data SDU, the Random ID or AS ID, R_SFS,
+                  time slot and RSSI
 plus the files its protocol adds (Protocol.outputs), such as adaptation.csv or q.csv.
 Each Tag writes:
-  tag<id>_tx.csv         every transmission it made (TxRecord)
-  tag<id>_rx.csv         every command it heard (RxRecord)
+  tag<id>_tx.csv  every D2R it started (amber.backscatter.TxRecord)
+  tag<id>_rx.csv  every R2D Data SDU it received (RxRecord)
 
-Every file is written even when it has no rows, so a run in which nothing was received has a
-reader_bs<id>_rx.csv holding only its header. The Reader and Tag containers on OAI each write
+Every file is written even when it has no rows. The Reader and Tag containers on OAI each write
 their own files; python -m amber.run writes all of them for a run on one machine, with the same
 bytes for the same scenario and seed (amber.iq.run).
 """
@@ -21,7 +23,6 @@ import os
 from typing import Any, Iterable, Sequence
 
 from .backscatter import RxRecord, TxRecord
-from .bsengine import RxPacket, TxPacket
 
 
 def write_csv(path: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]) -> None:
@@ -37,18 +38,16 @@ def _write_records(path: str, record_type, records) -> None:
     write_csv(path, columns, ([getattr(r, c) for c in columns] for r in records))
 
 
-def write_reader_files(output_dir: str, protocol, bss) -> None:
-    """Write each base station's received and sent packets, and the files its protocol adds."""
-    for bs in bss:
-        _write_records(os.path.join(output_dir, f"reader_bs{bs.id}_rx.csv"), RxPacket, bs.rx_packets)
-        _write_records(os.path.join(output_dir, f"reader_bs{bs.id}_tx.csv"), TxPacket, bs.tx_packets)
+def write_reader_files(output_dir: str, protocol, record, tx_columns, rx_columns) -> None:
+    """Write what the Reader sent and heard, and the files its protocol adds."""
+    write_csv(os.path.join(output_dir, "reader_tx.csv"), tx_columns, record.tx)
+    write_csv(os.path.join(output_dir, "reader_rx.csv"), rx_columns, record.rx)
     if protocol is not None:
-        for name, (columns, rows) in protocol.outputs(bss).items():
+        for name, (columns, rows) in protocol.outputs().items():
             write_csv(os.path.join(output_dir, name), columns, rows)
 
 
 def write_tag_files(output_dir: str, node_id: int, bsm) -> None:
-    """Write one Tag's transmissions and the commands it heard."""
+    """Write one Tag's transmissions and the Data SDUs it received."""
     _write_records(os.path.join(output_dir, f"tag{node_id}_tx.csv"), TxRecord, bsm.tx_records)
     _write_records(os.path.join(output_dir, f"tag{node_id}_rx.csv"), RxRecord, bsm.rx_records)
-

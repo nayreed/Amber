@@ -18,17 +18,24 @@ tables:
 [reader]
     protocol        the protocol (required): a module of amber.protocols, or a full module path
     params          table of the protocol's parameters
-    enable_sic, noise_figure_db
-                    BSBehavior's options
+    enable_sic      the Reader cancels each decoded D2R and looks again (default true)
+    noise_figure_db the Reader's receiver noise figure (default 6)
+    cw_leak_dbm     the Reader's carrier leaking into its receiver (default -38, as 38.194's
+                    REFSENS assumes; see amber.link.CarrierLeak)
+    phase_noise_floor_dbc_hz, phase_noise_corner_hz
+                    the leak's phase noise: a floor (default -103) rising as 1/f^2 below the
+                    corner (default 5300 Hz), calibrated to 38.194 REFSENS
 [[base_station]]    one or more: id, x, y (required) and BaseStation's other fields, and sectors,
                     a list of tables of Sector's fields (azimuth_deg and beamwidth_deg required)
 [radio]             CoverageMap's options: freq_hz, pathloss_model, los, extra_np_per_m,
                     bandwidth_hz, noise_figure_db, combine_mode
 [energy]            the energy trace (EnvEnergySource), needed by "external" and "hybrid" Tags:
                     trace (path relative to the scenario file, required), column, resistance
-[phy]               required: rfsim carries real waveforms (see amber.iq) and the physics decides
-                    what is received; r2d_kbps, d2r_kbps, subcarrier_khz (amber.phy.PhyConfig).
-                    Needs exactly one base station.
+[phy]               the Rel-19 A-IoT link (amber.link.LinkConfig): m_chip_symb, n_rb,
+                    t_bit_tau, r_sfs, x, r_code, r_block, l_amble, interval_cp, i_add, d2r_tbs,
+                    modulation, timing_error, tag_snr_db; all required. rfsim carries real
+                    waveforms (see amber.iq) and the physics decides what is received. Needs
+                    exactly one base station.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -63,12 +70,14 @@ try:
 except ModuleNotFoundError:  # Python < 3.11
     import tomli as tomllib
 
-from . import bsengine, capacitor, controller, energy, phy, propagation, protocols, radiodevices
+from . import backscatter, capacitor, controller, energy, propagation, protocols, radiodevices
+from .link import LinkConfig
 
 _ABSENT = object()
 
-# BSBehavior options a scenario may set; the protocol sets schedule, loop and policy.
-_READER_OPTIONS = {"enable_sic": "bool", "noise_figure_db": "number"}
+# The Reader's options a scenario may set.
+_READER_OPTIONS = {"enable_sic": "bool", "noise_figure_db": "number", "cw_leak_dbm": "number",
+                   "phase_noise_floor_dbc_hz": "number", "phase_noise_corner_hz": "number"}
 _ENERGY_MODES = ("wpt", "external", "hybrid")
 _TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "tag_defaults", "tag_group")
 _PLACEMENT = ("positions", "count", "layout", "ids")
@@ -105,6 +114,7 @@ _CAP_FIELDS = _fields(capacitor.Capacitor, exclude=("env", "id", "params", "keep
 _CONTROLLER_TABLES = {"currents": controller.CurrentsA, "durations_ms": controller.DurationsMs,
                       "thresholds_v": controller.VoltageThresholdsV}
 _CONTROLLER_FIELDS = _fields(controller.ControllerParams, exclude=tuple(_CONTROLLER_TABLES))
+_LINK_FIELDS = _fields(LinkConfig, exclude=("r_sfs",))
 _GROUP_KEYS = ("energy_mode", "capacitor", "controller") + tuple(_NODE_FIELDS)
 
 
@@ -250,8 +260,10 @@ class Scenario:
         The protocol the base stations and Tags run.
     path : str
         The scenario file.
-    phy : PhyConfig
+    phy : LinkConfig
         The [phy] table.
+    enable_sic : bool
+        Whether the Reader cancels each decoded D2R and looks again.
     """
 
     def __init__(self, path: str, data: Dict[str, Any]):
@@ -282,12 +294,13 @@ class Scenario:
         self._energy = self._read_energy(top.table("energy")) if top.has("energy") else None
 
         t = top.table("phy", required=True)
-        values = t.fields({"r2d_kbps": "int", "d2r_kbps": "int", "subcarrier_khz": "int"})
+        values = {key: t.take(key, kind, required=True) for key, kind in _LINK_FIELDS.items()}
+        values["r_sfs"] = tuple(t.take("r_sfs", "list", required=True))
         t.done()
         try:
-            self.phy: phy.PhyConfig = phy.PhyConfig(**values)
+            self.phy: LinkConfig = LinkConfig(**values)
         except ValueError as e:
-            raise ValueError(f"{path}: {e}") from None
+            raise ValueError(f"{path}: [phy]: {e}") from None
         if len(self._base_stations) != 1:
             raise ValueError(f"{path}: [phy] needs exactly one base station, got {len(self._base_stations)}")
 
@@ -478,28 +491,29 @@ class Scenario:
     def reader_noise_figure_db(self) -> float:
         return float(self._reader_options.get("noise_figure_db", 6.0))
 
+    @property
+    def cw_leak(self):
+        """(leak dBm, phase noise floor dBc/Hz, corner Hz) of the Reader's carrier leak."""
+        from .link import CW_LEAK_DBM, PHASE_NOISE_CORNER_HZ, PHASE_NOISE_FLOOR_DBC_HZ
+        o = self._reader_options
+        return (float(o.get("cw_leak_dbm", CW_LEAK_DBM)),
+                float(o.get("phase_noise_floor_dbc_hz", PHASE_NOISE_FLOOR_DBC_HZ)),
+                float(o.get("phase_noise_corner_hz", PHASE_NOISE_CORNER_HZ)))
+
+    @property
+    def enable_sic(self) -> bool:
+        return bool(self._reader_options.get("enable_sic", True))
+
     def build_tag(self, env, shared: Dict[int, _TagParts], node_id: int):
-        """One Tag's Capacitor, BackscatterModule (the protocol's TAG_CLASS) and Controller, drawing
-        from the Tag's own random generator; returns the BackscatterModule."""
+        """One Tag's Capacitor, AiotTag and Controller, drawing from the Tag's own random generator;
+        returns the AiotTag."""
         node, dl, ul, cov, group = shared[node_id]
         rng = random.Random(f"{self.SEED}/{node_id}")
         cap = capacitor.Capacitor(env=env, id=node.id, params=group.cap_params, **group.cap_args)
-        bsm = self.protocol.TAG_CLASS(env=env, node=node, bs_processes=[], uplink_results=ul, downlink_results=dl,
-                                      rng=rng)
-        controller.Controller(env=env, capacitor_ctrl=cap, node=node, params=group.controller_params, backscatter=bsm,
-                              coverage_map=cov, downlink_results=dl, rng=rng)
-        self.protocol.setup_tag(bsm)
+        bsm = backscatter.AiotTag(env=env, node=node, uplink_results=ul, downlink_results=dl)
+        bsm.controller = controller.Controller(env=env, capacitor_ctrl=cap, node=node, params=group.controller_params,
+                                               backscatter=bsm, coverage_map=cov, downlink_results=dl, rng=rng)
         return bsm
-
-    def build_reader(self, env, tags) -> List[bsengine.BSBehavior]:
-        """One BSBehavior per base station, running the protocol, given the Tags as backscatter_modules."""
-        out = []
-        for bs in self._base_stations:
-            behavior = bsengine.BSBehavior(env=env, base_station=self._make_base_station(bs), backscatter_modules=tags,
-                                           **self.protocol.reader_args(), **self._reader_options)
-            self.protocol.setup_reader(behavior)
-            out.append(behavior)
-        return out
 
 
 def load(path: str, overrides: Optional[Mapping[str, Any]] = None) -> Scenario:

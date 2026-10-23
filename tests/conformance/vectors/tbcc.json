@@ -1,0 +1,189 @@
+{
+ "file": "tbcc.json",
+ "title": "Tail-biting convolutional code, rate 1/3, K=7",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "tbcc-tbcc_encode-001",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "10110010"
+   },
+   "expect": {
+    "bits": "011010001110010101111110"
+   },
+   "note": "Taps read from Figure 8.2-1 (G0=133, G1=171, G2=165 octal, MSB = current input); initial state s_i = c_(K-1-i). Output e_(3k+i) = d_k^(i). The octal-to-tap order is read from the figure, not stated in words; OAI's ccodelte_encode agrees.",
+   "xcheck": {
+    "oai_streams": [
+     "00010111",
+     "11011011",
+     "10100110"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-002",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "00000000"
+   },
+   "expect": {
+    "bits": "000000000000000000000000"
+   },
+   "xcheck": {
+    "oai_streams": [
+     "00000000",
+     "00000000",
+     "00000000"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-003",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "00000001"
+   },
+   "expect": {
+    "bits": "011111110001100111000111"
+   },
+   "xcheck": {
+    "oai_streams": [
+     "01101101",
+     "11100101",
+     "11010101"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-004",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "10000000"
+   },
+   "expect": {
+    "bits": "111011111110001100111000"
+   },
+   "xcheck": {
+    "oai_streams": [
+     "10110110",
+     "11110010",
+     "11101010"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-005",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "1010010111000011"
+   },
+   "expect": {
+    "bits": "011010111000101010101100101010110111011010100011"
+   },
+   "xcheck": {
+    "oai_streams": [
+     "0010101110110010",
+     "1110010001111101",
+     "1010101010011001"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-006",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, Figure 8.2-1, p.18-19",
+    "TS 38.291 V19.3.0 \u00a76.1.2.3, p.12"
+   ],
+   "input": {
+    "bits": "1001111100101110011100011011010011010011"
+   },
+   "expect": {
+    "bits": "111101000100110000010100111011011001011101010110111100110000101000011101111011110011001101011010010010000001100010010010"
+   },
+   "xcheck": {
+    "oai_streams": [
+     "1101100110000101111010011010010000001000",
+     "1000101011101011101000101111001111000111",
+     "1100000011111100100010111101111000010000"
+    ],
+    "oai_commit": "f80a88326801f5417405dea0b174879bac8940e0",
+    "oai_fn": "ccodelte_encode"
+   }
+  },
+  {
+   "id": "tbcc-tbcc_encode-007",
+   "kind": "tbcc_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2"
+   ],
+   "input": {
+    "bits": "1011001110100100011010"
+   },
+   "expect": {
+    "bits": "101110110110010101111001000101111000101010101011001110000011110100"
+   },
+   "note": "22 bits: A=16 Msg1 payload plus CRC6; not byte aligned, so not cross-checked against OAI"
+  },
+  {
+   "id": "tbcc-tbcc_property-001",
+   "kind": "tbcc_property",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, \u00a76.1.2.3"
+   ],
+   "input": {
+    "bits": "101100101011001010110010"
+   },
+   "expect": {
+    "length_factor": 3,
+    "tail_biting": true
+   },
+   "note": "Output length 3K; the encoder's initial and final shift-register states are equal, so the encoding of any cyclic rotation of the input is the same rotation (by 3 bits per input bit) of the output"
+  }
+ ]
+}
