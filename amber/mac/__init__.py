@@ -18,12 +18,12 @@ from its seed.
 import ctypes as C
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 from ..phy import aiot
-from ..phy.aiot import MAX_SHIFTS, MAX_SIC_ROUNDS, MAX_TB_BITS, _Expect, _Outcome, _Params
+from ..phy.aiot import MAX_SHIFTS, MAX_SIC_ROUNDS, _Expect, _Outcome, _Params
 from ..phy.params import D2RParams
 
 MAX_TBS = 125
@@ -523,7 +523,7 @@ class Reader:
         self._r = lib.aiot_reader_new(C.byref(c), protocol.encode(), ps, len(params), ids, len(node_ids), err, 256)
         if not self._r:
             msg = err.value.decode()
-            raise ValueError(msg if msg.startswith("protocol ") or msg.startswith("no protocol") else
+            raise ValueError(msg if msg.startswith(("protocol ", "no protocol")) else
                              f"protocol {protocol}: {msg}")
         self._r2d = ReaderR2D_()
         self._exp = (_Expect * MAX_EXPECTS)()

@@ -12,7 +12,6 @@ import unittest
 from amber import iq, scenario
 from amber.backscatter import AiotTag
 from amber.hosts import SHARED_PHASE, PhasedEnvironment
-from amber.link import LinkConfig
 
 try:
     import tomllib
@@ -160,7 +159,7 @@ class LinkTest(unittest.TestCase):
         s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"))
         links = s.iq_links()
         self.assertEqual(sorted(links), s.NODE_IDS)
-        for sector, shift, power_dbm in links.values():
+        for sector, _shift, power_dbm in links.values():
             self.assertTrue(0 <= sector < 3)
             self.assertTrue(-200 < power_dbm < 0)
 

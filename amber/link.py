@@ -19,7 +19,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from . import mac
-from .mac import Answer, D2RSend, Device, Heard, Reader
+from .mac import D2RSend, Device, Heard, Reader
 from .phy import aiot, params
 
 BLOCK = params.SAMPLES_PER_MS           # one millisecond, 5760 samples

@@ -34,16 +34,15 @@ import math
 import os
 import struct
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 import numpy as np
 
-from . import output
-from .hosts import TagHost
 from . import link as rlink
-from . import mac
-from .phy import params as rparams
+from . import mac, output
+from .hosts import TagHost
 from .link import LinkConfig
+from .phy import params as rparams
 
 AIR_SAMPLES = rparams.SAMPLES_PER_MS              # 5760
 CONTROL_SAMPLES = 128
@@ -328,7 +327,7 @@ class IqTagSession:
         self.link.powered = self.bsm.powered
         sent = len(self.link.sent)
         out = self.link.step(carrier)
-        for start, s in self.link.sent[sent:]:
+        for _start, s in self.link.sent[sent:]:
             self.bsm.started_d2r(ms, s)
         self.host.step(ms)
         return out
