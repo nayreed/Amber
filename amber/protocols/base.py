@@ -1,9 +1,10 @@
 # amber/protocols/base.py
-"""The base class of every protocol."""
+"""The base class of every protocol: a Reader policy over 38.391 messages."""
 
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Dict, Generator, List, Mapping, Sequence, Tuple
 
-from .. import backscatter
+from ..mac import pdu as mp
+from ..mac import Msg1Heard
 
 
 def _kind(value: Any) -> str:
@@ -25,12 +26,17 @@ def _same_kind(default: Any, value: Any) -> bool:
 
 
 class Protocol:
-    """What a base station sends and how a Tag answers.
+    """What the Reader sends, as a policy over 38.391 (Rel-19 A-IoT MAC) messages.
 
-    A subclass lists its parameters with their defaults in PARAMS, returns the base station's
-    schedule or policy from reader_args(), and overrides the rest only where it differs. The
-    scenario builds every Tag as TAG_CLASS, then calls setup_tag() on it, and every base station
-    as a BSBehavior, then calls setup_reader() on it.
+    The Tag side is fixed by 38.391 and is the same for every protocol (amber.mac). A
+    protocol decides only what the spec leaves to the Reader: whom to page and how (CBRA with how
+    many access occasions, or CFA to one Paging ID), when to send an Access Trigger, which devices
+    to answer in a Random ID Response, when to ask a known AS ID for data, when to NACK.
+
+    policy(ctx) is a generator. It yields one R2D message at a time (build them with ctx.mac and
+    the Scheduling Info helpers of ctx.cfg) and receives what that message brought back, a
+    link.Heard: the D2R answers decoded (Msg1s, or Tag data) and the collisions. The Reader
+    sends the next message as soon as every answer the last one can cause has arrived.
 
     Parameters
     ----------
@@ -43,13 +49,6 @@ class Protocol:
     #: Parameter names and their defaults. A value must be of its default's type (an integer
     #: where the default is an integer, any number where it is a float).
     PARAMS: Dict[str, Any] = {}
-    #: The class every Tag is built as.
-    TAG_CLASS = backscatter.BackscatterModule
-    #: IQ mode (amber.iq) sends commands as bits: the commands this protocol sends beyond the
-    #: built-in send_id, ack and send_data ...
-    COMMANDS: Tuple[str, ...] = ()
-    #: ... and the bit width of every integer field its commands carry beyond cmd and target.
-    COMMAND_FIELDS: Dict[str, int] = {}
 
     def __init__(self, params: Mapping[str, Any], node_ids: Sequence[int]):
         unknown = sorted(set(params) - set(self.PARAMS))
@@ -75,19 +74,45 @@ class Protocol:
             if self.params[key] < 1:
                 raise ValueError(f"protocol {self.name}: {key} must be at least 1, got {self.params[key]}")
 
+    def within(self, key: str, lo, hi) -> None:
+        if not lo <= self.params[key] <= hi:
+            raise ValueError(f"protocol {self.name}: {key} must be within [{lo}, {hi}], got {self.params[key]}")
+
     def check(self) -> None:
         """Check the parameters beyond their types; raise ValueError naming the one that is wrong."""
 
-    def reader_args(self) -> Dict[str, Any]:
-        """The BSBehavior arguments that make this protocol: schedule and loop, or policy."""
+    def policy(self, ctx) -> Generator:
+        """The Reader's policy (see the class docstring)."""
         raise NotImplementedError
 
-    def setup_reader(self, bs) -> None:
-        """Prepare a newly built BSBehavior, before the simulation starts."""
-
-    def setup_tag(self, bsm) -> None:
-        """Prepare a newly built Tag (a TAG_CLASS), before the simulation starts."""
-
-    def outputs(self, bss) -> Dict[str, Tuple[Sequence[str], List[Sequence[Any]]]]:
-        """Extra CSV files a run writes from its base stations, as {file name: (columns, rows)}."""
+    def outputs(self) -> Dict[str, Tuple[Sequence[str], List[Sequence[Any]]]]:
+        """Extra CSV files a run writes, as {file name: (columns, rows)}."""
         return {}
+
+    # -- building blocks for policies ----------------------------------------------------------
+    @staticmethod
+    def access(ctx, msg):
+        """Send a CBRA paging or Access Trigger, then answer the Msg1s it brought with one Random
+        ID Response, which brings each answered Tag's data. Use as `h1, h2 = yield from
+        self.access(ctx, msg)`; h2 is None when no Msg1 decoded."""
+        h1 = yield msg
+        heard = [Msg1Heard(a.message.random_id, a.r_sfs, a.slot) for a in h1.answers if a.kind == "msg1"]
+        if not heard:
+            return h1, None
+        heard = heard[:ctx.cfg.max_entries]
+        h2 = yield ctx.mac.random_id_response(heard, ctx.cfg.ridr(len(heard)))
+        return h1, h2
+
+    @staticmethod
+    def occasions_code(n: int) -> int:
+        """The Number of Access Occasions codepoint v (n = 2^v) for at least n occasions."""
+        v = max(0, (int(n) - 1).bit_length())
+        if v > 15:
+            raise ValueError(f"{n} access occasions is more than the 2^15 a paging can offer")
+        return v
+
+    @staticmethod
+    def r2d_per_paging(ctx, v: int, sched: mp.SchedulingInfo) -> int:
+        """R2D messages (the paging and its Access Triggers) to play out 2^v occasions."""
+        m = sched.x * len(sched.r_sfs)
+        return -(-(1 << v) // m)

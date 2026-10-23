@@ -35,10 +35,10 @@ def run(path: str, out_dir: str = None) -> str:
     except ValueError:
         print("  no Tag transmitted")
     else:
-        print(f"  sent={r['sent']} decoded={r['decoded']} collided={r['collided']} "
+        print(f"  sent={r['sent']} decoded={r['decoded']} collided={r['collided']} msg1={r['msg1']} "
               f"DER={r['der']:.2%} throughput={r['throughput']:.2f} pkt/s")
-        for node, (sent, dec, col) in r["per_node"].items():
-            print(f"  node {node}: sent={sent} decoded={dec} collided={col}")
+        for node, (sent, dec, m1) in r["per_node"].items():
+            print(f"  node {node}: sent={sent} decoded={dec} msg1={m1}")
     print(f"  files in {out_dir}")
     return out_dir
 

@@ -1,3 +1,0 @@
-# bsengine
-
-::: amber.bsengine

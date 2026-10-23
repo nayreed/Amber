@@ -448,3 +448,6 @@ build/
 # MkDocs build output (published to the gh-pages branch, not committed here)
 site/
 demo_experiments/*/output/
+
+# Amber's PHY, built by scripts/build_aiot_lib.sh
+amber/phy/lib/

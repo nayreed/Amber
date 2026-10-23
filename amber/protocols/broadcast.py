@@ -1,32 +1,30 @@
 # amber/protocols/broadcast.py
-"""Broadcast: the base station asks every Tag for data at once, then listens for a few slots.
+"""Broadcast: page every Tag, offer a few access occasions, read everyone heard.
 
-Each frame is one send_data command to all Tags (target -1) of tx_ms, then `slots` listening
-slots of rx_ms; each Tag that has energy answers in one slot it picks at random. The Tags start
-registered, as send_data is only answered by registered Tags. This is the protocol of Amber's
-broadcast and broadcast_sic demos.
+Each frame is a CBRA paging with a new Transaction ID, so every Tag answers again, offering
+2^occasions_exp access occasions (spread over the paging and the Access Triggers that follow,
+m = x * N_SFS per R2D). Every Tag that hears it and has energy sends a Msg1 on a random occasion;
+the Reader answers every Msg1 it decoded with a Random ID Response, which brings their data. Two
+Tags on the same occasion and R_SFS collide; with SIC on, the stronger may still be decoded.
 """
 
+from ..mac import pdu as mp
 from .base import Protocol
 
 
 class Broadcast(Protocol):
-    PARAMS = {"slots": 2, "tx_ms": 5, "rx_ms": 10}
+    PARAMS = {"occasions_exp": 2}
 
     def check(self):
-        self.positive("slots", "tx_ms", "rx_ms")
+        self.within("occasions_exp", 0, 15)
 
-    def reader_args(self):
-        p = self.params
-        schedule = [("tx", p["tx_ms"], "cmd", {"target": -1, "cmd": "send_data"})]
-        schedule += [("rx", p["rx_ms"], "listen") for _ in range(p["slots"])]
-        return {"schedule": schedule, "loop": True}
-
-    def setup_reader(self, bs):
-        bs.nodes_registered = list(self.node_ids)
-
-    def setup_tag(self, bsm):
-        bsm.state = "registered"
+    def policy(self, ctx):
+        v = self.params["occasions_exp"]
+        sched = ctx.cfg.cbra()
+        while True:
+            yield from self.access(ctx, ctx.mac.paging_cbra(ctx.next_tid(), sched, n_occasions_code=v))
+            for _ in range(self.r2d_per_paging(ctx, v, sched) - 1):
+                yield from self.access(ctx, mp.AccessTrigger())
 
 
 PROTOCOL = Broadcast

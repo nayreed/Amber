@@ -3,7 +3,7 @@
 
 The C programs exchange one block of IQ samples per millisecond over rfsim and pass every block
 through these sessions: the Reader sends its waveform to all Tags and reads the sum of the Tags'
-waveforms back, as normal rfsim gives it (reads_sum). The sessions themselves are in amber.iq; this
+waveforms back, as rfsim gives it. The sessions themselves are in amber.iq; this
 module is the entry point the C programs import, and it checks the scenario. When the run is over
 each side writes its own CSV files (see amber.output).
 """
@@ -22,9 +22,7 @@ def _load(scenario_path: str):
 
 def ReaderSession(scenario_path: str, block_bytes: int, output_dir: str) -> iq.IqReaderSession:
     """The Reader's session for amber-reader."""
-    session = iq.IqReaderSession(_load(scenario_path), block_bytes, output_dir)
-    session.reads_sum = True
-    return session
+    return iq.IqReaderSession(_load(scenario_path), block_bytes, output_dir)
 
 
 def TagSession(scenario_path: str, node_id: int, block_bytes: int, output_dir: str) -> iq.IqTagSession:

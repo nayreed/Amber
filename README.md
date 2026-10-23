@@ -43,6 +43,20 @@ uv sync
 > **Note:** editable installs need pip 21.3 or newer. Upgrade with
 > `python -m pip install --upgrade pip` if the install fails.
 
+Amber's PHY (TS 38.291: the R2D and D2R waveforms and receivers) is OAI's C library
+`libaiot_phy.so`, from `openair1/PHY/AIOT` of
+[nayreed/openairinterface5g](https://github.com/nayreed/openairinterface5g), built on OAI's own CRC,
+convolutional coder and Viterbi decoder. Build it once (needs git, cmake, a C compiler and SIMDe,
+`libsimde-dev` on Ubuntu):
+
+```bash
+scripts/build_aiot_lib.sh                  # fetches the library's sources and builds amber/phy/lib/libaiot_phy.so
+scripts/build_aiot_lib.sh /path/to/oai     # or builds from an OAI checkout
+```
+
+Or point `AMBER_AIOT_LIB` at a `libaiot_phy.so` you built elsewhere. OAI's `amber-reader` and
+`amber-tag` set it to their own copy.
+
 ## Quickstart
 
 Every protocol has a demo in `demo_experiments/<protocol>/`: one or more scenario files.
@@ -58,9 +72,9 @@ python -m amber.run demo_experiments/gen2_q/gen2_q.toml               # 12 Tags,
 ```
 
 Each prints a summary and writes its CSV files to `output/<scenario>/` in the demo's folder:
-`reader_bs<id>_rx.csv` (packets received) and `reader_bs<id>_tx.csv` (commands sent) for each base
-station, `tag<id>_tx.csv` and `tag<id>_rx.csv` for each Tag, and the protocol's own files, such as
-`adaptation.csv`. These are the same files, byte for byte, that the Reader and Tag containers
+`reader_tx.csv` (the R2D messages sent) and `reader_rx.csv` (the D2Rs decoded, and the collisions)
+for the Reader, `tag<id>_tx.csv` and `tag<id>_rx.csv` for each Tag, and the protocol's own files,
+such as `adaptation.csv`. These are the same files, byte for byte, that the Reader and Tag containers
 write on OAI ([amber-reader and amber-tag](https://github.com/nayreed/openairinterface5g/tree/aiot-rfsim/openair2/AMBER)),
 which need a seed in the file. A file without a seed draws a new one for every run and prints it.
 `python -m amber.run SCENARIO DIR` writes to `DIR` instead.
@@ -80,25 +94,22 @@ new one, and the rules it must follow to run on OAI.
 ## Real waveforms
 
 Every scenario has a `[phy]` table, and the Reader and the Tags exchange real waveforms; there is
-no mode in which Amber decides with formulas what is received. The design follows 3GPP Rel-19
-Ambient IoT for a monostatic Reader and backscatter Tags:
+no mode in which Amber decides with formulas what is received. The link is 3GPP Rel-19 Ambient IoT
+(TS 38.291 and TS 38.391) for a monostatic Reader and backscatter Tags, at 5.76 Msps:
 
-- The Reader's carrier is a signal (1.92 Msps), always on for the whole run. A command keys it
-  off for part of each chip, so a Tag harvests less while one is sent. A Tag can only answer by
-  reflecting the carrier.
-- Commands are keyed onto the carrier (OOK, Manchester, CRC-16) as short bit fields, at
-  `r2d_kbps`; a Tag decodes them with an envelope detector, or does not.
-- A Tag answers by switching its reflection (BPSK backscatter on a square-wave subcarrier,
-  Manchester, CRC-16) at `d2r_kbps`. Every Tag's reflection is added up, and the Reader
-  demodulates the sum: two Tags at once really collide, and with `enable_sic` the Reader decodes
-  the strongest, subtracts it and tries again.
+- The Reader's carrier is on for the whole run. The Reader sends 38.391 R2D messages on it as
+  38.291 R2D frames, OFDM symbols of Manchester-coded chips; a Tag decodes them with an envelope
+  detector, or does not.
+- A Tag runs the 38.391 device MAC, the same for every protocol, and answers by switching its
+  reflection of the carrier: a 38.291 D2R frame (convolutional code, repetition, preamble and
+  midambles, OOK or BPSK on a small frequency shift) at T_R->D after the R2D it answers.
+- Every Tag's reflection is added up, with the Reader's own carrier leak and its phase noise, and
+  the Reader searches the sum for D2R frames: two Tags on one occasion and shift really collide,
+  and with `enable_sic` the Reader subtracts what it decoded and searches again.
 
-`python -m amber.run` runs it on one machine; on OAI, rfsim carries the samples and adds the
-Tags' signals up (normal rfsim), with the same files byte for byte. A scenario needs one base
-station, integer payloads, and receive slots that follow each other with one length. A protocol
-lists the commands it adds in `COMMANDS` and the bit width of their integer fields in
-`COMMAND_FIELDS`. A run is slow: 12 Tags took about 4 s of run time per simulated second on one
-core. `amber/phy.py` and `amber/iq.py` describe it in full.
+`python -m amber.run` runs it on one machine; on OAI, rfsim carries the samples and adds the Tags' signals up, with the same files byte for byte. A scenario needs exactly one base
+station. `amber/link.py`, `amber/phy` and `amber/mac` describe the link in full, and `amber/iq.py`
+the blocks of samples the Reader and the Tags exchange.
 
 ## Modules
 
@@ -110,13 +121,15 @@ core. `amber/phy.py` and `amber/iq.py` describe it in full.
 | `controller` | Voltage-threshold state machine driving node duty cycling |
 | `energy` | `EnvEnergySource` — replays an external energy trace |
 | `backscatter` | Node-side backscatter transmit/receive |
-| `bsengine` | Base station behaviour, downlink scheduling |
-| `phy`, `iq` | The waveforms, and the Reader and Tags exchanging them |
-| `protocols` | The base station's protocol and the Tag class it needs, chosen by name |
+| `phy` | The Rel-19 A-IoT PHY (TS 38.291): its parameters, and OAI's C library that does the signal processing |
+| `mac` | The Rel-19 A-IoT MAC (TS 38.391): every MAC PDU, and the device's and the Reader's procedures |
+| `link` | The Reader's and the Tags' link: 38.391 messages on real waveforms, one millisecond at a time |
+| `iq` | The Reader and the Tags exchanging blocks of IQ samples, as rfsim carries them |
+| `protocols` | The Reader policies (which 38.391 messages the Reader sends), chosen by name |
 | `scenario` | Scenarios as TOML files (`load`, `Scenario`) |
 | `output` | The CSV files of a run, and the one function that writes them |
 | `run` | `python -m amber.run`: run a scenario on one machine |
-| `hosts`, `session`, `proxies` | The Reader and the Tags as separate hosts, one block of IQ samples every millisecond, as amber-reader and amber-tag run them on OAI |
+| `hosts`, `session` | The Reader and the Tags as separate hosts, one block of IQ samples every millisecond, as amber-reader and amber-tag run them on OAI |
 | `summary` | Sent, decoded, collided, DER and throughput from a run's files |
 
 Full API reference, generated from the source docstrings, is at

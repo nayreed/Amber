@@ -1,43 +1,38 @@
 # amber/hosts.py
-"""Reader host and Tag host: each owns a SimPy environment and advances it one millisecond at a
-time. amber.iq drives them, one block of IQ samples per millisecond, as amber-reader and amber-tag
-do in their OAI containers (through amber.session) and as python -m amber.run does on one machine.
+"""The Tag host: each Tag owns a SimPy environment for its energy (capacitor, controller and
+sensing) and advances it one millisecond at a time. amber.iq drives it, one block of IQ samples
+per millisecond, as amber-tag does in its OAI container (through amber.session) and as
+python -m amber.run does on one machine. The Reader needs no SimPy: its protocol is a policy over
+38.391 messages that amber.iq runs on the waveforms.
 
-Per millisecond n, the exchange is:
-  1. ReaderHost.run_ms(n)        Reader processes its events at n; returns the commands it sent.
-                                 amber.iq puts them on the Reader's carrier as bits.
-  2. TagHost.deliver(n, cmds)    each Tag receives the commands it decoded at n, before its own
-                                 events at n.
-  3. TagHost.step(n)             each Tag processes its events at n; returns its transmissions,
-                                 which amber.iq reflects off the carrier.
-  4. The Reader decodes what the Tags reflected; amber.iq hands the receptions to the base station
-     through Amber's own interrupt path.
+Per millisecond n, a Tag:
+  1. TagHost.deliver(n)    advances its environment to n;
+  2. amber.iq              decodes the Reader's R2D from the carrier while the Tag is on, runs the
+                           38.391 device MAC and starts its D2R reflection when the MAC says so;
+  3. TagHost.step(n)       processes its events at n (the Controller draws current, senses).
 
-Both hosts run on a PhasedEnvironment, which processes the events of one millisecond in a fixed
-order: the Reader's, then those of the objects the Tags share, then each node's in NODE_IDS order.
-Plain SimPy orders events of the same time by when they were scheduled, mixing the Reader's and
-the Tags'; a run could then differ between the containers and one machine.
-
-Amber times must be whole milliseconds: a command or transmission at any other time is refused
-rather than silently moved to the next millisecond.
+The host runs on a PhasedEnvironment, which processes the events of one millisecond in a fixed
+order: those of the objects the Tags share, then each node's in NODE_IDS order. Plain SimPy orders
+events of the same time by when they were scheduled; a run could then differ between the
+containers and one machine.
 
 A scenario is a TOML file read by amber.scenario, or a Python module defining:
-  phy                            the PhyConfig of the IQ waveforms (amber.phy)
-  SIM_TIME_MS                    simulated duration, as passed to env.run(until=...)
-  NODE_IDS                       node ids, in the order build() builds them
-  BS_IDS                         base station ids
+  phy                            the LinkConfig of the A-IoT link (amber.link)
+  protocol                       the Reader's protocol (amber.protocols)
+  SIM_TIME_MS                    simulated duration in ms
+  NODE_IDS                       node ids, in the order the Tags are built
+  BS_IDS                         base station ids (one)
   build_shared(env)              objects all Tags share (energy source, coverage map); returns them
-  build_tag(env, shared, id)     one node's Capacitor, BackscatterModule and Controller; returns
-                                 the BackscatterModule (its bs_processes are set by the host)
-  build_reader(env, tags)        the BSBehavior list, given the Tags as backscatter_modules
+  build_tag(env, shared, id)     one node's Capacitor, AiotTag and Controller; returns the AiotTag
   iq_links()                     {node id: (sector, subcarrier_shift, power)} as Scenario.iq_links
   reader_noise_figure_db         the Reader's receiver noise figure
+  enable_sic                     whether the Reader cancels decoded D2Rs and looks again
 and optionally:
   SEED                           seed for Python's global random generator, set before building.
 
-Give every node its own random generator (the rng argument of BackscatterModule and Controller).
-A node drawing from the global generator gets numbers that depend on what every other node on the
-same environment drew, so a Tag in its own container could not match a run on one machine.
+Give every node its own random generator (the rng argument of Controller). A node drawing from
+the global generator gets numbers that depend on what every other node on the same environment
+drew, so a Tag in its own container could not match a run on one machine.
 """
 
 import contextlib
@@ -51,10 +46,9 @@ import simpy
 from simpy.events import NORMAL, Initialize, Interruption
 
 from .scenario import load as load_toml_scenario
-from .proxies import BSProxy, Delivery, TagProxy, Uplink
 
-_SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "build_reader", "phy", "iq_links",
-                   "reader_noise_figure_db")
+_SCENARIO_ATTRS = ("SIM_TIME_MS", "NODE_IDS", "BS_IDS", "build_shared", "build_tag", "phy", "protocol",
+                   "iq_links", "reader_noise_figure_db", "enable_sic")
 
 
 def load_scenario(path: str) -> Any:
@@ -159,35 +153,8 @@ def _run_current_ms(env: simpy.Environment):
         env.step()
 
 
-class ReaderHost:
-    """Runs the scenario's base stations, with TagProxy objects in place of the Tags."""
-
-    def __init__(self, scenario: Any):
-        self.scenario = scenario
-        _seed(scenario)
-        self.env = PhasedEnvironment()
-        self._deliveries: List[Delivery] = []
-        self.tags = [TagProxy(node_id, self._deliveries) for node_id in scenario.NODE_IDS]
-        with self.env.in_phase(READER_PHASE):
-            self.bss = scenario.build_reader(self.env, self.tags)
-        self._bs_by_id = {bs.id: bs for bs in self.bss}
-        if sorted(self._bs_by_id) != sorted(scenario.BS_IDS):
-            raise ValueError(f"build_reader returned base stations {sorted(self._bs_by_id)}, BS_IDS is {scenario.BS_IDS}")
-
-    def run_ms(self, ms: int) -> List[Delivery]:
-        """Process the Reader's events at ms; return the commands sent to Tags at ms."""
-        _advance_to(self.env, ms)
-        assert self.env.now == ms, f"run_ms({ms}) called at {self.env.now} ms"
-        if self._deliveries:
-            raise ValueError(f"a command was sent between {ms - 1} and {ms} ms; Amber times must be whole milliseconds")
-        _run_current_ms(self.env)
-        out = list(self._deliveries)
-        self._deliveries.clear()
-        return out
-
-
 class TagHost:
-    """Runs one node of the scenario, with BSProxy objects in place of the base stations."""
+    """Runs one node of the scenario."""
 
     def __init__(self, scenario: Any, node_id: int):
         if node_id not in scenario.NODE_IDS:
@@ -196,28 +163,17 @@ class TagHost:
         self.node_id = node_id
         _seed(scenario)
         self.env = PhasedEnvironment()
-        self._uplinks: List[Uplink] = []
-        self.bss = [BSProxy(bs_id, self._uplinks) for bs_id in scenario.BS_IDS]
         with self.env.in_phase(SHARED_PHASE):
             shared = scenario.build_shared(self.env)
         with self.env.in_phase(node_phase(scenario, node_id)):
             self.bsm = scenario.build_tag(self.env, shared, node_id)
-        self.bsm.bs_processes = list(self.bss)
 
-    def deliver(self, ms: int, deliveries: Sequence[Delivery]):
-        """Advance to ms and hand this node the commands the Reader sent at ms."""
+    def deliver(self, ms: int, _unused=()):
+        """Advance to ms, before this node's events at ms."""
         _advance_to(self.env, ms)
         assert self.env.now == ms, f"deliver({ms}) called at {self.env.now} ms"
-        if self._uplinks:
-            raise ValueError(f"node {self.node_id} transmitted between {ms - 1} and {ms} ms; Amber times must be whole milliseconds")
-        for d in deliveries:
-            assert d.node_id == self.node_id, f"node {self.node_id} got a command for node {d.node_id}"
-            self.bsm.receive_command(d.cmd, d.bs_id, d.data)
 
-    def step(self, ms: int) -> List[Uplink]:
-        """Process this node's events at ms; return what it transmitted at ms."""
+    def step(self, ms: int):
+        """Process this node's events at ms."""
         assert self.env.now == ms, f"step({ms}) called at {self.env.now} ms"
         _run_current_ms(self.env)
-        out = list(self._uplinks)
-        self._uplinks.clear()
-        return out

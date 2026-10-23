@@ -1,6 +1,10 @@
 # tests/helpers.py
 """What several tests share: a scenario file cut to a short run, one run of a scenario as the
-Reader and Tag sessions that amber-reader and amber-tag drive, and the records to compare."""
+Reader and Tag sessions that amber-reader and amber-tag drive, and the records to compare.
+
+A Tag starts to answer only after its capacitor has charged (about 500 ms in the test scenarios),
+so a run that must decode data lasts at least SHORT_MS; broadcast and unicast, whose Tags are
+farther from the base station, need LONG_MS."""
 
 import contextlib
 import os
@@ -13,16 +17,20 @@ from amber import iq
 SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
 DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "demo_experiments")
 SEED = 12345
+SHORT_MS = 1000
+LONG_MS = 1500
 
 
 @contextlib.contextmanager
 def shortened(path, sim_time_ms):
     """A copy of the scenario file at path, next to it so that its relative paths hold, that runs
-    sim_time_ms instead; yields the copy's path and removes it afterwards."""
+    sim_time_ms instead (and uses SEED if the file draws one); yields the copy's path and removes it afterwards."""
     with open(path) as f:
         text = f.read()
     text, n = re.subn(r"(?m)^sim_time_ms\s*=\s*\d+", f"sim_time_ms = {sim_time_ms}", text)
     assert n == 1, f"{path} has no sim_time_ms"
+    if not re.search(r"(?m)^seed\s*=", text):    # a run needs the same seed every time
+        text = re.sub(r"(?m)^(sim_time_ms\s*=.*)$", rf"\1\nseed = {SEED}", text, count=1)
     with tempfile.NamedTemporaryFile("w", suffix=".toml", dir=os.path.dirname(os.path.abspath(path)), delete=False) as f:
         f.write(text)
     try:
@@ -50,11 +58,11 @@ def run_sessions(scenario, out):
         block = reader.next_block()
         answers, tags_done = [], []
         for tag in tags:
-            scramble_global_random(tag.node_id, reader.host.env.now)
+            scramble_global_random(tag.node_id, reader.ctx.now_ms)
             answer, tag_done = tag.reply(block)
             answers.append(answer)
             tags_done.append(tag_done)
-        done = reader.on_blocks([iq.add_blocks(answers)])
+        done = reader.on_block(iq.add_blocks(answers))
         assert tags_done == [done] * len(tags)
     reader.finish()
     for tag in tags:
@@ -69,6 +77,12 @@ def run_one_machine(scenario):
 
 
 def records(reader, tags):
-    """What a run did, for comparing two runs."""
-    return ([(bs.rx_packets, bs.tx_packets) for bs in reader.host.bss],
-            [(t.host.bsm.tx_records, t.host.bsm.rx_records, t.host.bsm.state) for t in tags])
+    """What a run did, for comparing two runs: what the Reader sent and heard, the files its
+    protocol adds, and each Tag's transmissions, received SDUs and what it sent over the air."""
+    return ((reader.record.tx, reader.record.rx, reader.protocol.outputs()),
+            [(t.bsm.tx_records, t.bsm.rx_records, t.bsm.powered, [start for start, _ in t.link.sent]) for t in tags])
+
+
+def read_files(out):
+    """{file name: text} of every file in the directory out."""
+    return {f: open(os.path.join(out, f)).read() for f in sorted(os.listdir(out))}

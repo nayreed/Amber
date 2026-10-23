@@ -1,205 +1,225 @@
 # tests/test_iq.py
-"""Checks of amber.phy and amber.iq: the waveforms decode when they should and fail when they
-should, the carrier matters, commands survive their bit fields, and a run is the same whether its
-blocks go through the sessions one by one or are added up by iq.run()."""
+"""Checks of amber.iq: the block plumbing (16-bit counts, control values, sums that saturate), the
+Reader's and the Tags' control handshake (hello, up, bye), a Tag that is missing, and that a short
+run of one Tag decodes a Tag data packet at the Reader."""
 
-import math
 import os
+import sys
 import tempfile
 import unittest
 
 import numpy as np
 
-from amber import iq, phy, scenario
-from amber.session import ReaderSession, TagSession
+from amber import iq, scenario
+from amber.phy import params as rparams
 
-SCENARIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scenarios")
-IQ_SCENARIO = os.path.join(SCENARIO_DIR, "gen2_q.toml")
-CFG = phy.PhyConfig()
-NOISE_W = phy.thermal_noise_w(6.0)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from helpers import SCENARIO_DIR, SHORT_MS, read_files  # noqa: E402
 
-
-def downlink(bits, power_dbm, sensitivity_dbm=-45.0, seed=0, carrier_on=True):
-    """The commands a Tag decodes from bits sent at power_dbm."""
-    tx = phy.ReaderTransmitter(CFG)
-    tx.queue(bits)
-    det = phy.EnvelopeDetector(CFG, sensitivity_dbm, np.random.default_rng(seed))
-    got = []
-    for _ in range(4):
-        got += det.receive(tx.next_ms(carrier_on) * math.sqrt(phy.dbm_to_w(power_dbm)))
-    return got
+SINGLE = os.path.join(SCENARIO_DIR, "single_node.toml")
 
 
-def uplink(powers_dbm, sic=True, seed=0, shifts=None, carrier=None):
-    """(node ids decoded, collisions) for Tags 10, 11, ... reflecting at once."""
-    rng = np.random.default_rng(seed)
-    shifts = shifts or [0] * len(powers_dbm)
-    rx = phy.ReaderReceiver(CFG, shifts, NOISE_W, sic, rng, range(10, 10 + len(powers_dbm)))
-    tags = [phy.TagReflector(CFG, s, rng.uniform(0, 2 * math.pi)) for s in shifts]
-    for i, (t, p) in enumerate(zip(tags, powers_dbm)):
-        t.queue(10 + i, 1000 + i, p)
-    scale = phy.up_scale(NOISE_W)
-    decoded, collisions = [], 0
-    for ms in range(3):
-        c = np.ones(phy.AIR_SAMPLES, dtype=complex) if carrier is None else carrier
-        # Each Tag writes its own 16-bit samples and the Reader gets their saturated sum, as in iq.py
-        x = sum(phy.to_counts(t.next_ms(c, ms * phy.AIR_SAMPLES), scale).astype(np.int64) for t in tags)
-        d, n = rx.receive(ms, phy.from_counts(np.clip(x, -32768, 32767), scale))
-        decoded += d
-        collisions += n
-    return sorted(d.node_id for d in decoded), collisions
+def load(sim_time_ms=SHORT_MS, **overrides):
+    return scenario.load(SINGLE, {"run.sim_time_ms": sim_time_ms, **overrides})
 
 
-class TestPhy(unittest.TestCase):
-    def test_crc_catches_a_flipped_bit(self):
-        bits = [1, 0, 1, 1, 0, 0, 1, 0] * 4
-        flipped = list(bits)
-        flipped[5] ^= 1
-        self.assertNotEqual(phy.crc16(bits), phy.crc16(flipped))
+class TestBlocks(unittest.TestCase):
+    def test_sizes(self):
+        self.assertEqual(iq.AIR_SAMPLES, rparams.SAMPLES_PER_MS)
+        self.assertEqual(iq.AIR_SAMPLES, 5760)
+        self.assertEqual(iq.BLOCK_SAMPLES, 5760 + 128)
+        self.assertEqual(iq.BLOCK_BYTES, 23552)
+        self.assertEqual(iq.CONTROL_INT16, 256)
 
-    def test_a_command_decodes_above_sensitivity_and_not_below(self):
-        bits = [1, 0, 0, 1, 1, 1, 0, 1] * 5
-        self.assertEqual(downlink(bits, -30.0), [bits])
-        self.assertEqual(downlink(bits, -60.0), [])
+    def test_block_bytes_are_checked(self):
+        iq.check_block_bytes(iq.BLOCK_BYTES)
+        with self.assertRaisesRegex(ValueError, "block_bytes"):
+            iq.check_block_bytes(iq.BLOCK_BYTES + 4)
 
-    def test_no_carrier_no_command(self):
-        tx = phy.ReaderTransmitter(CFG)
-        self.assertEqual(float(np.abs(tx.next_ms(False)).max()), 0.0)
-        self.assertEqual(float(np.abs(tx.next_ms(True)).min()), 1.0)
+    def test_split_and_join_round_trip(self):
+        air = np.arange(2 * iq.AIR_SAMPLES, dtype=np.int64) % 1000 - 500
+        control = np.arange(iq.CONTROL_INT16, dtype=np.int64)
+        block = iq.join_block(air, control)
+        self.assertEqual(len(block), iq.BLOCK_BYTES)
+        got_air, got_control = iq.split_block(block)
+        np.testing.assert_array_equal(got_air, air)
+        np.testing.assert_array_equal(got_control, control)
 
-    def test_one_tag_decodes(self):
-        self.assertEqual(uplink([-80.0]), ([10], 0))
+    def test_counts_round_trip(self):
+        rng = np.random.default_rng(1)
+        x = rng.normal(size=100) + 1j * rng.normal(size=100)
+        scale = 1000.0
+        counts = iq.to_counts(x, scale)
+        self.assertEqual((counts.dtype, len(counts)), (np.dtype("int16"), 200))
+        self.assertLessEqual(float(np.abs(iq.from_counts(counts, scale) - x).max()), 0.5 * 2 ** 0.5 / scale + 1e-12)
+        # I and Q interleave
+        self.assertEqual(list(iq.to_counts(np.array([1 + 2j]), 10.0)), [10, 20])
 
-    def test_a_weak_tag_is_heard_beside_a_tag_next_to_the_reader(self):
-        # The receiver gain follows the noise, not the strongest Tag: -95 dBm still decodes beside
-        # a Tag at -20 dBm on another subcarrier
-        self.assertEqual(uplink([-20.0, -95.0], shifts=[0, 1]), ([10, 11], 0))
+    def test_counts_clip_at_the_16_bit_limits(self):
+        counts = iq.to_counts(np.array([1e9 - 1e9j]), 1.0)
+        self.assertEqual(list(counts), [32767, -32768])
 
-    def test_the_sum_of_strong_tags_saturates_and_does_not_wrap(self):
-        strong = np.full(2 * phy.AIR_SAMPLES, 30000, dtype="<i2")
+    def test_the_receiver_scale_puts_the_noise_at_one_count(self):
+        noise_w = iq.thermal_noise_w(6.0)
+        self.assertAlmostEqual(iq.up_scale(noise_w) * np.sqrt(noise_w / 2), iq.ADC_NOISE_COUNTS)
+        # 6 dB more noise figure is 6 dB more noise power over the same bandwidth
+        self.assertAlmostEqual(iq.thermal_noise_w(12.0) / noise_w, 10 ** 0.6)
+        self.assertAlmostEqual(iq.w_to_dbm(iq.dbm_to_w(-37.0)), -37.0)
+
+    def test_the_sum_of_strong_blocks_saturates_and_does_not_wrap(self):
+        strong = np.full(2 * iq.AIR_SAMPLES, 30000, dtype="<i2")
         blocks = [np.concatenate([strong, np.zeros(iq.CONTROL_INT16, dtype="<i2")]).tobytes()] * 2
         air, _ = iq.split_block(iq.add_blocks(blocks))
         self.assertTrue(np.all(air == 32767))
 
-    def test_a_tag_far_below_the_noise_is_not_heard(self):
-        self.assertEqual(uplink([-125.0]), ([], 0))
+    def test_the_sum_adds_the_control_of_each_tag(self):
+        zeros = np.zeros(2 * iq.AIR_SAMPLES, dtype=np.int64)
+        a, b = np.zeros(iq.CONTROL_INT16, dtype=np.int64), np.zeros(iq.CONTROL_INT16, dtype=np.int64)
+        a[0], b[1] = iq.UP, iq.UP
+        _, control = iq.split_block(iq.add_blocks([iq.join_block(zeros, a), iq.join_block(zeros, b)]))
+        self.assertEqual(list(control[:2]), [iq.UP, iq.UP])
 
-    def test_without_carrier_there_is_nothing_to_reflect(self):
-        self.assertEqual(uplink([-80.0], carrier=np.zeros(phy.AIR_SAMPLES, dtype=complex)), ([], 0))
+    def test_the_sdu_round_trips(self):
+        self.assertEqual(iq.read_sdu(iq.make_sdu(300, 200)), (300, 200))
+        self.assertEqual(iq.read_sdu(iq.make_sdu(1, 999)), (1, 255))   # the value is 8 bits
+        self.assertIsNone(iq.read_sdu(b"\x00"))
 
-    def test_sic_decodes_the_weaker_tag_after_the_stronger(self):
-        self.assertEqual(uplink([-70.0, -80.0], sic=True), ([10, 11], 0))
-
-    def test_without_sic_the_weaker_tag_is_a_collision(self):
-        self.assertEqual(uplink([-70.0, -80.0], sic=False), ([10], 1))
-
-    def test_sic_separates_three_tags_with_nearly_the_same_data(self):
-        # Small IDs and values are mostly the same zeros; scrambled per Tag, the frames still differ
-        for seed in range(8):
-            self.assertEqual(uplink([-57.0, -64.0, -67.0], seed=seed), ([10, 11, 12], 0))
-
-    def test_many_equal_tags_collide(self):
-        decoded, collisions = uplink([-80.0] * 6)
-        self.assertEqual(collisions, 1)
-        self.assertLess(len(decoded), 6)
-
-    def test_different_subcarriers_do_not_collide(self):
-        self.assertEqual(uplink([-80.0, -80.0], shifts=[0, 1]), ([10, 11], 0))
-
-    def test_rates_must_fit_the_millisecond(self):
-        with self.assertRaises(ValueError):
-            phy.PhyConfig(r2d_kbps=7)
+    def test_the_paging_id_is_the_node_id_on_16_bits(self):
+        bits = iq.paging_id(5)
+        self.assertEqual((len(bits), bits[-3:]), (16, [1, 0, 1]))
+        self.assertNotEqual(iq.paging_id(5), iq.paging_id(6))
 
 
-class TestCommands(unittest.TestCase):
-    def setUp(self):
-        self.s = scenario.load(IQ_SCENARIO)
-        self.codec = iq.CommandCodec(self.s.protocol, self.s.NODE_IDS, 0)
+class TestControl(unittest.TestCase):
+    """The handshake: hello while idle, up in every millisecond, bye at the end."""
 
-    def round_trip(self, node_ids, cmd, data, node_id, end_ms=100):
-        return self.codec.decode(self.codec.encode(node_ids, cmd, data, end_ms), node_id, end_ms)
+    def sessions(self, out, s=None):
+        s = s or load(20)
+        reader = iq.IqReaderSession(s, iq.BLOCK_BYTES, out)
+        tag = iq.IqTagSession(s, s.NODE_IDS[0], iq.BLOCK_BYTES, out)
+        return reader, tag
 
-    def test_a_broadcast_with_slots(self):
-        data = {"cmd": "query", "target": -1, "q": 5, "rx_slots": [(101.0, 111.0), (111.0, 121.0)]}
-        d = self.round_trip(self.s.NODE_IDS, "query", data, 3)
-        self.assertEqual((d.cmd, d.data), ("query", data))
-
-    def test_a_command_for_one_tag_reaches_only_it(self):
-        data = {"cmd": "send_data", "target": 4, "rx_slots": [(105.0, 115.0)]}
-        self.assertEqual(self.round_trip([4], "send_data", data, 4).data, data)
-        self.assertIsNone(self.round_trip([4], "send_data", data, 5))
-
-    def test_an_ack(self):
-        d = self.round_trip([2], "ack", {}, 2)
-        self.assertEqual((d.cmd, d.data), ("ack", {}))
-
-    def test_a_field_without_a_width_is_refused(self):
-        with self.assertRaises(ValueError):
-            self.codec.encode(self.s.NODE_IDS, "query", {"cmd": "query", "target": -1, "colour": 1}, 0)
-
-    def test_scattered_slots_are_refused(self):
-        with self.assertRaises(ValueError):
-            self.codec.encode(self.s.NODE_IDS, "query", {"cmd": "query", "rx_slots": [(1, 2), (5, 6)]}, 0)
-
-
-class TestRun(unittest.TestCase):
-    def run_iq(self, out):
-        iq.run(scenario.load(IQ_SCENARIO), out)
-        return {f: open(os.path.join(out, f)).read() for f in sorted(os.listdir(out))}
-
-    def test_the_sessions_give_what_iq_run_gives(self):
-        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
-            expected = self.run_iq(a)
-            path = IQ_SCENARIO
-            reader = ReaderSession(path, iq.BLOCK_BYTES, b)
-            self.assertTrue(reader.reads_sum)
-            tags = [TagSession(path, n, iq.BLOCK_BYTES, b) for n in reader.scenario.NODE_IDS]
+    def test_hello_up_bye(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, tag = self.sessions(out, load(5))
+            marks = []
+            block = reader.next_block()
+            self.assertEqual(len(block), iq.BLOCK_BYTES)
+            self.assertEqual(int(iq.split_block(block)[1][0]), iq.IDLE)
+            answer, done = tag.reply(block)
+            self.assertFalse(done)
+            self.assertEqual(int(iq.split_block(answer)[1][tag.index]), iq.HELLO)
+            self.assertFalse(reader.on_block(answer))
             done = False
             while not done:
                 block = reader.next_block()
-                # Each Tag's block on its own, added up by the Reader
-                done = reader.on_blocks([t.reply(block)[0] for t in tags])
-            reader.finish()
-            for t in tags:
-                t.finish()
-            got = {f: open(os.path.join(b, f)).read() for f in sorted(os.listdir(b))}
-            self.assertEqual(got, expected)
-            self.assertGreater(expected["reader_bs0_rx.csv"].count("\n"), 2)
+                control = iq.split_block(block)[1]
+                answer, tag_done = tag.reply(block)
+                mark = int(iq.split_block(answer)[1][tag.index])
+                marks.append((int(control[0]), int(control[1]), mark))
+                done = reader.on_block(answer)
+                self.assertEqual(done, tag_done)
+            self.assertEqual(marks, [(iq.MS, ms, iq.UP) for ms in range(5)] + [(iq.END, 0, iq.BYE)])
 
-    def test_the_carrier_is_always_on_and_the_tags_live_on_it(self):
+    def test_the_reader_waits_for_every_hello(self):
         with tempfile.TemporaryDirectory() as out:
-            reader = ReaderSession(IQ_SCENARIO, iq.BLOCK_BYTES, out)
-            tags = [TagSession(IQ_SCENARIO, n, iq.BLOCK_BYTES, out) for n in reader.scenario.NODE_IDS]
-            powers, fractions, done = [], set(), False
-            while not done:
-                block = reader.next_block()
-                air, control = iq.split_block(block)
-                if int(control[0]) == iq.MS:
-                    powers.append(float(np.mean(np.abs(phy.from_counts(air, phy.TX_COUNTS)) ** 2)))
-                replies = [t.reply(block)[0] for t in tags]
-                if int(control[0]) == iq.MS:
-                    # Each Tag harvests from the carrier it received in this block
-                    for t in tags:
-                        self.assertAlmostEqual(t.node.carrier_fraction, powers[-1], places=6)
-                    fractions.add(round(tags[0].node.carrier_fraction, 6))
-                done = reader.on_blocks(replies)
-            # On in every millisecond, idle or listening; only a command keys part of it off
-            self.assertEqual(len(powers), reader.scenario.SIM_TIME_MS)
-            self.assertGreater(min(powers), 0.3)
-            self.assertIn(1.0, fractions)
-            self.assertLess(min(fractions), 1.0)
+            s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"), {"run.sim_time_ms": 5})
+            reader = iq.IqReaderSession(s, iq.BLOCK_BYTES, out)
+            tags = [iq.IqTagSession(s, n, iq.BLOCK_BYTES, out) for n in s.NODE_IDS]
+            idle = reader.next_block()
+            answers = [t.reply(idle)[0] for t in tags]
+            # Only some of the Tags are there: the Reader stays idle
+            self.assertFalse(reader.on_block(iq.add_blocks(answers[:-1])))
+            self.assertEqual(int(iq.split_block(reader.next_block())[1][0]), iq.IDLE)
+            self.assertFalse(reader.on_block(iq.add_blocks(answers)))
+            self.assertEqual(int(iq.split_block(reader.next_block())[1][0]), iq.MS)
 
-    def test_iq_mode_needs_one_base_station(self):
-        with open(IQ_SCENARIO) as f:
-            text = f.read()
-        text += "\n[[base_station]]\nid = 1\nx = 50\ny = 0\n"
-        with tempfile.NamedTemporaryFile("w", suffix=".toml", dir=SCENARIO_DIR, delete=False) as f:
-            f.write(text)
-        try:
-            with self.assertRaisesRegex(ValueError, "exactly one base station"):
-                scenario.load(f.name)
-        finally:
-            os.remove(f.name)
+    def test_a_missing_tag_is_an_error(self):
+        with tempfile.TemporaryDirectory() as out:
+            s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"), {"run.sim_time_ms": 5})
+            reader = iq.IqReaderSession(s, iq.BLOCK_BYTES, out)
+            tags = [iq.IqTagSession(s, n, iq.BLOCK_BYTES, out) for n in s.NODE_IDS]
+            idle = reader.next_block()
+            self.assertFalse(reader.on_block(iq.add_blocks([t.reply(idle)[0] for t in tags])))
+            block = reader.next_block()
+            with self.assertRaisesRegex(RuntimeError, "did not answer"):
+                reader.on_block(iq.add_blocks([t.reply(block)[0] for t in tags[1:]]))
+
+    def test_a_tag_at_the_wrong_millisecond_is_an_error(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, tag = self.sessions(out)
+            tag.reply(reader.next_block())
+            reader.on_block(tag.reply(reader.next_block())[0])
+            block = reader.next_block()
+            tag.reply(block)
+            with self.assertRaisesRegex(RuntimeError, "expected 1 ms"):
+                tag.reply(block)
+
+    def test_the_block_size_is_checked(self):
+        with tempfile.TemporaryDirectory() as out:
+            s = load(5)
+            with self.assertRaisesRegex(ValueError, "block_bytes"):
+                iq.IqReaderSession(s, 4096, out)
+            with self.assertRaisesRegex(ValueError, "block_bytes"):
+                iq.IqTagSession(s, 0, 4096, out)
+
+    def test_the_block_of_a_millisecond_carries_its_number(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, tag = self.sessions(out)
+            reader.on_block(tag.reply(reader.next_block())[0])
+            ms = 0
+            while ms < 3:
+                block = reader.next_block()
+                control = iq.split_block(block)[1]
+                self.assertEqual((int(control[0]), int(control[1])), (iq.MS, ms))
+                reader.on_block(tag.reply(block)[0])
+                ms += 1
+
+    def test_the_reader_carrier_is_always_on(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, tag = self.sessions(out, load(30))
+            reader.on_block(tag.reply(reader.next_block())[0])
+            powers = []
+            for _ in range(30):
+                block = reader.next_block()
+                air = iq.from_counts(iq.split_block(block)[0], iq.TX_COUNTS)
+                powers.append(float(np.mean(np.abs(air) ** 2)))
+                reader.on_block(tag.reply(block)[0])
+            self.assertGreater(min(powers), 0.3)
+            self.assertLessEqual(max(powers), 1.0 + 1e-9)
+
+
+class TestRun(unittest.TestCase):
+    def test_one_tag_decodes_at_least_one_data_packet(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, tags = iq.run(load(), out)
+            data = [r for r in reader.record.rx if r[2] == "data"]
+            self.assertGreater(len(data), 0)
+            self.assertTrue(all(r[3] == 0 for r in data), "every data packet is from node 0")
+            # What the Reader decoded is what the Tag sent over the air
+            sent = [(r.kind, r.payload) for r in tags[0].bsm.tx_records]
+            self.assertGreaterEqual(len([k for k, _ in sent if k != "msg1"]), len(data))
+            self.assertTrue(all(r[0] > 0 and r[8] < 0 for r in data), "time and RSSI in dBm")
+            self.assertEqual(len(reader.record.tx), len(read_files(out)["reader_tx.csv"].splitlines()) - 1)
+
+    def test_the_reader_ends_after_the_last_millisecond(self):
+        with tempfile.TemporaryDirectory() as out:
+            reader, _ = iq.run(load(50), out)
+            self.assertTrue(reader._ending)
+            self.assertEqual(reader._ms, 50)
+
+    def test_same_run_same_files(self):
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            iq.run(load(300), a)
+            iq.run(load(300), b)
+            self.assertEqual(read_files(a), read_files(b))
+
+    def test_a_scenario_of_too_many_tags_is_refused(self):
+        s = load(5)
+        s.NODE_IDS = list(range(iq.MAX_TAGS + 1))
+        with tempfile.TemporaryDirectory() as out:
+            with self.assertRaisesRegex(ValueError, "at most"):
+                iq.IqReaderSession(s, iq.BLOCK_BYTES, out)
 
 
 if __name__ == "__main__":

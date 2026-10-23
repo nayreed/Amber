@@ -1,29 +1,28 @@
 # amber/protocols/__init__.py
-"""Protocols: what a base station sends and how a Tag answers, chosen by name in a scenario file.
+"""Protocols: what a Reader sends, chosen by name in a scenario file.
+
+Everything on the air is 3GPP Rel-19 Ambient IoT. The Tag side is fixed by TS 38.391 (the A-IoT
+MAC, amber.mac) and is the same for every protocol. A protocol is only a Reader policy:
+it decides what 38.391 leaves to the Reader (whom to page, with how many access occasions, when to
+send an Access Trigger, which devices to answer in a Random ID Response, when to ask a known AS ID
+for data, when to NACK) and what goes in the Data SDU. It cannot add messages or change how Tags
+behave.
 
 A protocol is a subclass of Protocol, exported as PROTOCOL by its module. A scenario names one of
 Amber's own by its module name (``broadcast``, ``unicast``, ``registration``,
 ``adaptive_aloha``, ``gen2_q``) or any other by its full module path, such as
 ``my_package.my_protocol``.
 
-A base station runs either a static schedule or a policy: a generator that yields one frame at a
-time, each a list of (mode, duration_ms, slot_id[, payload]) entries. The policy resumes once the
-whole frame has played out, and can then read on the BSBehavior:
+Its ``policy(ctx)`` is a generator. It yields one 38.391 R2D message at a time, built with
+``ctx.mac`` (a ReaderMAC) and the Scheduling Info helpers of ``ctx.cfg`` (``cbra``, ``ridr``,
+``cfa``, ``unicast``), and receives a ``link.Heard`` after each: the D2R answers decoded and
+the number of collisions. The Reader sends the next message as soon as every answer the last one
+can cause has arrived. ``Protocol.access`` is a helper for ``yield from``: a paging or Access
+Trigger, then a Random ID Response to the Msg1s it brought.
 
-- ``decoded_this_frame``: the node ids decoded in this frame;
-- ``slot_results``: one SlotResult per listening slot of this frame, empty slots included, with the
-  node ids it decoded, how many packets collided, and ``empty``, ``success`` and ``collision``
-  (a slot can hold a decoded and a collided packet at once, which ``collision`` counts);
-- ``total_collided``: collided packets since the start of the run.
-
-A protocol has two shapes. One command and many slots per frame (``adaptive_aloha``) decides once
-per frame. One command and one slot per frame (``gen2_q``) decides after every slot, at the cost
-of a command before every slot, as Gen2's QueryRep is.
-
-A new protocol goes in this package. amber/protocols/README.md is the guide: what each protocol
-here does, how to write a new one, and the rules it must follow to run as a Reader container
-and Tag containers on OAI (Tag randomness from ``self.rng``, integer payloads, commands with a bit width, whole-millisecond durations).
-tests/test_protocol_conformance.py checks every module here against them.
+amber/protocols/README.md is the guide: what each protocol here does, its parameters, how to
+write a new one, and the pitfalls. tests/test_protocols.py and tests/test_protocol_conformance.py
+run the protocols here.
 """
 
 import importlib

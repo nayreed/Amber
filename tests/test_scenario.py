@@ -5,12 +5,14 @@ scenario is refused with a message naming the key."""
 import copy
 import math
 import os
-import random
+import sys
 import tempfile
 import unittest
 
 from amber import iq, scenario
+from amber.backscatter import AiotTag
 from amber.hosts import SHARED_PHASE, PhasedEnvironment
+from amber.link import LinkConfig
 
 try:
     import tomllib
@@ -22,12 +24,15 @@ SCENARIO_DIR = os.path.join(HERE, "scenarios")
 DEMO_DIR = os.path.join(HERE, "..", "demo_experiments")
 BASE = os.path.join(SCENARIO_DIR, "single_node.toml")
 
+sys.path.insert(0, HERE)
+from helpers import SHORT_MS  # noqa: E402
+
 
 def run(s):
-    """The Reader's base stations and the Tags' modules after a run in IQ mode."""
+    """The Reader session and the Tags' AiotTags after a run."""
     with tempfile.TemporaryDirectory() as out:
         reader, tags = iq.run(s, out)
-    return reader.host.bss, [tag.host.bsm for tag in tags]
+    return reader, [tag.bsm for tag in tags]
 
 
 def base_data():
@@ -47,14 +52,29 @@ class SeedTest(unittest.TestCase):
         self.assertEqual(fixed.SEED, 5)
 
     def test_each_tag_draws_from_its_own_generator(self):
-        s = scenario.load(BASE, {"run.seed": 41})
-        tag = run(s)[1][0]
-        self.assertIsInstance(tag.rng, random.Random)
+        import random
+
+        def tx(seed):
+            return run(scenario.load(BASE, {"run.seed": seed, "run.sim_time_ms": SHORT_MS}))[1][0].tx_records
+
         random.seed(1)
-        first = run(s)[1][0].tx_records
+        first = tx(41)
+        self.assertGreater(len(first), 0)
         random.seed(2)  # the global generator does not matter
-        self.assertEqual(run(scenario.load(BASE, {"run.seed": 41}))[1][0].tx_records, first)
-        self.assertNotEqual(run(scenario.load(BASE, {"run.seed": 42}))[1][0].tx_records, first)
+        self.assertEqual(tx(41), first)
+        self.assertNotEqual(tx(42), first)
+
+    def test_the_controller_has_its_own_generator(self):
+        import random
+        s = scenario.load(BASE, {"run.seed": 41})
+        env = PhasedEnvironment()
+        with env.in_phase(SHARED_PHASE):
+            shared = s.build_shared(env)
+        with env.in_phase(2):
+            bsm = s.build_tag(env, shared, 0)
+        self.assertIsInstance(bsm, AiotTag)
+        self.assertIsNotNone(bsm.controller)
+        self.assertIsInstance(bsm.controller.rng, random.Random)
 
 
 class PlacementTest(unittest.TestCase):
@@ -108,6 +128,43 @@ class PlacementTest(unittest.TestCase):
         self.assertEqual(second.group.controller_params.thresholds_v.high, 1.7)
 
 
+class LinkTest(unittest.TestCase):
+    """The [phy] table is a LinkConfig with every key required; [reader] holds the receiver options."""
+
+    def test_phy_is_required(self):
+        data = base_data()
+        del data["phy"]
+        with self.assertRaisesRegex(ValueError, "phy is required"):
+            scenario.Scenario(BASE, data)
+
+    def test_every_phy_key_is_required(self):
+        for key in list(base_data()["phy"]):
+            data = base_data()
+            del data["phy"][key]
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, rf"{key} is required"):
+                scenario.Scenario(BASE, data)
+
+    def test_phy_values_reach_the_link_config(self):
+        data = base_data()
+        data["phy"].update({"m_chip_symb": 12, "r_sfs": [1, 2]})
+        s = scenario.Scenario(BASE, data)
+        self.assertEqual((s.phy.m_chip_symb, s.phy.r_sfs), (12, (1, 2)))
+
+    def test_reader_options(self):
+        s = scenario.load(BASE)
+        self.assertEqual((s.enable_sic, s.reader_noise_figure_db), (True, 6.0))
+        s = scenario.load(BASE, {"reader.enable_sic": False, "reader.noise_figure_db": 9})
+        self.assertEqual((s.enable_sic, s.reader_noise_figure_db), (False, 9.0))
+
+    def test_every_tag_has_an_uplink(self):
+        s = scenario.load(os.path.join(SCENARIO_DIR, "registration.toml"))
+        links = s.iq_links()
+        self.assertEqual(sorted(links), s.NODE_IDS)
+        for sector, shift, power_dbm in links.values():
+            self.assertTrue(0 <= sector < 3)
+            self.assertTrue(-200 < power_dbm < 0)
+
+
 def shared_of(s):
     """What the scenario's Tags share, built as a host builds it."""
     env = PhasedEnvironment()
@@ -157,13 +214,17 @@ class ErrorTest(unittest.TestCase):
             (drop("reader", "protocol"), r"reader\.protocol is required"),
             (set_("nope", "reader", "protocol"), "unknown protocol 'nope'"),
             (set_(4, "reader", "params", "slots"), "registration has no parameter slots"),
+            (set_(16, "reader", "params", "occasions_exp"), r"occasions_exp must be within \[0, 15\]"),
+            (set_(1.5, "reader", "params", "occasions_exp"), "occasions_exp must be an integer"),
             (set_(1, "reader", "loop"), "reader has no key loop"),
-            # The formulas of the old message mode have no place in a scenario any more
+            # keys a scenario does not have
+            (set_(True, "reader", "noise_figure_db"), r"reader\.noise_figure_db: must be a number"),
             (set_(3.0, "reader", "required_sinr_db"), "reader has no key required_sinr_db"),
             (set_(0.9, "reader", "cancellation_factor"), "reader has no key cancellation_factor"),
             (set_(100e6, "reader", "bandwidth_hz"), "reader has no key bandwidth_hz"),
-            (drop("phy"), r"phy is required"),
             (set_(80, "phy", "r2d_kbit"), "phy has no key r2d_kbit"),
+            (set_(3, "phy", "m_chip_symb"), r"\[phy\]"),
+            (lambda d: d["base_station"].append({**d["base_station"][0], "id": 5}), "exactly one base station"),
             (set_("yes", "reader", "enable_sic"), r"reader\.enable_sic: must be true or false"),
             (drop("base_station"), "base_station is required"),
             (set_([], "base_station"), r"base_station: must be one or more \[\[base_station\]\] tables"),
@@ -206,7 +267,7 @@ class ErrorTest(unittest.TestCase):
             os.unlink(f.name)
 
     def test_overrides(self):
-        self.assertEqual(scenario.load(BASE, {"reader.params.id_slots": 4}).protocol.params["id_slots"], 4)
+        self.assertEqual(scenario.load(BASE, {"reader.params.occasions_exp": 3}).protocol.params["occasions_exp"], 3)
         self.assertEqual(scenario.load(BASE, {"tag_group.0.positions": [[1, 1], [2, 2]]}).NODE_IDS, [0, 1])
         with self.assertRaisesRegex(ValueError, "tag_group has no entry 3"):
             scenario.load(BASE, {"tag_group.3.count": 2})
