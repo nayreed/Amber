@@ -1,5 +1,6 @@
 #!/bin/bash
-# Build Amber's PHY, OAI's C library libaiot_phy.so (openair1/PHY/AIOT), into amber/phy/lib/.
+# Build Amber's PHY and MAC, OAI's C library libaiot_phy.so (openair1/PHY/AIOT with the MAC of
+# openair2/LAYER2/AIOT_MAC), into amber/phy/lib/.
 #
 #   scripts/build_aiot_lib.sh                # fetch the library's sources from OAI_REPO at OAI_REF
 #   scripts/build_aiot_lib.sh /path/to/oai   # or build from an OAI checkout
@@ -7,7 +8,7 @@
 # Needs git, cmake, a C compiler and SIMDe (Ubuntu: libsimde-dev), which OAI's coders use.
 set -euo pipefail
 OAI_REPO=${OAI_REPO:-https://github.com/nayreed/openairinterface5g.git}
-OAI_REF=${OAI_REF:-aiot-rfsim}
+OAI_REF=${OAI_REF:-gnb-aiot-reader}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$HERE/amber/phy/lib
 WORK=$(mktemp -d)
@@ -16,10 +17,10 @@ trap 'rm -rf "$WORK"' EXIT
 if [ $# -ge 1 ]; then
   SRC=$(cd "$1" && pwd)
 else
-  # only the library and the OAI files it builds on: OAI's CRC, LTE convolutional coder and Viterbi
-  # decoder, and the headers they include
+  # only the library, its MAC and the OAI files it builds on: OAI's CRC, LTE convolutional coder and
+  # Viterbi decoder, and the headers they include
   git clone -q --depth 1 --filter=blob:none --sparse --branch "$OAI_REF" "$OAI_REPO" "$WORK/oai"
-  git -C "$WORK/oai" sparse-checkout set --no-cone /openair1/PHY/AIOT/ \
+  git -C "$WORK/oai" sparse-checkout set --no-cone /openair1/PHY/AIOT/ /openair2/LAYER2/AIOT_MAC/ \
     /openair1/PHY/CODING/crc_byte.c /openair1/PHY/CODING/ccoding_byte_lte.c /openair1/PHY/CODING/viterbi_lte.c \
     /openair1/PHY/CODING/coding_defs.h /openair1/PHY/CODING/crc.h /openair1/PHY/CODING/crcext.h \
     /openair1/PHY/CODING/types.h /openair1/PHY/sse_intrin.h /common/platform_types.h \

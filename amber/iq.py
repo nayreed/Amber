@@ -12,9 +12,9 @@ up what the Tags send, as normal rfsim does:
   from the sum of every Tag's reflection: two Tags on one access occasion and R_SFS really
   collide. Whether the Reader cancels the stronger first is the base station's enable_sic.
 
-What the Reader sends is its protocol's policy (amber.protocols): a generator that yields 38.391
-R2D messages and sees what each one brought back. The Tag side is the same for every protocol:
-38.391 fixes it. A Tag is on, and can hear and answer, only while its capacitor and controller
+What the Reader sends is its protocol's choice (amber.protocols), run by the A-IoT MAC library
+(amber.mac): the same C code a gNB or a UE runs as the Reader. The Tag side is the same for every
+protocol: 38.391 fixes it. A Tag is on, and can hear and answer, only while its capacitor and controller
 say so (amber.controller); its answer is its node id and its last sensed value as the Data SDU.
 
 A block is 5888 samples (23552 bytes): 5760 samples of signal (one millisecond at 5.76 Msps),
@@ -41,10 +41,9 @@ import numpy as np
 from . import output
 from .hosts import TagHost
 from . import link as rlink
-from .mac import pdu as mp
+from . import mac
 from .phy import params as rparams
 from .link import LinkConfig
-from .mac import DeviceMAC, ReaderMAC, UpperLayer
 
 AIR_SAMPLES = rparams.SAMPLES_PER_MS              # 5760
 CONTROL_SAMPLES = 128
@@ -168,58 +167,6 @@ TX_COLUMNS = ("start_ms", "end_ms", "message", "detail")
 RX_COLUMNS = ("time_ms", "after", "kind", "node_id", "value", "id", "r_sfs", "slot", "rssi_dbm")
 
 
-def describe(msg) -> Tuple[str, str]:
-    """(message name, its main fields) of an R2D message, for reader_tx.csv."""
-    if isinstance(msg, mp.AIoTPagingCBRA):
-        return "paging_cbra", (f"tid={msg.transaction_id} n={msg.num_access_occasions} k={msg.k} "
-                               f"x={msg.sched.x} r_sfs={list(msg.sched.r_sfs)}")
-    if isinstance(msg, mp.AIoTPagingCFA):
-        return "paging_cfa", f"paging_id={len(msg.paging_id)} bits r_sfs={msg.sched.r_sfs[0]}"
-    if isinstance(msg, mp.AccessTrigger):
-        return "access_trigger", ""
-    if isinstance(msg, mp.RandomIDResponse):
-        return "random_id_response", f"entries={len(msg.entries)}"
-    if isinstance(msg, mp.R2DUpperLayerDataTransfer):
-        return "r2d_data", f"as_id={msg.as_id} ci={msg.ci}"
-    if isinstance(msg, mp.NACKFeedback):
-        return "nack_feedback", f"as_ids={list(msg.as_ids)}"
-    return type(msg).__name__, ""
-
-
-class ReaderContext:
-    """What a protocol's policy sees: the link settings, a message builder, the Tags, the clock.
-
-    A policy yields 38.391 R2D messages and gets a link.Heard back after each. Helpers here
-    turn what was heard into Tags (tags_in) so policies can keep per-Tag statistics."""
-
-    def __init__(self, cfg: LinkConfig, node_ids: Sequence[int], link_ref: "IqReaderSession"):
-        self.cfg = cfg
-        self.mac = ReaderMAC()
-        self.node_ids = list(node_ids)
-        self._session = link_ref
-        self.tid = 0
-
-    @property
-    def now_ms(self) -> float:
-        return self._session.link.t / AIR_SAMPLES
-
-    def next_tid(self) -> int:
-        """A fresh Transaction ID (6 bits, wrapping): a paging with it asks every Tag again."""
-        self.tid = (self.tid + 1) % 64
-        return self.tid
-
-    @staticmethod
-    def tags_in(heard) -> List[Tuple[int, int]]:
-        """(node id, value) of every Tag whose data was decoded in heard."""
-        out = []
-        for a in heard.answers:
-            if a.kind == "data":
-                v = read_sdu(a.message.sdu)
-                if v is not None:
-                    out.append(v)
-        return out
-
-
 class IqReaderSession:
     """The Reader: one block out and the sum of the Tags' blocks back, per millisecond."""
 
@@ -233,31 +180,18 @@ class IqReaderSession:
         self.protocol = scenario.protocol
         self.noise_w = thermal_noise_w(scenario.reader_noise_figure_db)
         self.scale = up_scale(self.noise_w)
-        self.ctx = ReaderContext(self.cfg, scenario.NODE_IDS, self)
         leak_dbm, pn_floor, pn_corner = scenario.cw_leak
         leak = rlink.CarrierLeak(dbm_to_w(leak_dbm), pn_floor, pn_corner, np.random.default_rng([_seed(scenario), 1]))
-        self.link = rlink.ReaderLink(self._policy(), self.cfg.m_chip_symb, self.cfg.rb, self.noise_w,
-                                     scenario.enable_sic, np.random.default_rng([_seed(scenario), 0]), leak)
         self.record = ReaderRecord()
+        self.link = rlink.ReaderLink(self.protocol.reader(self.cfg), self.cfg.m_chip_symb, self.cfg.rb, self.noise_w,
+                                     scenario.enable_sic, np.random.default_rng([_seed(scenario), 0]), leak,
+                                     on_heard=self._log)
         self._index = {node: i for i, node in enumerate(scenario.NODE_IDS)}
         self._ms: Optional[int] = None
         self._ending = False
 
-    def _policy(self):
-        """The protocol's policy, with every message and answer recorded on the way."""
-        g = self.protocol.policy(self.ctx)
-        heard = None
-        try:
-            msg = next(g)
-            while True:
-                heard = yield msg
-                self._log(heard)
-                msg = g.send(heard)
-        except StopIteration:
-            return
-
     def _log(self, h):
-        name, detail = describe(h.sent)
+        name, detail = mac.describe(h.sent)
         self.record.tx.append((h.r2d_start / AIR_SAMPLES, h.r2d_end / AIR_SAMPLES, name, detail))
         for a in h.answers:
             node, value, ident = -1, -1, ""
@@ -322,7 +256,7 @@ class IqReaderSession:
 # A Tag
 # ----------------------------------------------------------------------------------------------
 
-class _TagUpper(UpperLayer):
+class _TagUpper(mac.UpperLayer):
     """The Tag's upper layer: its Paging ID is its node id, and it sends its node id and the
     value its controller last sensed."""
 
@@ -353,11 +287,11 @@ class IqTagSession:
         self.bsm = bsm
         self.node = bsm.node
         rng = np.random.default_rng([_seed(scenario), 1, node_id])
-        mac = DeviceMAC(_TagUpper(bsm), rng, self.cfg.modulation)
+        device = mac.Device(_TagUpper(bsm), rng, self.cfg.modulation)
         sector, _, up_dbm = scenario.iq_links().get(node_id, (-1, 0, -999.0))
         incident_w = bsm.downlink_results.get("best_pw_w", {}).get(node_id, 0.0)
         tag_noise = dbm_to_w(self.node.sensitivity_dbm) / 10 ** (self.cfg.tag_snr_db / 10)
-        self.link = rlink.TagLink(mac, incident_w, math.sqrt(dbm_to_w(up_dbm)) if up_dbm > -999 else 0.0,
+        self.link = rlink.TagLink(device, incident_w, math.sqrt(dbm_to_w(up_dbm)) if up_dbm > -999 else 0.0,
                                   tag_noise, rng, self.cfg.m_chip_symb, self.cfg.timing_error)
         self.index = list(scenario.NODE_IDS).index(node_id)
         self.scale = up_scale(thermal_noise_w(scenario.reader_noise_figure_db))

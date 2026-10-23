@@ -16,7 +16,7 @@ tables:
     seed            integer from which every random draw comes, each Tag's from its own
                     generator; without one, load() draws a new seed, so every run is a new sample
 [reader]
-    protocol        the protocol (required): a module of amber.protocols, or a full module path
+    protocol        the protocol (required): one of the A-IoT MAC library's (amber.protocols.names())
     params          table of the protocol's parameters
     enable_sic      the Reader cancels each decoded D2R and looks again (default true)
     noise_figure_db the Reader's receiver noise figure (default 6)
@@ -364,7 +364,7 @@ class Scenario:
         reader.done()
         top.done()
         try:
-            self.protocol = protocols.load(name, params, self.NODE_IDS)
+            self.protocol = protocols.load(name, params, self.NODE_IDS, self.phy)
         except ValueError as e:
             raise ValueError(f"{path}: reader: {e}") from None
 

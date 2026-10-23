@@ -7,8 +7,8 @@ receiver) is all in C; the C files document each step. This module gives it Pyth
 draws the receivers' noise from the run's rng, so a run is reproducible from its seed.
 
 The library is found at AMBER_AIOT_LIB, or else at amber/phy/lib/libaiot_phy.so, which
-scripts/build_aiot_lib.sh builds from an OAI checkout. It is loaded on first use, so the
-parts of Amber that do not touch the air (scenario files, the MAC codec) work without it.
+scripts/build_aiot_lib.sh builds from an OAI checkout. The same library holds the A-IoT MAC
+(amber.mac), so Amber needs it to load a scenario too: the scenario's protocol is checked there.
 """
 
 import ctypes as C

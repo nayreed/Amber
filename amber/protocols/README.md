@@ -16,10 +16,10 @@ c = 0.3
 
 Any parameter you leave out keeps its default. A parameter the protocol doesn't have, or a value of the wrong type, is refused when the scenario loads.
 
-This folder holds every protocol. **A new protocol goes here too**, as one Python file.
+The protocols are part of the A-IoT MAC library, OAI's `openair2/LAYER2/AIOT_MAC` (built into `libaiot_phy.so`, which Amber loads). It is the same code a gNB or a UE runs as the Reader, so a protocol tried in Amber runs unchanged in OAI. **A new protocol goes there**, in C.
 
 - [How a protocol runs](#how-a-protocol-runs)
-- [The protocols in this folder](#the-protocols-in-this-folder)
+- [The protocols](#the-protocols)
 - [Writing a new protocol](#writing-a-new-protocol)
 - [Rules](#rules)
 - [Pitfalls](#pitfalls)
@@ -31,7 +31,7 @@ This folder holds every protocol. **A new protocol goes here too**, as one Pytho
 
 ### The Tag side (fixed)
 
-Every Tag runs `DeviceMAC` (`amber/mac/procedures.py`), the device side of TS 38.391. In short, a Tag:
+Every Tag runs the device side of TS 38.391 from the MAC library (`aiot_mac_device.c`, through `amber.mac.Device`). In short, a Tag:
 
 - answers an A-IoT Paging, either **CBRA** (contention-based random access, for everyone) or **CFA** (contention-free access, for one Paging ID);
 - on a CBRA paging, draws a counter over the access occasions on offer and counts them down over the Access Triggers that follow;
@@ -42,56 +42,56 @@ Every Tag runs `DeviceMAC` (`amber/mac/procedures.py`), the device side of TS 38
 
 A Tag's Paging ID is its node id on 16 bits. Its **Data SDU** is its node id (16 bits) and its last sensed value (8 bits), so every D2R with data tells the Reader who sent it. A Tag only acts while its capacitor has enough charge. A Tag that is off misses what was sent meanwhile.
 
-### The Reader side: a policy
+### The Reader side: a protocol
 
-`Protocol.policy(ctx)` is a generator. It **yields** one R2D message at a time and **receives** what that message brought back:
+The Reader's MAC (`aiot_mac_reader.c`) runs the protocol. Each time the last R2D's answers are all in, it calls the protocol's step function with what that R2D brought back, and the step writes the next message:
 
-```python
-heard = yield ctx.mac.paging_cfa(paging_id(3), ctx.cfg.cfa())
+```c
+int step(void *state, const double *params, aiot_policy_ctx_t *ctx,
+         const aiot_reader_heard_t *h1, const aiot_reader_heard_t *h2, aiot_policy_msg_t *next);
 ```
 
-`ctx` gives the policy:
+It returns 1 with `next` filled, or 0 when the protocol has ended. `state` is the protocol's own memory (8 KiB of zeros at the start), `params` its parameters in the order it declares them. `ctx` gives:
 
 | Name | What it is |
 |---|---|
-| `ctx.mac` | a `ReaderMAC`: builds the messages and keeps the AS IDs it has handed out (`ctx.mac.assigned`) |
-| `ctx.cfg` | the scenario's `[phy]` table, a `LinkConfig`; its helpers `cbra()`, `ridr(n)`, `cfa()` and `unicast()` make the Scheduling Info of a message |
-| `ctx.next_tid()` | a fresh 6-bit Transaction ID (wraps after 63) |
-| `ctx.now_ms` | the Reader's clock, in ms |
-| `ctx.node_ids` | the scenario's Tags (also `self.node_ids` on the protocol) |
-| `ctx.tags_in(heard)` | `(node id, value)` of every Tag whose data is in `heard` |
+| `ctx->cfg` | the scenario's `[phy]` table; `aiot_link_cbra()`, `aiot_link_cfa()` and `aiot_link_unicast()` make a message's Scheduling Info from it |
+| `ctx->tid` | the last Transaction ID given (6 bits, wrapping) |
+| `ctx->now_ms` | the Reader's clock, in ms |
+| `ctx->node_ids`, `ctx->n_nodes` | the scenario's Tags |
+| `ctx->add_row()` | adds a row to the protocol's table (`q.csv`, `adaptation.csv`) |
 
-What comes back is a `amber.link.Heard`:
+What comes back is an `aiot_reader_heard_t`:
 
-- `answers`: the D2Rs decoded. Each has `kind` (`"msg1"` or `"data"`), `message` (the `AccessRandomID`, or the data transfer with its `sdu`), `r_sfs`, `slot`, `as_id` and `rssi_w`;
-- `collided`: preambles found whose frame did not decode (collisions, or a frame lost in noise);
-- `empty`: true when there is neither.
+- `answers`: the D2Rs decoded. Each has `kind` (`AIOT_ANSWER_MSG1` or `AIOT_ANSWER_DATA`), `message` (the Random ID, or the data with its SDU), `r_sfs`, `slot`, `as_id` and `rssi_w`;
+- `collided`: preambles found whose frame did not decode (collisions, or a frame lost in noise).
 
-The Reader sends the next message as soon as every answer the last one can cause has arrived. There are no millisecond slots to plan: a D2R starts at T_R->D after the last chip of the R2D it answers (TS 38.291), and the policy only chooses the order of messages.
+A message marked `access` (a CBRA paging or an Access Trigger) has its Msg1s answered by the Reader itself, with one Random ID Response to at most `aiot_link_max_entries()` of them, each given the next AS ID. The step then gets both: `h1`, what the paging or trigger brought, and `h2`, what the Random ID Response brought (`NULL` when no Msg1 was decoded). Otherwise `h1` is what the message brought and `h2` is `NULL`.
 
-### The messages a policy can send
+The Reader sends the next message as soon as every answer the last one can cause has arrived, and no earlier than T_D2R_min after the latest D2R. There are no millisecond slots to plan: a D2R starts at T_R->D after the last chip of the R2D it answers (TS 38.291), and the protocol only chooses the order of messages.
 
-| Message | Build it with | What it does, and what it brings back |
+### The messages a protocol can send
+
+`next->msg` is an `aiot_mac_r2d_msg_t` (`aiot_mac_pdu.h`); set `kind` and the fields of that message:
+
+| Message | `kind` and fields | What it does, and what it brings back |
 |---|---|---|
-| A-IoT Paging, CBRA | `ctx.mac.paging_cbra(tid, ctx.cfg.cbra(), n_occasions_code=v)` | Starts random access for every Tag that has not done this Transaction ID. Offers n = 2^v access occasions. Brings Msg1s (`kind == "msg1"`). A Tag that already finished this Transaction ID ignores it, so a new `tid` asks everyone again. |
-| Access Trigger | `mp.AccessTrigger()` (`from ..mac import pdu as mp`) | Opens the next block of access occasions of the last CBRA paging, and counts down every waiting Tag's counter. Brings Msg1s. |
-| Random ID Response | `ctx.mac.random_id_response(heard, ctx.cfg.ridr(len(heard)))` | Answers up to 8 Msg1s at once. Entry i tells that Tag to send on the i-th R_SFS. Gives each Tag an AS ID. Brings the data of every Tag answered (`kind == "data"`). |
-| A-IoT Paging, CFA | `ctx.mac.paging_cfa(paging_id, ctx.cfg.cfa())` | Asks the one Tag with that Paging ID for data, with no contention. Brings its data. |
-| R2D Upper Layer Data Transfer | `ctx.mac.data(as_id, ctx.cfg.unicast(), sdu=None, received=0)` | Talks to one Tag by AS ID. With `received=0` and no SDU it asks that Tag for data. With an `sdu` the Tag receives it (it appears in the Tag's `tag<id>_rx.csv`) and answers with data. |
-| NACK Feedback | `ctx.mac.nack([as_id, ...])` | Tells the Tags with those AS IDs that their access failed. Each drops its AS ID and tries again at the next paging. A Tag only listens to it after its first data following a Random ID Response, and until it gets R2D data or a paging. Brings nothing. |
+| A-IoT Paging, CBRA | `AIOT_R2D_PAGING_CBRA`: `transaction_id`, `num_access_occasions_code` v, `sched` from `aiot_link_cbra()`; `access = 1` | Starts random access for every Tag that has not done this Transaction ID. Offers n = 2^v access occasions. Brings Msg1s. A Tag that already finished this Transaction ID ignores it, so a new one asks everyone again. |
+| Access Trigger | `AIOT_R2D_ACCESS_TRIGGER`; `access = 1` | Opens the next block of access occasions of the last CBRA paging, and counts down every waiting Tag's counter. Brings Msg1s. |
+| Random ID Response | sent by the Reader for an access message | Answers up to 8 Msg1s at once. Entry i tells that Tag to send on the i-th R_SFS. Gives each Tag an AS ID. Brings the data of every Tag answered. |
+| A-IoT Paging, CFA | `AIOT_R2D_PAGING_CFA`: `paging_id` (`aiot_paging_id_of_node()`), `sched` from `aiot_link_cfa()` | Asks the one Tag with that Paging ID for data, with no contention. Brings its data. |
+| R2D Upper Layer Data Transfer | `AIOT_R2D_UPPER_LAYER_DATA`: `as_id`, `sched` from `aiot_link_unicast()`, a Data SDU or a Received Data Size | Talks to one Tag by AS ID. With Received Data Size 0 it asks that Tag for data. With an SDU the Tag receives it (it appears in the Tag's `tag<id>_rx.csv`) and answers with data. |
+| NACK Feedback | `AIOT_R2D_NACK_FEEDBACK`: `as_ids` | Tells the Tags with those AS IDs that their access failed. Each drops its AS ID and tries again at the next paging. A Tag only listens to it after its first data following a Random ID Response, and until it gets R2D data or a paging. Brings nothing. |
 
-Two helpers on `Protocol` build on these. Use them with `yield from`:
-
-- `self.access(ctx, msg)` sends a CBRA paging or an Access Trigger, then answers every Msg1 it brought (up to `ctx.cfg.max_entries`) with one Random ID Response. It returns `(h1, h2)`; `h2` is `None` when no Msg1 was decoded.
-- `self.r2d_per_paging(ctx, v, sched)` is how many R2D messages (the paging and its Access Triggers) play out 2^v occasions. Each R2D carries `x * len(r_sfs)` occasions. `self.occasions_code(n)` gives the codepoint v for at least n occasions.
+The protocol `manual` sends nothing of its own: its caller pushes every message (`aiot_reader_push`, `amber.mac.Reader.push`), as a core network's A-IoT function would ask a gNB. Amber's link tests use it (`amber.link.run_script`); a scenario cannot name it.
 
 ### Parameters of the link
 
-The scenario's `[phy]` table is a `LinkConfig` (`amber/link.py`). Every key is required, so the scenario file alone states what is simulated; the docstring lists them: R2D chips per symbol, D2R bit duration, the R_SFS values a paging offers, time slots per R2D, D2R coding, the D2R transport block (`d2r_tbs`, for example 5 bytes: a 2-byte header and the 3-byte SDU) and so on. A protocol does not set these; it reads them through `ctx.cfg`. `[reader]` holds `protocol`, `params`, `enable_sic` and `noise_figure_db`.
+The scenario's `[phy]` table is a `LinkConfig` (`amber/link.py`). Every key is required, so the scenario file alone states what is simulated; the docstring lists them: R2D chips per symbol, D2R bit duration, the R_SFS values a paging offers, time slots per R2D, D2R coding, the D2R transport block (`d2r_tbs`, for example 5 bytes: a 2-byte header and the 3-byte SDU) and so on. A protocol does not set these; it reads them through `ctx->cfg`. `[reader]` holds `protocol`, `params`, `enable_sic` and `noise_figure_db`.
 
 ---
 
-## The protocols in this folder
+## The protocols
 
 ### `broadcast`
 
@@ -201,7 +201,7 @@ Every run writes (see `amber/output.py` and `amber/summary.py`):
 - `reader_rx.csv`: every D2R it decoded, and every collision, with the Tag's node id and value from its Data SDU, the Random ID or AS ID, R_SFS, time slot and RSSI;
 - `tag<id>_tx.csv`: every D2R that Tag started;
 - `tag<id>_rx.csv`: every R2D Data SDU that Tag received;
-- the files the protocol adds with `Protocol.outputs()`: `adaptation.csv` and `q.csv` above.
+- the protocol's table, if it keeps one: `adaptation.csv` and `q.csv` above.
 
 `python -m amber.summary SIM_TIME_MS LOG_DIR` prints sent, decoded and collided packets, DER and throughput from these files.
 
@@ -209,73 +209,82 @@ Every run writes (see `amber/output.py` and `amber/summary.py`):
 
 ## Writing a new protocol
 
-Add one file, for example `amber/protocols/stalest.py`. It needs:
+A protocol is a step function in `openair2/LAYER2/AIOT_MAC/aiot_protocols.c` and an entry in its `PROTOCOLS` list:
 
-1. **A `Protocol` subclass** (from `.base`) with:
-   - `PARAMS`: parameter names and their defaults. The default's type is the type a value must have: write `5` for an integer and `0.5` for a number.
-   - `policy(self, ctx)`: the generator.
-   - Optionally `check()` to validate values (`self.positive("n")` requires at least 1, `self.within("v", 0, 15)` a range), and `outputs()` for extra CSV files, as `{file name: (columns, rows)}`.
-2. **`PROTOCOL = YourClass`** at the end of the file.
+```c
+{.name = "stalest", .n_params = 0, .step = stalest_step},
+```
 
-There is no Tag class to write. Whatever your protocol does, the Tags run the same 38.391 MAC.
+An entry can also declare parameters (`param_names`, `param_defaults`, and `param_is_int` for those that take whole numbers only), a `check` function for their ranges, and a table (`table`, `columns`) the protocol fills with `ctx->add_row()`. Rebuild the library (`scripts/build_aiot_lib.sh /path/to/oai`) and a scenario can name it. There is no Tag code to write: whatever your protocol does, the Tags run the same 38.391 MAC.
 
 Then add a demo: a folder `demo_experiments/stalest/` holding a scenario `stalest.toml` with `protocol = "stalest"` (copy another demo's file and change `[reader]`). `python -m amber.run demo_experiments/stalest/stalest.toml` runs it and writes its results next to it.
 
-### What a custom protocol may decide
+### What a protocol may decide
 
-Reader decisions over 38.391 fields: how many access occasions to offer, whom to page and with which variant, when to send an Access Trigger, which Msg1s to answer and which AS IDs to give, when to poll a known AS ID, when to NACK. Plus free content in the Data SDU of an R2D Upper Layer Data Transfer. It cannot add messages or change what a Tag does.
+Reader decisions over 38.391 fields: how many access occasions to offer, whom to page and with which variant, when to send an Access Trigger, when to poll a known AS ID, when to NACK. Plus free content in the Data SDU of an R2D Upper Layer Data Transfer. It cannot add messages or change what a Tag does.
 
 ### Example: page the Tag heard longest ago
 
 Each step pages, with CFA, the Tag whose data the Reader heard least recently, so a Tag that missed a turn is asked again first. A Tag that never has energy would be asked again at once every time and starve the others; add a back-off if that matters.
 
-```python
-# amber/protocols/stalest.py
-from .base import Protocol
+```c
+/* -- stalest: page, with CFA, the Tag heard longest ago ------------------------------------- */
 
+typedef struct {
+  int started;
+  aiot_sched_info_t sched;
+  int k; /* the Tag paged last */
+  double last[256]; /* when each Tag was last heard, in ms; -1: never */
+} stalest_t;
 
-class Stalest(Protocol):
-    PARAMS = {}
+static int stalest_step(void *state,
+                        const double *p,
+                        aiot_policy_ctx_t *ctx,
+                        const aiot_reader_heard_t *h1,
+                        const aiot_reader_heard_t *h2,
+                        aiot_policy_msg_t *next)
+{
+  stalest_t *s = state;
+  (void)p, (void)h2;
+  if (ctx->n_nodes == 0 || ctx->n_nodes > 256)
+    return 0; /* the protocol ends */
+  if (!s->started) {
+    s->started = 1;
+    if (aiot_link_cfa(ctx->cfg, 0, 0, &s->sched) < 0)
+      return 0;
+    for (int i = 0; i < ctx->n_nodes; i++)
+      s->last[i] = -1;
+  } else if (h1 && h1->n_answers > 0) {
+    s->last[s->k] = ctx->now_ms; /* the Tag paged last answered */
+  }
+  s->k = 0;
+  for (int i = 1; i < ctx->n_nodes; i++)
+    if (s->last[i] < s->last[s->k])
+      s->k = i; /* ties go to the first in order */
+  memset(next, 0, sizeof(*next));
+  next->msg.kind = AIOT_R2D_PAGING_CFA;
+  next->msg.sched = s->sched;
+  next->msg.has_paging_id = 1;
+  next->msg.paging_id_len = 16;
+  aiot_paging_id_of_node(ctx->node_ids[s->k], next->msg.paging_id);
+  return 1;
+}
 
-    def policy(self, ctx):
-        from ..iq import paging_id
-        sched = ctx.cfg.cfa()
-        last = {node: float("-inf") for node in self.node_ids}   # when each was last heard, in ms
-        while True:
-            node = min(self.node_ids, key=last.get)              # ties go to the first in order
-            heard = yield ctx.mac.paging_cfa(paging_id(node), sched)
-            for heard_node, _value in ctx.tags_in(heard):
-                last[heard_node] = ctx.now_ms
-
-
-PROTOCOL = Stalest
+_Static_assert(sizeof(stalest_t) <= AIOT_PROTOCOL_STATE_BYTES, "stalest state");
 ```
 
-### Example: NACK a join that got no data
-
-A Random ID Response gives an AS ID to each Msg1 it answers. If a Tag's data never arrives, NACK its AS ID, so the Tag drops it and joins again at the next paging. This is the body of a join step, inside a policy:
-
-```python
-first = ctx.mac.next_as_id
-h1, h2 = yield from self.access(ctx, msg)                 # msg: a CBRA paging or an Access Trigger
-if h2 is not None:
-    got = {a.as_id for a in h2.answers}
-    lost = [i for i in range(first, ctx.mac.next_as_id) if i not in got]
-    if lost:
-        yield ctx.mac.nack(lost)
-```
-
-For policies that adapt, read `adaptive_aloha.py` (decides once per frame) and `gen2_q.py` (decides after every occasion).
+For protocols that adapt, read `adaptive_aloha` (decides once per frame) and `gen2_q` (decides after every occasion) in the same file.
 
 ---
 
 ## Rules
 
-1. **Yield at least one message in every pass of your loop.** Time only passes when the Reader sends something. A loop that yields nothing never ends.
-2. **Choose only what 38.391 leaves to the Reader.** Build messages with `ctx.mac` and the Scheduling Info with `ctx.cfg`; a field the spec fixes (for example the R_SFS of an entry in a Random ID Response, which follows its position) is set by the helper.
-3. **Keep the policy deterministic given what it hears.** The Reader and every Tag may run in separate containers on OAI (`amber-reader`, `amber-tag`), and the same scenario and seed must give the same files. If you need randomness in the policy, use your own `random.Random(...)` with a fixed seed, not the `random` module's global functions. The conformance test reads each module for these.
+1. **Write a message every step, or end.** Time only passes when the Reader sends something.
+2. **Choose only what 38.391 leaves to the Reader.** Build the Scheduling Info with the `aiot_link_*()` helpers; a field the spec fixes (for example the R_SFS of an entry in a Random ID Response, which follows its position) is set by the library.
+3. **Keep the protocol deterministic given what it hears.** The Reader and every Tag may run in separate containers on OAI (`amber-reader`, `amber-tag`), and the same scenario and seed must give the same files. A protocol draws no random numbers.
 4. **Payloads are small.** A D2R carries `d2r_tbs` bytes (default 5), and the Tag's SDU is 3 of them.
-5. **Parameters have types and ranges.** Declare them in `PARAMS` with a default of the right type, and validate ranges in `check()`.
+5. **Parameters have types and ranges.** Declare them with their defaults, mark whole-number ones in `param_is_int`, and check ranges in `check`. Amber refuses a value of the wrong type when the scenario loads; the library refuses one out of range.
+6. **Keep the state within 8 KiB**, and check it with a `_Static_assert`, as the example does.
 
 A Tag hears an R2D only if it decodes it from the waveform, and a Tag's D2R reaches the Reader only if the Reader decodes it from the sum of every Tag's reflection. There is no formula for either: a Tag that is too far away does not hear, and two Tags on the same occasion collide.
 
@@ -283,10 +292,10 @@ A Tag hears an R2D only if it decodes it from the waveform, and a Tag's D2R reac
 
 ## Pitfalls
 
-- **A Transaction ID that did not change asks nobody.** A Tag that finished a CBRA with that Transaction ID ignores the paging. Call `ctx.next_tid()` for a new round, and reuse the ID only on purpose, as `registration` does.
-- **Play out every occasion you offer.** A paging offering 2^v occasions with `m = x * len(r_sfs)` per R2D needs more R2D messages (Access Triggers) for the rest. `self.r2d_per_paging` counts them. A Tag whose counter is past the occasions you play never answers in that round.
-- **Answer Msg1s right away.** A Tag listens for its Random ID Response only for a short window after its Msg1 (K Access Triggers or pagings, K = 1 by default). `self.access` answers at once. A paging in between marks the Tag's access as failed.
-- **A Random ID Response answers at most 8 Msg1s**, and no more than the R_SFS values the bit duration allows (`ctx.cfg.max_entries`). The rest get no response and try again at the next paging.
+- **A Transaction ID that did not change asks nobody.** A Tag that finished a CBRA with that Transaction ID ignores the paging. Take a new one for a new round, and reuse the ID only on purpose, as `registration` does.
+- **Play out every occasion you offer.** A paging offering 2^v occasions with `m = x * len(r_sfs)` per R2D needs more R2D messages (Access Triggers) for the rest. Each R2D carries `x * len(r_sfs)` occasions. A Tag whose counter is past the occasions you play never answers in that round.
+- **Answer Msg1s right away.** A Tag listens for its Random ID Response only for a short window after its Msg1 (K Access Triggers or pagings, K = 1 by default). The Reader answers an access message's Msg1s at once. A paging in between marks the Tag's access as failed.
+- **A Random ID Response answers at most 8 Msg1s**, and no more than the R_SFS values the bit duration allows (`aiot_link_max_entries()`). The rest get no response and try again at the next paging.
 - **A Tag that was off missed what was sent meanwhile.** Expect Tags whose counter or state is out of step, as with real devices.
 - **Collisions are counted per R2D.** `Heard.collided` covers one message. There is no running total; keep your own, as `adaptive_aloha` does with its frame totals.
 
@@ -298,13 +307,13 @@ From the repository root:
 
 ```bash
 # Everything
-PYTHONPATH=. python3 -m unittest discover -s tests
+PYTHONPATH=. python3 -m pytest tests
 
-# The protocols (found by listing this folder, so a new file is tested as soon as it is there)
-PYTHONPATH=. python3 -m unittest tests/test_protocols.py tests/test_protocol_conformance.py
+# The protocols (found by asking the library, so a new one is tested as soon as it is built in)
+PYTHONPATH=. python3 -m pytest tests/test_protocols.py tests/test_protocol_conformance.py
 
 # Run a demo: summary, plus the CSV files next to it
 python -m amber.run demo_experiments/stalest/stalest.toml
 ```
 
-`tests/test_protocols.py` runs each protocol and checks its parameters. `tests/test_protocol_conformance.py` runs every module in this folder on one machine and as separate Reader and Tag sessions, and expects the same records. The 38.391 Tag behaviour itself is covered by the `tests/test_phy*.py, tests/test_mac*.py, tests/test_link.py` files. A test can only cover what its scenario reaches, so the rules above still matter for code paths it doesn't run.
+`tests/test_protocols.py` runs each protocol and checks its parameters. `tests/test_protocol_conformance.py` checks every protocol the library lists. In OAI, `ctest -R test_aiot_mac` runs the Reader and every protocol against the device MAC over an ideal air, and the device MAC against 38.391 clause 5. A test can only cover what its scenario reaches, so the rules above still matter for code paths it doesn't run.

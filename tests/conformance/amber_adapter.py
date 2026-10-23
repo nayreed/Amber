@@ -173,12 +173,12 @@ class _Amble:
 # ----------------------------------------------------------------------------------------------
 # 38.391 MAC PDUs (vectors/mac_pdu.json)
 #
-# The vectors give each field as its raw codepoint; amber.mac.pdu works in values. The
-# Scheduling Info is turned into its bit string in table order and parsed by mac_pdu itself, so the
-# codepoint-to-value mapping under test is the module's, not this adapter's.
+# The vectors give each field as its raw codepoint; amber.mac (OAI's C MAC through ctypes) works in
+# values. The Scheduling Info is turned into its bit string in table order and parsed by the C
+# codec itself, so the codepoint-to-value mapping under test is the library's, not this adapter's.
 # ----------------------------------------------------------------------------------------------
 
-from amber.mac import pdu as mp  # noqa: E402
+from amber import mac  # noqa: E402
 
 _SCHED_FIELDS = {   # Table 6.2.1.6-1 row order, per carrier: (name, width)
     "paging_cbra": [("time_resource_cp", 1), ("bit_duration_cp", 3), ("freq_bitmap", 8), ("block_rep_cp", 1),
@@ -189,11 +189,12 @@ _SCHED_FIELDS = {   # Table 6.2.1.6-1 row order, per carrier: (name, width)
                  ("interval_cp", 2), ("seq_len_cp", 1), ("add_midamble_cp", 1), ("d2r_tbs_cp", 7)],
 }
 _SCHED_FIELDS["random_id_response"] = _SCHED_FIELDS["paging_cfa"]
-_VARIANT = {"paging_cbra": mp.SCHED_PAGING_CBRA, "paging_cfa": mp.SCHED_PAGING_CFA,
-            "random_id_response": mp.SCHED_RANDOM_ID_RESPONSE, "r2d_data": mp.SCHED_R2D_DATA}
-_KIND = {mp.AIoTPagingCBRA: "paging_cbra", mp.AIoTPagingCFA: "paging_cfa", mp.AccessTrigger: "access_trigger",
-         mp.RandomIDResponse: "random_id_response", mp.R2DUpperLayerDataTransfer: "r2d_data",
-         mp.NACKFeedback: "nack_feedback"}
+_VARIANT = {"paging_cbra": mac.SCHED_PAGING_CBRA, "paging_cfa": mac.SCHED_PAGING_CFA,
+            "random_id_response": mac.SCHED_RANDOM_ID_RESPONSE, "r2d_data": mac.SCHED_R2D_DATA}
+_KIND = {mac.PAGING_CBRA: "paging_cbra", mac.PAGING_CFA: "paging_cfa", mac.ACCESS_TRIGGER: "access_trigger",
+         mac.RANDOM_ID_RESPONSE: "random_id_response", mac.R2D_DATA: "r2d_data",
+         mac.NACK_FEEDBACK: "nack_feedback"}
+_R2D_TYPE = {1: "paging", 2: "access_trigger", 3: "random_id_response", 4: "r2d_data", 5: "nack_feedback"}
 
 
 def _sched_bits(carrier, cps):
@@ -205,11 +206,11 @@ def _sched_bits(carrier, cps):
 
 
 def _sched_obj(carrier, cps):
-    return mp.parse_sched_info(_sched_bits(carrier, cps), _VARIANT[carrier])
+    return mac.sched_parse(_sched_bits(carrier, cps), _VARIANT[carrier])
 
 
 def _sched_cps(carrier, sched):
-    bits, out, i = _bstr(sched.pack()), {}, 0
+    bits, out, i = _bstr(mac.sched_pack(sched)), {}, 0
     for name, w in _SCHED_FIELDS[carrier]:
         out[name] = bits[i:i + w] if name == "freq_bitmap" else int(bits[i:i + w], 2)
         i += w
@@ -217,16 +218,16 @@ def _sched_cps(carrier, sched):
 
 
 def _sched_l1(carrier, sched):
-    l1 = {"t_bit_tau": str(sched.t_bit_tau), "r_block": sched.r_block, "coded": sched.r_code,
-          "i_bit": sched.i_bit, "l_amble": sched.l_amble, "i_add": sched.i_add,
-          "r_sfs_valid": True}   # parse_sched_info refuses an invalid set, so a parsed one is valid
+    l1 = {"t_bit_tau": str(Fraction(sched.t_bit_num, sched.t_bit_den)), "r_block": sched.r_block,
+          "coded": bool(sched.r_code), "i_bit": sched.i_bit, "l_amble": sched.l_amble, "i_add": bool(sched.i_add),
+          "r_sfs_valid": True}   # sched_parse refuses an invalid set, so a parsed one is valid
     if carrier == "paging_cbra":
         l1["x"] = sched.x
     if carrier == "r2d_data":
-        l1["r_sfs"] = sched.r_sfs[0]
+        l1["r_sfs"] = sched.shifts[0]
     else:
-        l1["r_sfs_set"] = list(sched.r_sfs)
-    if sched.d2r_tbs is not None:
+        l1["r_sfs_set"] = sched.shifts
+    if sched.d2r_tbs:
         l1["d2r_tbs_bytes"] = sched.d2r_tbs
     return l1
 
@@ -235,81 +236,88 @@ def _pid(v):
     return None if v is None else _bits(v)
 
 
+def _fi(e):
+    v = e.get("frequency_index_cp")
+    return int(v, 2) if isinstance(v, str) else v
+
+
 class _MacMixin:
     def mac_pack(self, kind, f):
         if kind == "access_random_id":
-            return _bstr(mp.AccessRandomID(f["random_id"]).pack())
+            return _bstr(mac.pack_d2r(mac.access_random_id(f["random_id"])))
         if kind == "d2r_data":
-            m = mp.D2RUpperLayerDataTransfer(sdu=bytes.fromhex(f["sdu_hex"]), mdi=f["mdi"],
-                                             padding_bytes=f["padding_bytes"])
-            return _bstr(m.pack())
+            m = mac.d2r_data(bytes.fromhex(f["sdu_hex"]), mdi=f["mdi"], padding_bytes=f["padding_bytes"])
+            return _bstr(mac.pack_d2r(m))
         if kind == "access_trigger":
-            return _bstr(mp.AccessTrigger().pack())
-        tbs = f.get("r2d_tbs")
+            return _bstr(mac.pack_r2d(mac.access_trigger()))
+        tbs = f.get("r2d_tbs") or 0
         if kind == "nack_feedback":
-            return _bstr(mp.NACKFeedback(as_ids=list(f["as_ids"]), r2d_tbs=tbs).pack())
+            return _bstr(mac.pack_r2d(mac.nack(list(f["as_ids"]), tbs)))
         s = _sched_obj(kind, f["sched"])
         if kind == "paging_cbra":
-            m = mp.AIoTPagingCBRA(transaction_id=f["transaction_id"], sched=s, paging_id=_pid(f["paging_id"]),
-                                  num_access_occasions_code=f["n_access_occasions_exp"], k_bit=f["k_cp"], r2d_tbs=tbs)
+            m = mac.paging_cbra(f["transaction_id"], s, f["n_access_occasions_exp"], f["k_cp"],
+                                _pid(f["paging_id"]), tbs)
         elif kind == "paging_cfa":
-            m = mp.AIoTPagingCFA(paging_id=_pid(f["paging_id"]), sched=s, r2d_tbs=tbs)
+            m = mac.paging_cfa(_pid(f["paging_id"]), s, tbs)
         elif kind == "random_id_response":
-            ents = [mp.RandomIDEntry(e["echoed_random_id"], e.get("assigned_as_id"),
-                                     int(e["frequency_index_cp"], 2) if isinstance(e.get("frequency_index_cp"), str)
-                                     else e.get("frequency_index_cp")) for e in f["entries"]]
-            m = mp.RandomIDResponse(sched=s, entries=ents, r2d_tbs=tbs)
-            if bool(m.fipi) != bool(f["fipi"]):
+            ents = [(e["echoed_random_id"], e.get("assigned_as_id"), _fi(e)) for e in f["entries"]]
+            m = mac.random_id_response(ents, s, tbs)
+            if (ents[0][2] is not None) != bool(f["fipi"]):
                 raise ValueError("FIPI does not match the entries")
         elif kind == "r2d_data":
-            sdu = f.get("data_sdu_hex")
-            m = mp.R2DUpperLayerDataTransfer(as_id=f["as_id"], sched=s,
-                                             data_sdu=None if sdu is None else bytes.fromhex(sdu),
-                                             received_data_size=f.get("received_data_size"), r2d_tbs=tbs)
-            if m.ci != f["ci"]:
+            sdu, size = f.get("data_sdu_hex"), f.get("received_data_size")
+            if (sdu is None) == (size is None):
+                raise ValueError("exactly one of Data SDU and Received Data Size")
+            m = mac.r2d_data(f["as_id"], s, None if sdu is None else bytes.fromhex(sdu), size, tbs)
+            if int(sdu is not None) != f["ci"]:
                 raise ValueError("CI does not match the payload given")
         else:
             raise ValueError(kind)
-        return _bstr(m.pack())
+        return _bstr(mac.pack_r2d(m))
 
     def mac_parse(self, direction, bits):
         b = _bits(bits)
         if direction == "d2r":
             # the MAC knows from its own schedule which D2R message it expects; Msg1 is a bare 16 bits
             if len(b) == 16 and b[:2] != [0, 0]:
-                return "access_random_id", {"random_id": mp.parse_d2r(b, "access_random_id").random_id}
-            m = mp.parse_d2r(b, "upper_layer_data", d2r_tbs=len(b) // 8)
+                return "access_random_id", {"random_id": mac.parse_d2r(b, mac.D2R_ACCESS_RANDOM_ID).random_id}
+            m = mac.parse_d2r(b, mac.D2R_UPPER_LAYER_DATA, d2r_tbs=len(b) // 8)
             return "d2r_data", {"mdi": m.mdi, "sdu_hex": m.sdu.hex().upper(), "padding_bytes": m.padding_bytes}
-        m = mp.parse_r2d(b)
-        kind = _KIND[type(m)]
+        m = mac.parse_r2d(b)
+        if m is None:
+            raise ValueError("not an R2D message")
+        kind = _KIND[m.kind]
         if kind == "access_trigger":
             return kind, {"fill_bits": 0}
         f = {"r2d_tbs": m.r2d_tbs}
-        natural = len(m._body(0))
-        f["fill_bits"] = 8 * m.r2d_tbs - natural
+        f["fill_bits"] = 8 * m.r2d_tbs - mac.r2d_body_bits(m)
         if kind == "nack_feedback":
-            f["as_ids"] = list(m.as_ids)
+            f["as_ids"] = list(m.as_ids[:m.n_as_ids])
             return kind, f
         f["sched"] = _sched_cps(kind, m.sched)
+        pid = _bstr(m.paging_id[:m.paging_id_len]) if m.has_paging_id else None
         if kind == "paging_cbra":
             f.update(transaction_id=m.transaction_id, n_access_occasions_exp=m.num_access_occasions_code,
-                     k_cp=m.k_bit, paging_id=None if m.paging_id is None else _bstr(m.paging_id))
+                     k_cp=m.k_bit, paging_id=pid)
         elif kind == "paging_cfa":
-            f["paging_id"] = _bstr(m.paging_id)
+            f["paging_id"] = pid
         elif kind == "random_id_response":
-            f["fipi"] = int(m.fipi)
-            f["entries"] = [dict({"echoed_random_id": e.echoed_random_id, "assigned_as_id": e.assigned_as_id},
-                                 **({"frequency_index_cp": e.freq_index} if m.fipi else {})) for e in m.entries]
+            es = m.entries[:m.n_entries]
+            fipi = es[0].freq_index >= 0
+            f["fipi"] = int(fipi)
+            f["entries"] = [dict({"echoed_random_id": e.echoed_random_id,
+                                  "assigned_as_id": None if e.assigned_as_id < 0 else e.assigned_as_id},
+                                 **({"frequency_index_cp": e.freq_index} if fipi else {})) for e in es]
         elif kind == "r2d_data":
-            f.update(as_id=m.as_id, ci=m.ci)
-            if m.data_sdu is not None:
-                f["data_sdu_hex"] = m.data_sdu.hex().upper()
+            f.update(as_id=m.as_id, ci=m.has_sdu)
+            if m.has_sdu:
+                f["data_sdu_hex"] = bytes(m.sdu[:m.sdu_len]).hex().upper()
             else:
                 f["received_data_size"] = m.received_data_size
         return kind, f
 
     def sched_info_unpack(self, carrier, bits):
-        s = mp.parse_sched_info(_bits(bits), _VARIANT[carrier])
+        s = mac.sched_parse(_bits(bits), _VARIANT[carrier])
         return {"fields": _sched_cps(carrier, s), "l1": _sched_l1(carrier, s)}
 
     def cfa_bitmap_valid(self, bitmap):
@@ -322,32 +330,26 @@ class _MacMixin:
             return False
 
     def sched_info_length(self, carrier):
-        return mp.SCHED_WIDTH[_VARIANT[carrier]]
+        return mac.sched_width(_VARIANT[carrier])
 
     def d2r_data_padding_bytes(self, d2r_tbs_bytes, sdu_bytes):
-        return mp.D2RUpperLayerDataTransfer.for_tbs(bytes(sdu_bytes), d2r_tbs_bytes).padding_bytes
+        return mac.d2r_for_tbs(bytes(sdu_bytes), d2r_tbs_bytes).padding_bytes
 
     def n_access_occasions(self, field):
-        return mp.AIoTPagingCBRA(transaction_id=0, sched=_any_cbra(), num_access_occasions_code=field).num_access_occasions
+        return mac.num_access_occasions(field)
 
     def k_value(self, field):
-        return mp.AIoTPagingCBRA(transaction_id=0, sched=_any_cbra(), k_bit=field).k
+        return mac.k_value(field)
 
     def frequency_index(self, cp):
-        return mp.RandomIDEntry(1, None, int(cp, 2) if isinstance(cp, str) else cp).r_sfs
+        return mac.freq_index_r_sfs(int(cp, 2) if isinstance(cp, str) else cp)
 
     def r2d_message_type(self, t):
-        names = {mp.R2D_PAGING: "paging", mp.R2D_ACCESS_TRIGGER: "access_trigger",
-                 mp.R2D_RANDOM_ID_RESPONSE: "random_id_response", mp.R2D_UPPER_LAYER_DATA: "r2d_data",
-                 mp.R2D_NACK_FEEDBACK: "nack_feedback"}
-        return names.get(int(t, 2), "reserved")
+        n = int(t, 2)
+        return _R2D_TYPE[n] if mac.r2d_type_valid(n) else "reserved"
 
     def d2r_message_type(self, t):
         return "d2r_data" if _bstr(_bits(t)) == "00" else "reserved"
-
-
-def _any_cbra():
-    return mp.SchedulingInfo(mp.SCHED_PAGING_CBRA, Fraction(2), (8,), x=1)
 
 
 for _name, _fn in vars(_MacMixin).items():

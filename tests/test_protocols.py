@@ -1,14 +1,12 @@
 # tests/test_protocols.py
-"""Checks amber.protocols: each protocol checks its parameters, a scenario can name a protocol of its
-own by module path, and a short run of each protocol's scenario in tests/scenarios decodes Tag data
-(and, for gen2_q and adaptive_aloha, writes the file the protocol adds)."""
+"""Checks amber.protocols: the protocols of the A-IoT MAC library (OAI's C MAC) are what a scenario
+names, each checks its parameters, and a short run of each protocol's scenario in tests/scenarios
+decodes Tag data (and, for gen2_q and adaptive_aloha, writes the file the protocol adds)."""
 
 import csv
-import importlib
 import os
 import sys
 import tempfile
-import textwrap
 import unittest
 
 from amber import iq, protocols, scenario
@@ -23,6 +21,9 @@ class ParamsTest(unittest.TestCase):
         self.assertEqual(protocol.params, {"occasions_exp": 4})
         self.assertEqual(protocol.name, "broadcast")
         self.assertEqual(protocols.load("gen2_q", {}, [0]).params, {"q0": 4.0, "c": 0.3})
+        self.assertEqual(protocols.load("registration", {}, [0]).params, {"occasions_exp": 2})
+        self.assertEqual(protocols.load("adaptive_aloha", {}, [0]).params,
+                         {"start_exp": 4, "min_exp": 1, "max_exp": 6, "smoothing": 0.25, "occasions_per_contender": 2})
         self.assertEqual(protocols.load("unicast", {}, [0, 1]).node_ids, [0, 1])
 
     def test_unknown_parameter(self):
@@ -40,7 +41,7 @@ class ParamsTest(unittest.TestCase):
         self.assertEqual(protocols.load("gen2_q", {"q0": 3}, [0]).params["q0"], 3)
 
     def test_out_of_range(self):
-        with self.assertRaisesRegex(ValueError, "occasions_exp must be within"):
+        with self.assertRaisesRegex(ValueError, "protocol broadcast: occasions_exp must be within \\[0, 15\\]"):
             protocols.load("broadcast", {"occasions_exp": 16}, [0])
         with self.assertRaisesRegex(ValueError, "occasions_exp must be within"):
             protocols.load("registration", {"occasions_exp": -1}, [0])
@@ -57,37 +58,10 @@ class ParamsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "c must be in"):
             protocols.load("gen2_q", {"c": 0.0}, [0])
 
-    def test_within_and_positive_name_the_parameter(self):
-        protocol = protocols.load("broadcast", {}, [0])
-        protocol.within("occasions_exp", 0, 15)
-        with self.assertRaisesRegex(ValueError, "protocol broadcast: occasions_exp must be within \\[3, 4\\]"):
-            protocol.within("occasions_exp", 3, 4)
-
-    def test_occasions_code_and_the_pagings_to_play_them_out(self):
-        for n, v in ((1, 0), (2, 1), (3, 2), (4, 2), (5, 3)):
-            self.assertEqual(protocols.Protocol.occasions_code(n), v)
-        with self.assertRaises(ValueError):
-            protocols.Protocol.occasions_code(2 ** 16)
-
 
 class LoadTest(unittest.TestCase):
-    def setUp(self):
-        self.dir = tempfile.TemporaryDirectory()
-        sys.path.insert(0, self.dir.name)
-
-    def tearDown(self):
-        sys.path.remove(self.dir.name)
-        for name in [m for m in sys.modules if m.startswith("my_protocols")]:
-            del sys.modules[name]
-        self.dir.cleanup()
-
-    def write(self, name, source):
-        package = os.path.join(self.dir.name, "my_protocols")
-        os.makedirs(package, exist_ok=True)
-        open(os.path.join(package, "__init__.py"), "a").close()
-        with open(os.path.join(package, name + ".py"), "w") as f:
-            f.write(textwrap.dedent(source))
-        importlib.invalidate_caches()
+    def test_the_library_protocols(self):
+        self.assertEqual(sorted(protocols.names()), ["adaptive_aloha", "broadcast", "gen2_q", "registration", "unicast"])
 
     def test_unknown_protocol(self):
         with self.assertRaisesRegex(ValueError, "unknown protocol 'nope'"):
@@ -95,54 +69,10 @@ class LoadTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown protocol 'my_protocols.nope'"):
             protocols.load("my_protocols.nope", {}, [0])
 
-    def test_own_protocol_by_module_path(self):
-        self.write("poll", """
-            from amber.protocols import Protocol
-
-            class Poll(Protocol):
-                PARAMS = {"occasions_exp": 1}
-
-                def check(self):
-                    self.within("occasions_exp", 0, 3)
-
-                def policy(self, ctx):
-                    while True:
-                        _, h2 = yield from self.access(ctx, ctx.mac.paging_cbra(
-                            ctx.next_tid(), ctx.cfg.cbra(), n_occasions_code=self.params["occasions_exp"]))
-
-            PROTOCOL = Poll
-        """)
-        protocol = protocols.load("my_protocols.poll", {"occasions_exp": 2}, [0])
-        self.assertEqual((protocol.name, protocol.params), ("my_protocols.poll", {"occasions_exp": 2}))
-        with self.assertRaisesRegex(ValueError, "occasions_exp must be within"):
-            protocols.load("my_protocols.poll", {"occasions_exp": 9}, [0])
-
-    def test_own_protocol_runs_in_a_scenario(self):
-        self.write("poll", """
-            from amber.protocols import Protocol
-
-            class Poll(Protocol):
-                def policy(self, ctx):
-                    while True:
-                        yield from self.access(ctx, ctx.mac.paging_cbra(ctx.next_tid(), ctx.cfg.cbra(), n_occasions_code=0))
-
-            PROTOCOL = Poll
-        """)
-        s = scenario.load(os.path.join(SCENARIO_DIR, "single_node.toml"),
-                          {"reader.protocol": "my_protocols.poll", "reader.params": {}, "run.sim_time_ms": SHORT_MS})
-        with tempfile.TemporaryDirectory() as out:
-            reader, _ = iq.run(s, out)
-        self.assertGreater(len([r for r in reader.record.rx if r[2] == "data"]), 0)
-
-    def test_module_without_protocol(self):
-        self.write("empty", "X = 1\n")
-        with self.assertRaisesRegex(ValueError, "does not define PROTOCOL"):
-            protocols.load("my_protocols.empty", {}, [0])
-
-    def test_missing_import_inside_a_protocol_is_not_hidden(self):
-        self.write("broken", "import module_that_does_not_exist\n")
-        with self.assertRaises(ModuleNotFoundError):
-            protocols.load("my_protocols.broken", {}, [0])
+    def test_manual_is_not_a_scenario_protocol(self):
+        """manual sends only what a caller pushes, so a scenario cannot run it."""
+        with self.assertRaisesRegex(ValueError, "unknown protocol 'manual'"):
+            protocols.load("manual", {}, [0])
 
 
 def rows(path):

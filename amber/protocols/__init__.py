@@ -1,64 +1,90 @@
 # amber/protocols/__init__.py
 """Protocols: what a Reader sends, chosen by name in a scenario file.
 
-Everything on the air is 3GPP Rel-19 Ambient IoT. The Tag side is fixed by TS 38.391 (the A-IoT
-MAC, amber.mac) and is the same for every protocol. A protocol is only a Reader policy:
-it decides what 38.391 leaves to the Reader (whom to page, with how many access occasions, when to
-send an Access Trigger, which devices to answer in a Random ID Response, when to ask a known AS ID
-for data, when to NACK) and what goes in the Data SDU. It cannot add messages or change how Tags
-behave.
+Everything on the air is 3GPP Rel-19 Ambient IoT. The Tag side is fixed by TS 38.391 and is the
+same for every protocol. A protocol is only a Reader policy: it decides what 38.391 leaves to the
+Reader (whom to page, with how many access occasions, when to send an Access Trigger, which devices
+to answer in a Random ID Response, when to ask a known AS ID for data, when to NACK).
 
-A protocol is a subclass of Protocol, exported as PROTOCOL by its module. A scenario names one of
-Amber's own by its module name (``broadcast``, ``unicast``, ``registration``,
-``adaptive_aloha``, ``gen2_q``) or any other by its full module path, such as
-``my_package.my_protocol``.
-
-Its ``policy(ctx)`` is a generator. It yields one 38.391 R2D message at a time, built with
-``ctx.mac`` (a ReaderMAC) and the Scheduling Info helpers of ``ctx.cfg`` (``cbra``, ``ridr``,
-``cfa``, ``unicast``), and receives a ``link.Heard`` after each: the D2R answers decoded and
-the number of collisions. The Reader sends the next message as soon as every answer the last one
-can cause has arrived. ``Protocol.access`` is a helper for ``yield from``: a paging or Access
-Trigger, then a Random ID Response to the Msg1s it brought.
-
-amber/protocols/README.md is the guide: what each protocol here does, its parameters, how to
-write a new one, and the pitfalls. tests/test_protocols.py and tests/test_protocol_conformance.py
-run the protocols here.
+The protocols are part of the A-IoT MAC library (OAI's openair2/LAYER2/AIOT_MAC, in
+libaiot_phy.so), the same code a gNB or a UE runs as the Reader: ``registration``, ``broadcast``,
+``unicast``, ``gen2_q`` and ``adaptive_aloha``. A new protocol is written there, in C
+(aiot_protocols.c); amber/protocols/README.md says what each one does and how to add one.
 """
 
-import importlib
-from typing import Any, Mapping, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from .base import Protocol
+from .. import mac
 
-__all__ = ["Protocol", "load"]
+__all__ = ["Protocol", "load", "names"]
 
 
-def load(name: str, params: Mapping[str, Any], node_ids: Sequence[int]) -> Protocol:
-    """Import the protocol `name` and make it with the scenario's parameters and Tags.
+# sends only what a caller pushes (amber.mac.Reader.push): nothing a scenario could run
+CALLER_DRIVEN = {"manual"}
 
-    Parameters
-    ----------
-    name : str
-        A module of amber.protocols, or the full path of a module that defines PROTOCOL.
-    params : Mapping[str, Any]
-        The protocol's parameters from the scenario; any it does not take is an error.
-    node_ids : Sequence[int]
-        The scenario's Tags, in order.
 
-    Returns
-    -------
-    Protocol
-        The protocol, ready to build its base stations and Tags.
-    """
-    module_name = name if "." in name else f"{__name__}.{name}"
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError as e:
-        # Only a missing protocol module is the scenario's mistake; a missing import inside it is not.
-        if e.name is None or not (module_name == e.name or module_name.startswith(e.name + ".")):
-            raise
-        raise ValueError(f"unknown protocol {name!r}: no module {module_name}") from None
-    cls = getattr(module, "PROTOCOL", None)
-    if not (isinstance(cls, type) and issubclass(cls, Protocol)):
-        raise ValueError(f"protocol module {module_name} does not define PROTOCOL as a Protocol subclass")
-    return cls(params, node_ids)
+def names() -> List[str]:
+    """The protocols a scenario can name."""
+    return [n for n in mac.protocol_names() if n not in CALLER_DRIVEN]
+
+
+def _kind(value: Any) -> str:
+    if isinstance(value, bool):
+        return "a boolean"
+    if isinstance(value, int):
+        return "an integer"
+    if isinstance(value, float):
+        return "a number"
+    return f"a {type(value).__name__}"
+
+
+class Protocol:
+    """A protocol of the MAC library, as a scenario names it, with its parameters and Tags.
+
+    reader(cfg) makes the Reader that runs it on a link; outputs() gives the files its table
+    adds to a run (q.csv for gen2_q, adaptation.csv for adaptive_aloha)."""
+
+    def __init__(self, name: str, params: Mapping[str, Any], node_ids: Sequence[int]):
+        if name not in names():
+            raise ValueError(f"unknown protocol {name!r}: the A-IoT MAC has {', '.join(sorted(names()))}")
+        spec = mac.protocol_params(name)
+        self.name = name
+        unknown = sorted(set(params) - set(spec))
+        if unknown:
+            takes = ", ".join(spec) or "none"
+            raise ValueError(f"protocol {name} has no parameter {', '.join(unknown)} (it takes {takes})")
+        for key, value in params.items():
+            whole = spec[key][1]
+            ok = not isinstance(value, bool) and (isinstance(value, int) if whole else isinstance(value, (int, float)))
+            if not ok:
+                raise ValueError(f"protocol {name}: {key} must be {'an integer' if whole else 'a number'}, "
+                                 f"got {value!r}")
+        self.params: Dict[str, Any] = {k: (int(d) if whole else d) for k, (d, whole) in spec.items()}
+        self.params.update(params)
+        self.node_ids: List[int] = list(node_ids)
+        self._reader: Optional[mac.Reader] = None
+
+    def check(self, cfg) -> None:
+        """Raise ValueError if the protocol cannot run on the link cfg with these parameters."""
+        mac.Reader(cfg, self.name, self.params, self.node_ids)
+
+    def reader(self, cfg) -> "mac.Reader":
+        """The Reader that runs this protocol on the link cfg; outputs() reads its table."""
+        self._reader = mac.Reader(cfg, self.name, self.params, self.node_ids)
+        return self._reader
+
+    def outputs(self) -> Dict[str, Tuple[Sequence[str], List[Sequence[Any]]]]:
+        """Extra CSV files a run writes, as {file name: (columns, rows)}."""
+        t = self._reader.table() if self._reader is not None else None
+        return {t[0]: (tuple(t[1]), t[2])} if t else {}
+
+
+def load(name: str, params: Mapping[str, Any], node_ids: Sequence[int], cfg=None) -> Protocol:
+    """The protocol `name` with the scenario's parameters and Tags, checked by the MAC library on
+    the link settings cfg (amber.link.DEFAULT_LINK when None)."""
+    p = Protocol(name, params, node_ids)
+    if cfg is None:
+        from ..link import DEFAULT_LINK
+        cfg = DEFAULT_LINK
+    p.check(cfg)
+    return p
