@@ -1,0 +1,21 @@
+{
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "files": {
+  "sequences.json": 22,
+  "crc.json": 26,
+  "modulation.json": 21,
+  "tbcc.json": 8,
+  "r2d.json": 41,
+  "d2r_frame.json": 19,
+  "sched_info.json": 99,
+  "timing.json": 71,
+  "rf_limits.json": 85,
+  "frc_r2d.json": 7,
+  "mac_pdu.json": 74
+ }
+}

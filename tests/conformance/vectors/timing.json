@@ -1,0 +1,1144 @@
+{
+ "file": "timing.json",
+ "title": "D2R transmit timing (38.291 \u00a77.1.2, 38.191 \u00a79)",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "timing-delta_code_t1-001",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1"
+   },
+   "expect": {
+    "delta_code_tau": 0
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-002",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/2"
+   },
+   "expect": {
+    "delta_code_tau": 0
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-003",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/4"
+   },
+   "expect": {
+    "delta_code_tau": 0
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-004",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/8"
+   },
+   "expect": {
+    "delta_code_tau": 0
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-005",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/16"
+   },
+   "expect": {
+    "delta_code_tau": 0
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-006",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/32"
+   },
+   "expect": {
+    "delta_code_tau": 1
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-007",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/64"
+   },
+   "expect": {
+    "delta_code_tau": 1
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-008",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/128"
+   },
+   "expect": {
+    "delta_code_tau": 1
+   }
+  },
+  {
+   "id": "timing-delta_code_t1-009",
+   "kind": "delta_code_t1",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-1, p.16"
+   ],
+   "input": {
+    "t_chip_tau": "1/192"
+   },
+   "expect": {
+    "delta_code_tau": 1
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-001",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 1
+   },
+   "expect": {
+    "delta_code_tau": 2
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-002",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 32
+   },
+   "expect": {
+    "delta_code_tau": 2
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-003",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 33
+   },
+   "expect": {
+    "delta_code_tau": 4
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-004",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 64
+   },
+   "expect": {
+    "delta_code_tau": 4
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-005",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 65
+   },
+   "expect": {
+    "delta_code_tau": 8
+   }
+  },
+  {
+   "id": "timing-delta_code_t2-006",
+   "kind": "delta_code_t2",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-2, p.17"
+   ],
+   "input": {
+    "n_tbs_bytes": 125
+   },
+   "expect": {
+    "delta_code_tau": 8
+   }
+  },
+  {
+   "id": "timing-t_offset-001",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-002",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-003",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-004",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-005",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/2",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-006",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/2",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-007",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/2",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-008",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/2",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 10
+   }
+  },
+  {
+   "id": "timing-t_offset-009",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/4",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-010",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/4",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-011",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/4",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-012",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/4",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-013",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/8",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-014",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/8",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-015",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/8",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-016",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/8",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-017",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/16",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-018",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/16",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-019",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/16",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-020",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/16",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 5
+   }
+  },
+  {
+   "id": "timing-t_offset-021",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/32",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-022",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/32",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-023",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/32",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-024",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/32",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-025",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/64",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-026",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/64",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-027",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/64",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-028",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/64",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-029",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/128",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-030",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/128",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-031",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/128",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-032",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/128",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-033",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/192",
+    "m_chip_symb": 2
+   },
+   "expect": {
+    "t_offset_tau": 1
+   }
+  },
+  {
+   "id": "timing-t_offset-034",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/192",
+    "m_chip_symb": 6
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-035",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/192",
+    "m_chip_symb": 12
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_offset-036",
+   "kind": "t_offset",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Table 7.1.2-3, p.17"
+   ],
+   "input": {
+    "t_chip_tau": "1/192",
+    "m_chip_symb": 24
+   },
+   "expect": {
+    "t_offset_tau": "1/4"
+   }
+  },
+  {
+   "id": "timing-t_d2r_min-001",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1"
+   },
+   "expect": {
+    "us": "400"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-002",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/2"
+   },
+   "expect": {
+    "us": "200"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-003",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/4"
+   },
+   "expect": {
+    "us": "100"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-004",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/8"
+   },
+   "expect": {
+    "us": "50"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-005",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/16"
+   },
+   "expect": {
+    "us": "25"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-006",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/32"
+   },
+   "expect": {
+    "us": "25/2"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-007",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/64"
+   },
+   "expect": {
+    "us": "10"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-008",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/128"
+   },
+   "expect": {
+    "us": "10"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_d2r_min-009",
+   "kind": "t_d2r_min",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.3, p.20"
+   ],
+   "input": {
+    "t_chip_tau": "1/192"
+   },
+   "expect": {
+    "us": "10"
+   },
+   "note": "max{3 T_chip, 10 us}"
+  },
+  {
+   "id": "timing-t_r2d-001",
+   "kind": "t_r2d",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 9A.2.2-1/-3",
+    "TS 38.291 V19.3.0 \u00a77.1.2"
+   ],
+   "input": {
+    "kind": "msg1",
+    "t_bit_tau": "2",
+    "r_sfs_set": [
+     8
+    ],
+    "r_sfs_own": 8,
+    "m_chip_symb": 2,
+    "n_tbs_bytes": 2,
+    "coded": true,
+    "earlier_occasion": false,
+    "d2r_bits": 128
+   },
+   "expect": {
+    "tau": "5",
+    "us": "2000/3",
+    "te_us": "200/3"
+   },
+   "note": "9A Msg1: 1 access occasion, R_SFS set {8}, T_bit 2 tau. T'_chip = 2tau/16 = tau/8, T_offset = 5 tau; no earlier occasion, so T_R->D = T_offset Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-t_r2d-002",
+   "kind": "t_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.2, p.16"
+   ],
+   "input": {
+    "kind": "msg1",
+    "t_bit_tau": "2",
+    "r_sfs_set": [
+     8
+    ],
+    "r_sfs_own": 8,
+    "m_chip_symb": 2,
+    "n_tbs_bytes": 2,
+    "coded": true,
+    "earlier_occasion": true,
+    "d2r_bits": 128
+   },
+   "expect": {
+    "tau": "1305/4",
+    "us": "43500",
+    "te_us": "4350"
+   },
+   "note": "Msg1 with an earlier access occasion, same parameters. T_R->D = 1.25 (T_offset + M_chip T_chip); M_chip T_chip = V T_bit = 128 x 2 tau Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-t_r2d-003",
+   "kind": "t_r2d",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.191 V19.4.0 Table 9A.2.2-3",
+    "TS 38.291 V19.3.0 \u00a77.1.2 Table 7.1.2-1"
+   ],
+   "input": {
+    "kind": "msg2resp",
+    "t_bit_tau": "2",
+    "r_sfs_set": [
+     8
+    ],
+    "r_sfs_own": 8,
+    "m_chip_symb": 2,
+    "n_tbs_bytes": 12,
+    "coded": true,
+    "earlier_occasion": false
+   },
+   "expect": {
+    "tau": "5",
+    "us": "2000/3",
+    "te_us": "200/3"
+   },
+   "note": "9A Msg3 after Msg2: assumes Msg2 offers R_SFS set {8}. N_TBS = 12 bytes <= 32 and answers a Random ID Response, so T_offset + Delta_code (Table 7.1.2-1: 0 at tau/8). Msg2's own frequency indication is not given in 9A, so the set {8} is an assumption. Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-t_r2d-004",
+   "kind": "t_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.2 Tables 7.1.2-1, 7.1.2-3"
+   ],
+   "input": {
+    "kind": "cfa",
+    "t_bit_tau": "1/32",
+    "r_sfs_set": [
+     1
+    ],
+    "r_sfs_own": 1,
+    "m_chip_symb": 6,
+    "n_tbs_bytes": 10,
+    "coded": true,
+    "earlier_occasion": false
+   },
+   "expect": {
+    "tau": "5/4",
+    "us": "500/3",
+    "te_us": "50/3"
+   },
+   "note": "CFA, N_TBS<=32, T_bit tau/32 R_SFS 1 (chip tau/64), M=6. T_offset tau/4 (M=6) + Delta_code tau (chip tau/64) Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-t_r2d-005",
+   "kind": "t_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.2 Tables 7.1.2-2, 7.1.2-3"
+   ],
+   "input": {
+    "kind": "other",
+    "t_bit_tau": "1",
+    "r_sfs_set": [
+     4
+    ],
+    "r_sfs_own": 4,
+    "m_chip_symb": 12,
+    "n_tbs_bytes": 40,
+    "coded": true,
+    "earlier_occasion": false
+   },
+   "expect": {
+    "tau": "9",
+    "us": "1200",
+    "te_us": "120"
+   },
+   "note": "R2D data transfer, 40 bytes coded. chip tau/8: T_offset 5 tau, Delta_code 4 tau for 32<N<=64 Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-t_r2d-006",
+   "kind": "t_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.2"
+   ],
+   "input": {
+    "kind": "other",
+    "t_bit_tau": "1/2",
+    "r_sfs_set": [
+     2
+    ],
+    "r_sfs_own": 2,
+    "m_chip_symb": 2,
+    "n_tbs_bytes": 100,
+    "coded": false,
+    "earlier_occasion": false
+   },
+   "expect": {
+    "tau": "5",
+    "us": "2000/3",
+    "te_us": "200/3"
+   },
+   "note": "R2D data transfer, 100 bytes, no FEC. no channel coding: T_R->D = T_offset (chip tau/8 -> 5 tau) Te = 10% x T_SFO with T_SFO = T_R->D (38.191 \u00a79.2.1 and the transition edge at the end of the last chip, 38.291 \u00a77.2.4)."
+  },
+  {
+   "id": "timing-timing_check-001",
+   "kind": "timing_check",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79.2.1, p.20",
+    "TS 38.191 V19.4.0 \u00a79A.2.3, p.22"
+   ],
+   "input": {
+    "t_r2d_us": "2000/3",
+    "te_us": "200/3",
+    "measured_us": "2000/3"
+   },
+   "expect": {
+    "pass": true
+   },
+   "note": "start exactly at the reference point"
+  },
+  {
+   "id": "timing-timing_check-002",
+   "kind": "timing_check",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79A.2.3, p.22"
+   ],
+   "input": {
+    "t_r2d_us": "2000/3",
+    "te_us": "200/3",
+    "measured_us": "2200/3"
+   },
+   "expect": {
+    "pass": true
+   },
+   "note": "pass iff |measured - T_R->D| <= Te, here Te = 200/3 us"
+  },
+  {
+   "id": "timing-timing_check-003",
+   "kind": "timing_check",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79A.2.3, p.22"
+   ],
+   "input": {
+    "t_r2d_us": "2000/3",
+    "te_us": "200/3",
+    "measured_us": "1800/3"
+   },
+   "expect": {
+    "pass": true
+   },
+   "note": "pass iff |measured - T_R->D| <= Te, here Te = 200/3 us"
+  },
+  {
+   "id": "timing-timing_check-004",
+   "kind": "timing_check",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79A.2.3, p.22"
+   ],
+   "input": {
+    "t_r2d_us": "2000/3",
+    "te_us": "200/3",
+    "measured_us": "2201/3"
+   },
+   "expect": {
+    "pass": false
+   },
+   "note": "pass iff |measured - T_R->D| <= Te, here Te = 200/3 us"
+  },
+  {
+   "id": "timing-timing_check-005",
+   "kind": "timing_check",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 \u00a79A.2.3, p.22"
+   ],
+   "input": {
+    "t_r2d_us": "2000/3",
+    "te_us": "200/3",
+    "measured_us": "1799/3"
+   },
+   "expect": {
+    "pass": false
+   },
+   "note": "pass iff |measured - T_R->D| <= Te, here Te = 200/3 us"
+  }
+ ]
+}

@@ -1,5 +1,7 @@
-"""Tests of the Rel-19 PHY (amber.phy, amber.mac): R2D and D2R end to end."""
+"""Tests of the Rel-19 PHY (amber.phy, amber.mac): spec conformance vectors, then R2D and D2R end to end."""
 
+import os
+import sys
 from fractions import Fraction
 
 import numpy as np
@@ -7,6 +9,21 @@ import pytest
 
 from amber.phy import aiot
 from amber.phy import params
+
+HERE = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(HERE, "conformance"))
+
+
+def test_spec_conformance_vectors():
+    """Every vector from the spec (tests/conformance/vectors) that this PHY and MAC answer must pass.
+    An adapter method that is missing makes its vectors SKIP; one that raises fails the test."""
+    from aiot_conformance.runner import run
+    from amber_adapter import AmberAdapter
+
+    totals, rows = run(AmberAdapter(), os.path.join(HERE, "conformance", "vectors"), None, False)
+    assert totals["FAIL"] == 0, [r for r in rows if r[0] == "FAIL"]
+    assert totals["PASS"] >= 340
+
 
 # ----------------------------------------------------------------------------------------------
 # R2D

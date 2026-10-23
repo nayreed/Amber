@@ -1,0 +1,331 @@
+{
+ "file": "sequences.json",
+ "title": "Constants, fixed sequences, m-sequences",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "sequences-constant-001",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.3.1, p.14"
+   ],
+   "input": {
+    "name": "R2D_SIP"
+   },
+   "expect": {
+    "value": "11001000"
+   }
+  },
+  {
+   "id": "sequences-constant-002",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.3.2, p.14"
+   ],
+   "input": {
+    "name": "R2D_CAP"
+   },
+   "expect": {
+    "value": "1010"
+   }
+  },
+  {
+   "id": "sequences-constant-003",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.4, p.14"
+   ],
+   "input": {
+    "name": "R2D_POSTAMBLE"
+   },
+   "expect": {
+    "value": "1111"
+   }
+  },
+  {
+   "id": "sequences-constant-004",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.3.1, p.14"
+   ],
+   "input": {
+    "name": "N_SIP"
+   },
+   "expect": {
+    "value": 8
+   }
+  },
+  {
+   "id": "sequences-constant-005",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.3.2, p.14"
+   ],
+   "input": {
+    "name": "N_CAP"
+   },
+   "expect": {
+    "value": 4
+   }
+  },
+  {
+   "id": "sequences-constant-006",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.1, p.8"
+   ],
+   "input": {
+    "name": "KAPPA"
+   },
+   "expect": {
+    "value": 64
+   }
+  },
+  {
+   "id": "sequences-constant-007",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.3.1, p.9"
+   ],
+   "input": {
+    "name": "R2D_SCS_HZ"
+   },
+   "expect": {
+    "value": 15000
+   }
+  },
+  {
+   "id": "sequences-constant-008",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.3.3, p.9"
+   ],
+   "input": {
+    "name": "N_SC_RB"
+   },
+   "expect": {
+    "value": 12
+   }
+  },
+  {
+   "id": "sequences-constant-009",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15"
+   ],
+   "input": {
+    "name": "N_U_OVER_KAPPA"
+   },
+   "expect": {
+    "value": 2048
+   }
+  },
+  {
+   "id": "sequences-constant-010",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15"
+   ],
+   "input": {
+    "name": "N_CP_L0_OVER_KAPPA"
+   },
+   "expect": {
+    "value": 160
+   }
+  },
+  {
+   "id": "sequences-constant-011",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a76.2.7, p.15"
+   ],
+   "input": {
+    "name": "N_CP_OTHER_OVER_KAPPA"
+   },
+   "expect": {
+    "value": 144
+   }
+  },
+  {
+   "id": "sequences-constant-012",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "name": "CRC16_POLY"
+   },
+   "expect": {
+    "value": "x^16+x^12+x^5+1"
+   }
+  },
+  {
+   "id": "sequences-constant-013",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18"
+   ],
+   "input": {
+    "name": "CRC6_POLY"
+   },
+   "expect": {
+    "value": "x^6+x^5+1"
+   }
+  },
+  {
+   "id": "sequences-constant-014",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.1, p.18 (systematic form, remainder-zero definition)"
+   ],
+   "input": {
+    "name": "CRC_ZERO_INIT"
+   },
+   "expect": {
+    "value": true
+   }
+  },
+  {
+   "id": "sequences-constant-015",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.2, p.18"
+   ],
+   "input": {
+    "name": "TBCC_CONSTRAINT_LENGTH"
+   },
+   "expect": {
+    "value": 7
+   }
+  },
+  {
+   "id": "sequences-constant-016",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 Figure 8.2-1, p.19"
+   ],
+   "input": {
+    "name": "TBCC_GENERATORS_OCTAL"
+   },
+   "expect": {
+    "value": [
+     "133",
+     "171",
+     "165"
+    ]
+   }
+  },
+  {
+   "id": "sequences-constant-017",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
+   ],
+   "input": {
+    "name": "LAMBLE_SHORT"
+   },
+   "expect": {
+    "value": 7
+   }
+  },
+  {
+   "id": "sequences-constant-018",
+   "kind": "constant",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
+   ],
+   "input": {
+    "name": "LAMBLE_LONG"
+   },
+   "expect": {
+    "value": 31
+   }
+  },
+  {
+   "id": "sequences-constant-019",
+   "kind": "constant",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.2, p.8"
+   ],
+   "input": {
+    "name": "TAU_US"
+   },
+   "expect": {
+    "value": "400/3",
+    "approx": 133.33333333333334
+   },
+   "note": "tau = 2e6/15000 microseconds, exact fraction 400/3 us"
+  },
+  {
+   "id": "sequences-constant-020",
+   "kind": "constant",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a74.3.1, p.8"
+   ],
+   "input": {
+    "name": "TC_US"
+   },
+   "expect": {
+    "value": "25/49152",
+    "approx": 0.0005086263020833334
+   },
+   "note": "Tc = 1/(480e3*4096) s, in microseconds"
+  },
+  {
+   "id": "sequences-m_sequence-001",
+   "kind": "m_sequence",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.3, p.19"
+   ],
+   "input": {
+    "length": 7
+   },
+   "expect": {
+    "bits": "1001110"
+   },
+   "note": "Literal sequence in the text; also follows from x[m+3]=x[m+2]+x[m], x0..2 = 1,0,0"
+  },
+  {
+   "id": "sequences-m_sequence-002",
+   "kind": "m_sequence",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.3, p.19"
+   ],
+   "input": {
+    "length": 31
+   },
+   "expect": {
+    "bits": "0100100001010111011000111110011"
+   },
+   "note": "Literal sequence in the text; also follows from x[m+5]=x[m+3]+x[m], x0..4 = 0,1,0,0,1"
+  }
+ ]
+}

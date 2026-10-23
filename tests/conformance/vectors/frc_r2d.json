@@ -1,0 +1,195 @@
+{
+ "file": "frc_r2d.json",
+ "title": "R2D fixed reference channels",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "frc_r2d-frc_r2d-001",
+   "kind": "frc_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.194 V19.3.0 Annex B.2, p.36",
+    "TS 38.291 V19.3.0 \u00a76.2.5, p.14"
+   ],
+   "input": {
+    "frc": "A-FR1-B1-1",
+    "prb": 1,
+    "scs_khz": 15,
+    "m_chip_symb": 6,
+    "tbs_bits": 96,
+    "crc_bits": 16,
+    "sip_bits": 8,
+    "cap_bits": 4,
+    "postamble_bits": 4
+   },
+   "expect": {
+    "n_pad": 2,
+    "stated_n_pad": 2,
+    "n_chips": 242,
+    "n_ofdm_symbols": 41,
+    "n_rb_min": 1,
+    "prb_ok": true
+   },
+   "note": "stated_n_pad is the printed Annex B.2 value. It agrees with \u00a76.2.5."
+  },
+  {
+   "id": "frc_r2d-frc_r2d-002",
+   "kind": "frc_r2d",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.194 V19.3.0 Annex B.2, p.36",
+    "TS 38.291 V19.3.0 \u00a76.2.5, p.14"
+   ],
+   "input": {
+    "frc": "A-FR1-B1-2",
+    "prb": 2,
+    "scs_khz": 15,
+    "m_chip_symb": 12,
+    "tbs_bits": 96,
+    "crc_bits": 16,
+    "sip_bits": 8,
+    "cap_bits": 4,
+    "postamble_bits": 4
+   },
+   "expect": {
+    "n_pad": 8,
+    "stated_n_pad": 8,
+    "n_chips": 248,
+    "n_ofdm_symbols": 22,
+    "n_rb_min": 2,
+    "prb_ok": true
+   },
+   "note": "stated_n_pad is the printed Annex B.2 value. It agrees with \u00a76.2.5."
+  },
+  {
+   "id": "frc_r2d-frc_r2d-003",
+   "kind": "frc_r2d",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.194 V19.3.0 Annex B.2, p.36",
+    "TS 38.291 V19.3.0 \u00a76.2.5, p.14"
+   ],
+   "input": {
+    "frc": "A-FR1-B1-3",
+    "prb": 3,
+    "scs_khz": 15,
+    "m_chip_symb": 24,
+    "tbs_bits": 96,
+    "crc_bits": 16,
+    "sip_bits": 8,
+    "cap_bits": 4,
+    "postamble_bits": 4
+   },
+   "expect": {
+    "n_pad": 12,
+    "stated_n_pad": 8,
+    "n_chips": 272,
+    "n_ofdm_symbols": 13,
+    "n_rb_min": 3,
+    "prb_ok": true
+   },
+   "note": "stated_n_pad is the printed Annex B.2 value. It differs from the \u00a76.2.5 result; see r2d.json spec_inconsistency."
+  },
+  {
+   "id": "frc_r2d-frc_r2d-004",
+   "kind": "frc_r2d",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.194 V19.3.0 Annex B.2, p.36",
+    "TS 38.291 V19.3.0 \u00a76.2.5, p.14"
+   ],
+   "input": {
+    "frc": "A-FR1-B1-4",
+    "prb": 4,
+    "scs_khz": 15,
+    "m_chip_symb": 24,
+    "tbs_bits": 96,
+    "crc_bits": 16,
+    "sip_bits": 8,
+    "cap_bits": 4,
+    "postamble_bits": 4
+   },
+   "expect": {
+    "n_pad": 12,
+    "stated_n_pad": 8,
+    "n_chips": 272,
+    "n_ofdm_symbols": 13,
+    "n_rb_min": 3,
+    "prb_ok": true
+   },
+   "note": "stated_n_pad is the printed Annex B.2 value. It differs from the \u00a76.2.5 result; see r2d.json spec_inconsistency."
+  },
+  {
+   "id": "frc_r2d-frc_r2d-005",
+   "kind": "frc_r2d",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.191 V19.4.0 Table B.2.1-1, p.24",
+    "TS 38.191 V19.4.0 Table B.2.2-1, p.25"
+   ],
+   "input": {
+    "frc": "38.191 B.2.1 (REFSENS)",
+    "prb": 1,
+    "m_chip_symb": 6,
+    "tbs_bits": "size of the CFA paging MAC PDU",
+    "crc_bits": 16
+   },
+   "expect": {
+    "prb_ok": true
+   },
+   "note": "TBS is 'depending on the size of the MAC PDU of A-IoT CFA paging message', so no fixed numbers. The CRC is listed as 16 bits; by the A>24 rule that holds when the PDU is longer than 24 bits."
+  },
+  {
+   "id": "frc_r2d-frc_r2d-006",
+   "kind": "frc_r2d",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.191 V19.4.0 Table B.2.2-1, p.25"
+   ],
+   "input": {
+    "frc": "38.191 B.2.2 (max input)",
+    "prb": 3,
+    "m_chip_symb": 24,
+    "padding_per_symbol_excluding_sip_and_postamble": 2
+   },
+   "expect": {
+    "prb_ok": true,
+    "padding_per_symbol": 2
+   },
+   "note": "The 2 chips per symbol are the forced-1 chips of 38.291 \u00a76.2.5"
+  },
+  {
+   "id": "frc_r2d-frc_d2r_power-001",
+   "kind": "frc_d2r_power",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.191 V19.4.0 Table B.3.1-1, p.26"
+   ],
+   "input": {
+    "frc": "38.191 B.3.1",
+    "bw_khz": 15,
+    "crc_bits": 16,
+    "fec": "1/3",
+    "r_block": 1,
+    "l_amble": 31,
+    "i_bit": 48,
+    "i_add": false,
+    "shift_khz": 480,
+    "modulation": "BPSK or OOK"
+   },
+   "expect": {
+    "r_sfs_at_t_bit": {
+     "2tau": 128
+    }
+   },
+   "note": "480 kHz at 15 kHz nominal bandwidth (T_bit = 2 tau) is R_SFS = 128 (shift = R_SFS/T_bit)",
+   "origin_note": "shift to R_SFS is derived"
+  }
+ ]
+}

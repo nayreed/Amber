@@ -1,0 +1,508 @@
+{
+ "file": "modulation.json",
+ "title": "Line encoding and modulation mapping",
+ "schema": 1,
+ "specs": {
+  "38.291": "V19.3.0 (2026-04)",
+  "38.391": "V19.0.0 (2025-10)",
+  "38.191": "V19.4.0 (2026-09)",
+  "38.194": "V19.3.0 (2026-08)"
+ },
+ "vectors": [
+  {
+   "id": "modulation-line_encode-001",
+   "kind": "line_encode",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.5, p.19"
+   ],
+   "input": {
+    "bits": "0"
+   },
+   "expect": {
+    "bits": "10"
+   },
+   "note": "x_j=(2j-1)v+(1-j): 0 -> 10, 1 -> 01"
+  },
+  {
+   "id": "modulation-line_encode-002",
+   "kind": "line_encode",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.5, p.19"
+   ],
+   "input": {
+    "bits": "1"
+   },
+   "expect": {
+    "bits": "01"
+   },
+   "note": "x_j=(2j-1)v+(1-j): 0 -> 10, 1 -> 01"
+  },
+  {
+   "id": "modulation-line_encode-003",
+   "kind": "line_encode",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.5, p.19"
+   ],
+   "input": {
+    "bits": "10110010"
+   },
+   "expect": {
+    "bits": "0110010110100110"
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-001",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 1,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     0
+    ]
+   },
+   "note": "x_{j+2K}, j=0,1, K=0..R_SFS-1; BPSK values are +/-1"
+  },
+  {
+   "id": "modulation-sfs_modulate-002",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 1,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-003",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 2,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     0,
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-004",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 2,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     0,
+     1,
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-005",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 4,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-006",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 4,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-007",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 8,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-008",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 8,
+    "mod": "OOK"
+   },
+   "expect": {
+    "symbols": [
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1,
+     0,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-009",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 1,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     -1
+    ]
+   },
+   "note": "x_{j+2K}, j=0,1, K=0..R_SFS-1; BPSK values are +/-1"
+  },
+  {
+   "id": "modulation-sfs_modulate-010",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 1,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     -1,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-011",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 2,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     -1,
+     1,
+     -1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-012",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 2,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     -1,
+     1,
+     -1,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-013",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 4,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-014",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 4,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-015",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "0",
+    "r_sfs": 8,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-016",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.2, p.19"
+   ],
+   "input": {
+    "bits": "1",
+    "r_sfs": 8,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1
+    ]
+   }
+  },
+  {
+   "id": "modulation-sfs_modulate-017",
+   "kind": "sfs_modulate",
+   "origin": "spec-derived",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.1, \u00a78.4.2"
+   ],
+   "input": {
+    "bits": "1001",
+    "r_sfs": 2,
+    "mod": "BPSK"
+   },
+   "expect": {
+    "symbols": [
+     -1,
+     1,
+     -1,
+     1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     1,
+     -1,
+     -1,
+     1,
+     -1,
+     1
+    ]
+   },
+   "note": "multi-bit input"
+  },
+  {
+   "id": "modulation-r2d_ook_map-001",
+   "kind": "r2d_ook_map",
+   "origin": "spec-literal",
+   "cite": [
+    "TS 38.291 V19.3.0 \u00a78.4.1.2, p.19"
+   ],
+   "input": {
+    "chips": "1100101"
+   },
+   "expect": {
+    "symbols": [
+     1,
+     1,
+     0,
+     0,
+     1,
+     0,
+     1
+    ]
+   },
+   "note": "x_i = b_i"
+  }
+ ]
+}
