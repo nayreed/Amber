@@ -124,8 +124,8 @@ No parameters.
 The Reader keeps **one Transaction ID for the whole run**. A Tag that has joined ignores later pagings with it (38.391 §5.2). A Tag whose access failed (its Msg1 collided, or it got no Random ID Response) tries again at the next paging (§5.5.3).
 
 **One frame:**
-1. **Join.** A CBRA paging offering 2^`occasions_exp` occasions, and its Access Triggers. Every Msg1 decoded is answered with a Random ID Response that gives the Tag an AS ID and brings its data.
-2. **Poll.** An R2D Upper Layer Data Transfer to every AS ID given out so far (received size 0), which asks that Tag alone for data.
+1. **Join.** A CBRA paging offering 2^`occasions_exp` occasions, and its Access Triggers. Every Msg1 decoded is answered with a Random ID Response that gives the Tag an AS ID and brings its data. A Tag whose data is heard has joined. The AS IDs whose data is not heard (it collided or faded) get a NACK Feedback right after: the Tag releases its AS ID, finds its procedure failed (§5.5.2) and joins again at the next paging.
+2. **Poll.** An R2D Upper Layer Data Transfer to every Tag that has joined (received size 0), which asks that Tag alone for data.
 
 | Parameter | Default | Meaning |
 |---|---|---|
