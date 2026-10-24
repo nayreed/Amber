@@ -7,6 +7,7 @@ import csv
 import os
 import socket
 import struct
+import threading
 
 import pytest
 
@@ -101,3 +102,97 @@ def test_the_sink_writes_each_message_and_counts_the_lost(tmp_path):
     assert rows[1][:8] == ["1062.0", "paging_cbra", "msg1", "-1", "-1", str(0xBEEF), "2", "1"]
     assert [r[3] for r in rows[2:]] == ["3", "5"]
     assert float(rows[1][8]) == sink.dbfs(1.0e3)
+
+
+def test_the_c_constants_amber_copies_match_the_library():
+    b = mac.pack_tag_data(msg1())
+    assert len(b) == mac.TAG_DATA_FIXED_BYTES        # a msg1 has no SDU
+    assert mac.node_msg_type(b) == mac.NODE_MSG_TAG_DATA
+    assert len(mac.pack_tag_data(data())) - len(make_sdu(3, 42)) == mac.TAG_DATA_FIXED_BYTES
+
+
+@pytest.mark.parametrize("bad", [msg1(seq=-1), msg1(seq=2**32), msg1(seq=2**32 + 5)])
+def test_a_seq_that_is_not_32_bits_is_refused(bad):
+    with pytest.raises(ValueError, match="32-bit"):
+        mac.pack_tag_data(bad)
+
+
+def test_an_answer_of_unknown_kind_is_refused():
+    m = data()
+    m.answer.kind = "collision"
+    with pytest.raises(ValueError, match="kind"):
+        mac.pack_tag_data(m)
+
+
+def counts(tmp_path, seqs, senders=None):
+    """(received, lost, reordered, duplicates) and the seqs written, after the sink took seqs."""
+    with sink.Sink(str(tmp_path), "127.0.0.1", 0) as s:
+        for i, q in enumerate(seqs):
+            assert s.take(mac.pack_tag_data(msg1(seq=q, random_id=q & 0xFFFF)), None if senders is None else senders[i])
+    with open(os.path.join(tmp_path, "tag_data.csv"), newline="") as f:
+        written = [int(r[5]) for r in list(csv.reader(f))[1:]]
+    return (s.received, s.lost, s.reordered, s.duplicates), written
+
+
+@pytest.mark.parametrize("seqs, expect", [
+    ([0, 1, 2, 3], (4, 0, 0, 0)),
+    ([0, 2, 1, 3], (4, 0, 1, 0)),           # reordered: lost once, then found
+    ([0, 3, 1, 4], (4, 1, 1, 0)),           # 2 stays lost
+    ([5, 6, 7], (3, 0, 0, 0)),              # the sink started late
+    ([0, 1, 1, 2], (3, 0, 0, 1)),           # a duplicate is not written again
+    ([0, 2, 2, 1], (3, 0, 1, 1)),
+    ([2**32 - 2, 2**32 - 1, 0, 1], (4, 0, 0, 0)),     # seq wraps
+    ([2**32 - 1, 1, 0], (3, 0, 1, 0)),
+    ([100000, 3, 4], (3, 0, 0, 0)),         # far behind: the sender started again
+])
+def test_the_sink_counts_lost_late_and_duplicate_seqs(tmp_path, seqs, expect):
+    got, written = counts(tmp_path, seqs)
+    assert got == expect
+    assert len(written) == expect[0]
+
+
+def test_the_sink_follows_each_sender_on_its_own(tmp_path):
+    a, b = ("10.0.1.2", 1), ("10.0.1.3", 1)
+    got, _ = counts(tmp_path, [0, 7, 1, 8, 2], [a, b, a, b, a])
+    assert got == (5, 0, 0, 0)
+
+
+def test_a_sink_started_again_appends_to_its_file(tmp_path):
+    counts(tmp_path, [0, 1])
+    _, written = counts(tmp_path, [5])
+    assert written == [0, 1, 5]
+
+
+def test_a_sink_that_cannot_bind_closes_its_file(tmp_path, monkeypatch):
+    opened = []
+    real_open = open
+
+    def tracking_open(*args, **kwargs):
+        f = real_open(*args, **kwargs)
+        opened.append(f)
+        return f
+
+    monkeypatch.setattr("builtins.open", tracking_open)
+    with pytest.raises(OSError):
+        sink.Sink(str(tmp_path), "256.0.0.1", 0)
+    assert opened and all(f.closed for f in opened)
+
+
+def test_serve_takes_datagrams_until_stopped(tmp_path):
+    with sink.Sink(str(tmp_path), "127.0.0.1", 0) as s:
+        t = threading.Thread(target=s.serve, kwargs={"poll_s": 0.05})
+        t.start()
+        tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            for q in (0, 2, 1):
+                tx.sendto(mac.pack_tag_data(msg1(seq=q)), s.address)
+            for _ in range(100):
+                if s.received == 3:
+                    break
+                threading.Event().wait(0.02)
+        finally:
+            tx.close()
+            s.stop()
+            t.join(2)
+        assert not t.is_alive()
+        assert (s.received, s.lost, s.reordered) == (3, 0, 1)
