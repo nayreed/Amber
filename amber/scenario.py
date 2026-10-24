@@ -90,7 +90,9 @@ _ENERGY_MODES = ("wpt", "external", "hybrid")
 _TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "network", "tag_defaults", "tag_group")
 _CELLS = ("n28-25prb",)
 _R2D_D2R = ("reader", "gnb", "ue")
-_CW = ("reader", "gnb-dl", "gnb-ul", "ue-ul", "cw-node-dl", "cw-node-ul")
+# The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
+CW_NODES = ("cw-node-dl", "cw-node-ul")
+_CW = ("reader", "gnb-dl", "gnb-ul", "ue-ul") + CW_NODES
 
 
 class Network(NamedTuple):
