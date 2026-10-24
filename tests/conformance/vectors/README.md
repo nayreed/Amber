@@ -3,7 +3,7 @@
 Language-neutral JSON, derived only from the spec text. Run them with `python3 -m aiot_conformance`
 (see `tests/conformance/README.md`). A C test can read the same files directly.
 
-Specs used: TS 38.291 V19.3.0, TS 38.391 V19.0.0, TS 38.191 V19.4.0, TS 38.194 V19.3.0.
+Specs used: TS 38.291 V19.3.0, TS 38.391 V19.4.0, TS 38.191 V19.4.0, TS 38.194 V19.3.0.
 
 ## File layout
 
@@ -21,7 +21,7 @@ Each file is `{file, title, schema, specs, vectors:[...]}`. A vector is
 | `spec-derived` | Computed from a formula or definition the spec states (CRC polynomial, §6.1.3 length formula, Tables 7.1.2-x and so on) by `oracle.py`. No reading choice involved. |
 | `spec-inferred` | Needs a reading the spec does not spell out. The `note` says what was assumed. Treat a failure here as "check the reading", not "implementation wrong". |
 
-Every vector carries `cite` with spec version, clause or table, and printed page number.
+Every vector carries `cite` with spec version and clause or table, and, except for TS 38.391, the printed page number.
 
 ## Files
 
@@ -36,7 +36,7 @@ Every vector carries `cite` with spec version, clause or table, and printed page
 | `sched_info.json` | 38.391 Table 6.2.1.6-1: field widths, bit-duration codepoints, S scale, I_bit, R_SFS gating, T_chip values |
 | `timing.json` | 38.291 Tables 7.1.2-1/2/3, T_R→D cases, Te, T_D2R_min, the pass/fail rule of 38.191 §9A.2.3 |
 | `rf_limits.json` | REFSENS, EIS, max input, backscatter loss, BS REFSENS, emissions, bands, guard bands, channel raster, D2R channel bandwidth table |
-| `mac_pdu.json` | 38.391 §6: bit strings for every R2D message (Paging CBRA/CFA, Access Trigger, Random ID Response, R2D Upper Layer Data CI=0/1, NACK Feedback) and D2R message (Msg1, data), with per-field segments; D2R Scheduling Info decoded to L1 parameters per carrying message; message-type tables; TBS/padding relations |
+| `mac_pdu.json` | 38.391 §6 (V19.4.0): bit strings for every R2D message (Paging CBRA/CFA with SPPI 0 and 1, Access Trigger, Random ID Response, R2D Upper Layer Data CI=0/1, NACK Feedback) and D2R message (Msg1, data), with per-field segments; D2R Scheduling Info decoded to L1 parameters per carrying message; message-type tables; TBS/padding relations |
 | `frc_r2d.json` | R2D reference channels (38.194 B.2, 38.191 B.2.1/B.2.2/B.3.1) |
 
 ## OAI's values
@@ -69,3 +69,8 @@ kinds: paging_cbra, paging_cfa, access_trigger, random_id_response, r2d_data, na
 12. **Child-field order inside D2R Scheduling Info** is taken from the row order of Table 6.2.1.6-1; the widths then add up to the stated 18 (CBRA paging), 24 (CFA paging, Msg2) and 19 (R2D data) bits, which supports it.
 13. **Fill bits and padding** content is unspecified ("ignored"); vectors write zeros and the runner ignores the fill bits when comparing a packed PDU. Parse compares only the fill count.
 14. **Access Trigger** is 3 bits (`010`), not byte aligned, no TBS field.
+15. **Fill Bits are ignored on parse** (§6.2.1.1, CR 0016): a packed PDU has zeros there, but a parser takes any value. `mac_parse-020` is a Paging with every Fill Bit set to 1.
+16. **SPPI and Security Parameter** (§6.2.1.1, 5.2): a Paging has an SPPI bit after the TBS. With SPPI 1 the 128-bit Security Parameter (RAND_AIOT_n of TS 33.369) follows it; with SPPI 0 there is none. Fields: `sppi` (0 or 1) and `security_parameter` (32 hex digits, only with SPPI 1); segments `sppi`, `security_parameter`. A Reader sends SPPI 1 ("set to 1 in this release"), a device accepts both.
+17. **Paging ID Length is 10 bits** (V19.4.0; it was 8). A Paging ID has up to 1023 bits, and 125 bytes hold at most 954 (CFA, SPPI 0). `mac_parse-021` and `-022` have a 300-bit Paging ID.
+18. **Unicast R_SFS is gated by the Bit Duration** as the Broadcast values are (Table 6.2.1.6-1, CR 0009): `sched_info_unpack` of the R2D data carrier has `r_sfs_valid`, and the R2D data vectors at tau/96 use R_SFS 1 (`freq_unicast_cp` 0).
+19. **Received Data Size is 0 to 125** (§6.2.1.4); `mac_parse-023` has 125, `-024` has 0.

@@ -236,6 +236,13 @@ def _pid(v):
     return None if v is None else _bits(v)
 
 
+def _sec(f):
+    """The Security Parameter of a paging as bits (SPPI 1: 128 bits given in hex), None for SPPI 0."""
+    if not f["sppi"]:
+        return None
+    return _bits(format(int(f["security_parameter"], 16), f"0{mac.SECURITY_PARAM_BITS}b"))
+
+
 def _fi(e):
     v = e.get("frequency_index_cp")
     return int(v, 2) if isinstance(v, str) else v
@@ -256,9 +263,9 @@ class _MacMixin:
         s = _sched_obj(kind, f["sched"])
         if kind == "paging_cbra":
             m = mac.paging_cbra(f["transaction_id"], s, f["n_access_occasions_exp"], f["k_cp"],
-                                _pid(f["paging_id"]), tbs)
+                                _pid(f["paging_id"]), tbs, _sec(f))
         elif kind == "paging_cfa":
-            m = mac.paging_cfa(_pid(f["paging_id"]), s, tbs)
+            m = mac.paging_cfa(_pid(f["paging_id"]), s, tbs, _sec(f))
         elif kind == "random_id_response":
             ents = [(e["echoed_random_id"], e.get("assigned_as_id"), _fi(e)) for e in f["entries"]]
             m = mac.random_id_response(ents, s, tbs)
@@ -296,6 +303,11 @@ class _MacMixin:
             return kind, f
         f["sched"] = _sched_cps(kind, m.sched)
         pid = _bstr(m.paging_id[:m.paging_id_len]) if m.has_paging_id else None
+        if kind in ("paging_cbra", "paging_cfa"):
+            f["sppi"] = m.has_security_param
+            if m.has_security_param:
+                f["security_parameter"] = "%0*X" % (mac.SECURITY_PARAM_BITS // 4,
+                                                    int(_bstr(m.security_param), 2))
         if kind == "paging_cbra":
             f.update(transaction_id=m.transaction_id, n_access_occasions_exp=m.num_access_occasions_code,
                      k_cp=m.k_bit, paging_id=pid)

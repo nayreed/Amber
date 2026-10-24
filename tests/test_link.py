@@ -164,3 +164,92 @@ def test_link_config_is_checked_against_the_spec():
         link.LinkConfig(m_chip_symb=6, n_rb=0, t_bit_tau="1/8", r_sfs=(1, 2, 4, 8, 16), x=1, r_code=True, r_block=1,
                         l_amble=31, interval_cp=0, i_add=False, d2r_tbs=8, modulation="bpsk", timing_error=0.5,
                         tag_snr_db=10.0)
+
+
+# ----------------------------------------------------------------------------------------------
+# The device's MAC alone (no waveforms): what it asks of the layer above it
+# ----------------------------------------------------------------------------------------------
+
+class Upper(mac.UpperLayer):
+    def __init__(self, pid=None):
+        self.pid, self.sdu, self.fail, self.got, self.secs = pid, None, False, [], []
+
+    def paging_id_matched(self, paging_id):
+        return self.pid is None or tuple(paging_id) == tuple(self.pid)
+
+    def security_parameter(self, bits):
+        self.secs.append(list(bits))
+
+    def next_sdu(self):
+        return self.sdu
+
+    def deliver(self, sdu):
+        self.got.append(sdu)
+        return self.fail
+
+
+CF = mac.sched(mac.SCHED_PAGING_CFA, (8,), d2r_tbs=6, t_bit_tau=1)
+DS = mac.sched(mac.SCHED_R2D_DATA, (8,), d2r_tbs=6, t_bit_tau=1)
+
+
+def device(up):
+    return mac.Device(up, np.random.default_rng(3))
+
+
+def test_device_forwards_the_security_parameter_of_a_cfa_paging():
+    sec = [(i * 7) % 5 % 2 for i in range(128)]
+    up = Upper(pid=[1, 0, 1, 1])
+    dev = device(up)
+    # the Security Parameter goes up before the Paging ID is compared, so also for a paging that is not ours
+    assert dev.on_r2d(mac.paging_cfa([0, 0, 0, 0], CF, security_param=sec)) == []
+    assert up.secs == [sec]
+    assert len(dev.on_r2d(mac.paging_cfa([1, 0, 1, 1], CF, security_param=sec))) == 1
+    assert up.secs == [sec, sec]
+    # SPPI 0: no Security Parameter
+    dev.on_r2d(mac.paging_cfa([1, 0, 1, 1], CF))
+    assert len(up.secs) == 2
+    # and the Security Parameter of the bits parsed from the air is the one sent
+    parsed = mac.parse_r2d(mac.pack_r2d(mac.paging_cfa([1, 0, 1, 1], CF, security_param=sec)))
+    dev.on_r2d(parsed)
+    assert up.secs[-1] == sec
+
+
+def test_pending_upper_layer_data_sets_mdi():
+    up = Upper()
+    up.sdu = mac.SDU_PENDING
+    dev = device(up)
+    (send,) = dev.on_r2d(mac.paging_cfa([1], CF))
+    assert send.message.mdi == 1 and send.message.sdu == b""
+    up.sdu = b"ok"
+    (send,) = dev.on_r2d(mac.paging_cfa([1], CF))
+    assert send.message.mdi == 0 and send.message.sdu == b"ok"
+    up.sdu = None
+    (send,) = dev.on_r2d(mac.paging_cfa([1], CF))
+    assert send.message.mdi == 0 and send.message.sdu == b""
+
+
+def test_integrity_failure_delivers_but_sends_nothing():
+    up = Upper()
+    dev = device(up)
+    dev.on_r2d(mac.paging_cfa([1], CF))
+    up.fail = True
+    # the AS ID is stored from the first R2D data after the CFA paging, delivered all the same
+    assert dev.on_r2d(mac.r2d_data(0x0042, DS, sdu=b"go")) == []
+    assert up.got == [b"go"] and dev.state().as_id == 0x0042
+    # now the device has the AS ID: a failed SDU for it is delivered and still gets no D2R
+    assert dev.on_r2d(mac.r2d_data(0x0042, DS, sdu=b"again")) == []
+    assert up.got == [b"go", b"again"]
+    up.fail = False
+    up.sdu = b"y"
+    (send,) = dev.on_r2d(mac.r2d_data(0x0042, DS, sdu=b"fine"))
+    assert send.message.sdu == b"y" and up.got[-1] == b"fine"
+
+
+def test_a_failing_upper_layer_deliver_raises_not_crashes():
+    class Boom(Upper):
+        def deliver(self, sdu):
+            raise RuntimeError("boom")
+    dev = device(Boom())
+    dev.on_r2d(mac.paging_cfa([1], CF))
+    with pytest.raises(RuntimeError, match="boom"):
+        dev.on_r2d(mac.r2d_data(5, DS, sdu=b"x"))

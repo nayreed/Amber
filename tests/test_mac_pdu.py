@@ -1,6 +1,6 @@
 # tests/test_mac_pdu.py
 """Tests of OAI's C A-IoT MAC codec (aiot_mac_pdu.c in libaiot_phy.so, used through amber.mac) against
-3GPP TS 38.391 V19.0.0 clause 6: the bit layouts are worked out by hand from the spec figures."""
+3GPP TS 38.391 V19.4.0 clause 6: the bit layouts are worked out by hand from the spec figures."""
 
 import random
 from fractions import Fraction
@@ -46,14 +46,20 @@ def entry_of(e):
             None if e.freq_index < 0 else e.freq_index)
 
 
+def sec_of(m):
+    """SPPI and the Security Parameter of a paging: None for SPPI 0."""
+    return tuple(m.security_param) if m.has_security_param else None
+
+
 def view(m):
     """The fields of an R2D message that its kind uses."""
     if m.kind == ACCESS_TRIGGER:
         return (m.kind,)
     if m.kind == PAGING_CBRA:
-        return (m.kind, m.r2d_tbs, sv(m.sched), m.transaction_id, m.num_access_occasions_code, m.k_bit, pid_of(m))
+        return (m.kind, m.r2d_tbs, sv(m.sched), m.transaction_id, m.num_access_occasions_code, m.k_bit, pid_of(m),
+                sec_of(m))
     if m.kind == PAGING_CFA:
-        return (m.kind, m.r2d_tbs, sv(m.sched), pid_of(m))
+        return (m.kind, m.r2d_tbs, sv(m.sched), pid_of(m), sec_of(m))
     if m.kind == RANDOM_ID_RESPONSE:
         return (m.kind, m.r2d_tbs, sv(m.sched), tuple(entry_of(e) for e in m.entries[:m.n_entries]))
     if m.kind == R2D_DATA:
@@ -88,14 +94,20 @@ def rand_sched(rng, variant):
         l_amble=rng.choice((7, 31)), i_add=rng.random() < .5)
 
 
+def rand_security(rng):
+    """A Security Parameter (SPPI 1) half the time, else None (SPPI 0)."""
+    return rand_bits(rng, mac.SECURITY_PARAM_BITS) if rng.random() < .5 else None
+
+
 def rand_cbra(rng):
-    pid = rand_bits(rng, rng.randint(0, 255)) if rng.random() < .6 else None
+    pid = rand_bits(rng, rng.randint(0, 600)) if rng.random() < .6 else None
     return mac.paging_cbra(rng.randrange(64), rand_sched(rng, SCHED_PAGING_CBRA), rng.randrange(16),
-                           rng.randint(0, 1), pid)
+                           rng.randint(0, 1), pid, security_param=rand_security(rng))
 
 
 def rand_cfa(rng):
-    return mac.paging_cfa(rand_bits(rng, rng.randint(0, 255)), rand_sched(rng, SCHED_PAGING_CFA))
+    return mac.paging_cfa(rand_bits(rng, rng.randint(0, 600)), rand_sched(rng, SCHED_PAGING_CFA),
+                          security_param=rand_security(rng))
 
 
 def rand_ridr(rng):
@@ -109,7 +121,7 @@ def rand_r2d_data(rng):
     as_id, s = rng.randrange(1 << 16), rand_sched(rng, SCHED_R2D_DATA)
     if rng.random() < .5:
         return mac.r2d_data(as_id, s, sdu=bytes(rng.randrange(256) for _ in range(rng.randint(0, 119))))
-    return mac.r2d_data(as_id, s, received=rng.randrange(128))
+    return mac.r2d_data(as_id, s, received=rng.randrange(126))
 
 
 def rand_nack(rng):
@@ -199,13 +211,20 @@ def sized(m, body=None):
 
 
 def test_hand_computed_lengths():
-    # CBRA paging, PIPI = 0: 3 type + 7 TBS + 1 AT + 6 TID + 1 PIPI + 4 NAO + 18 sched + 1 K = 41 bits
-    # -> 7 fill bits -> 48 bits, TBS 6.
-    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA)), 41) == (48, 6)
-    # With a 20-bit Paging ID: 41 + 8 (length) + 20 = 69 bits -> 72, TBS 9.
-    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA), paging_id=[1] * 20), 69) == (72, 9)
-    # CFA paging, 32-bit Paging ID: 3 + 7 + 1 + 8 + 32 + 24 = 75 bits -> 80, TBS 10.
-    assert sized(mac.paging_cfa([0] * 32, sched(SCHED_PAGING_CFA)), 75) == (80, 10)
+    # CBRA paging, SPPI = 0, PIPI = 0: 3 type + 7 TBS + 1 SPPI + 1 AT + 6 TID + 1 PIPI + 4 NAO + 18 sched
+    # + 1 K = 42 bits -> 6 fill bits -> 48 bits, TBS 6.
+    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA)), 42) == (48, 6)
+    # With a 20-bit Paging ID: 42 + 10 (length) + 20 = 72 bits, TBS 9, no fill.
+    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA), paging_id=[1] * 20), 72) == (72, 9)
+    # CFA paging, SPPI = 0, 32-bit Paging ID: 3 + 7 + 1 + 1 + 10 + 32 + 24 = 78 bits -> 80, TBS 10.
+    assert sized(mac.paging_cfa([0] * 32, sched(SCHED_PAGING_CFA)), 78) == (80, 10)
+    # SPPI = 1 adds the 128-bit Security Parameter: CBRA without Paging ID 42 + 128 = 170 bits -> 176, TBS 22;
+    # with a 20-bit Paging ID 200 bits, TBS 25.
+    sec = [0, 1] * 64
+    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA), security_param=sec), 170) == (176, 22)
+    assert sized(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA), paging_id=[1] * 20, security_param=sec), 200) == (200, 25)
+    # CFA, 16-bit Paging ID: 3 + 7 + 1 + 128 + 1 + 10 + 16 + 24 = 190 bits -> 192, TBS 24.
+    assert sized(mac.paging_cfa([1] * 16, sched(SCHED_PAGING_CFA), security_param=sec), 190) == (192, 24)
     # Random ID Response, one entry without FI or AS ID: 3 + 7 + 24 + 1 FIPI + (16 + 1) = 52 -> 56, TBS 7.
     rs = sched(SCHED_RANDOM_ID_RESPONSE)
     assert sized(mac.random_id_response([(5, None, None)], rs), 52) == (56, 7)
@@ -218,7 +237,7 @@ def test_hand_computed_lengths():
     # R2D data, CI = 1: 3 + 7 + 16 + 19 + 1 + 2 R = 48 bits + SDU; 5-byte SDU -> 88 bits, TBS 11.
     ds = sched(SCHED_R2D_DATA)
     assert sized(mac.r2d_data(1, ds, sdu=b"12345"), 88) == (88, 11)
-    # CI = 0: 3 + 7 + 16 + 19 + 1 + 3 R + 7 Received Data Size = 56 bits, TBS 7.
+    # CI = 0: 3 + 7 + 16 + 19 + 1 + 3 R + 7 Received Data Size = 56 bits, TBS 7 (the size is 0..125).
     assert sized(mac.r2d_data(1, ds, received=9), 56) == (56, 7)
     # NACK: 3 + 7 + 6 R = 16 bits + 16 per AS ID; 3 IDs -> 64 bits, TBS 8.
     assert sized(mac.nack([1, 2, 3]), 64) == (64, 8)
@@ -260,27 +279,45 @@ def test_sched_hand_bits():
 
 
 def test_hand_paging_cbra():
-    s = ("001" "0000110" "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "0000000")
-    # type 001, TBS 6, AT 1, TID 37, PIPI 0, 2^5 access occasions, sched, K = 4, 7 fill bits
+    s = ("001" "0000110" "0" "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000")
+    # type 001, TBS 6, SPPI 0, AT 1, TID 37, PIPI 0, 2^5 access occasions, sched, K = 4, 6 fill bits
     assert len(s) == 48
     m = mac.parse_r2d(b(s))
-    assert view(m) == (PAGING_CBRA, 6, sv(mac.sched_parse(b(SCHED_CBRA_BITS), SCHED_PAGING_CBRA)), 37, 5, 1, None)
+    sch = sv(mac.sched_parse(b(SCHED_CBRA_BITS), SCHED_PAGING_CBRA))
+    assert view(m) == (PAGING_CBRA, 6, sch, 37, 5, 1, None, None)
     assert mac.num_access_occasions(m.num_access_occasions_code) == 32 and mac.k_value(m.k_bit) == 4
     assert mac.pack_r2d(m) == b(s)
-    # with a Paging ID: PIPI 1, length 20 '00010100', 20 ID bits; 41 + 28 = 69 bits, TBS 9, 3 fill bits
+    # with a Paging ID: PIPI 1, length 20 '0000010100' (10 bits), 20 ID bits; 42 + 30 = 72 bits, TBS 9, no fill
     pid = "10110011100011110000"
-    s = "001" "0001001" "1" "100101" "1" "00010100" + pid + "0101" + SCHED_CBRA_BITS + "1" + "000"
+    s = "001" "0001001" "0" "1" "100101" "1" "0000010100" + pid + "0101" + SCHED_CBRA_BITS + "1"
+    assert len(s) == 72
     m = mac.parse_r2d(b(s))
-    assert pid_of(m) == tuple(b(pid)) and mac.pack_r2d(m) == b(s)
+    assert pid_of(m) == tuple(b(pid)) and sec_of(m) is None and mac.pack_r2d(m) == b(s)
+    # SPPI 1: the 128-bit Security Parameter follows the SPPI bit; 170 bits, TBS 22, 6 fill bits
+    sec = "".join("1" if i % 3 == 0 else "0" for i in range(128))
+    s = "001" "0010110" "1" + sec + "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000"
+    assert len(s) == 176
+    m = mac.parse_r2d(b(s))
+    assert view(m) == (PAGING_CBRA, 22, sch, 37, 5, 1, None, tuple(b(sec)))
+    assert mac.pack_r2d(m) == b(s)
 
 
 def test_hand_paging_cfa():
     pid = "101100111000"
-    s = "001" "0000111" "0" "00001100" + pid + SCHED_CFA_BITS + "0"       # 55 bits + 1 fill
-    assert len(s) == 56
+    # type, TBS 8, SPPI 0, AT 0, length 12 on 10 bits, ID, sched: 58 bits + 6 fill
+    s = "001" "0001000" "0" "0" "0000001100" + pid + SCHED_CFA_BITS + "000000"
+    assert len(s) == 64
     m = mac.parse_r2d(b(s))
     assert pid_of(m) == tuple(b(pid)) and tuple(m.sched.shifts) == (128,) and m.sched.d2r_tbs == 125
+    assert sec_of(m) is None
     assert mac.pack_r2d(m) == b(s)
+    # SPPI 1 with a 16-bit ID: 190 bits, TBS 24, 2 fill bits
+    pid = "1011001110001111"
+    sec = "".join("0" if i % 2 else "1" for i in range(128))
+    s = "001" "0011000" "1" + sec + "0" "0000010000" + pid + SCHED_CFA_BITS + "00"
+    assert len(s) == 192
+    m = mac.parse_r2d(b(s))
+    assert pid_of(m) == tuple(b(pid)) and sec_of(m) == tuple(b(sec)) and mac.pack_r2d(m) == b(s)
 
 
 def test_hand_access_trigger():
@@ -340,8 +377,8 @@ def test_hand_d2r():
 # ----------------------------------------------------------------------------------------------
 
 MAX_SFS = {Fraction(2): 128, Fraction(1): 64, Fraction(1, 2): 32, Fraction(1, 4): 16, Fraction(1, 8): 8,
-           Fraction(1, 16): 4, Fraction(1, 32): 2, Fraction(1, 96): 1}     # Table 6.2.1.6-1, p.22
-SCALE = dict(zip(BIT_DURATIONS, (1, 2, 4, 8, 16, 32, 64, 192)))             # Interval Bits, p.23
+           Fraction(1, 16): 4, Fraction(1, 32): 2, Fraction(1, 96): 1}     # Table 6.2.1.6-1
+SCALE = dict(zip(BIT_DURATIONS, (1, 2, 4, 8, 16, 32, 64, 192)))             # Interval Bits
 
 
 @pytest.mark.parametrize("t", BIT_DURATIONS)
@@ -358,10 +395,17 @@ def test_r_sfs_gating(t):
         bits = "1" + format(BIT_DURATIONS.index(t), "03b") + bitmap + "0" "1" "00" "0" "0"
         with pytest.raises(ValueError):
             mac.sched_parse(b(bits), SCHED_PAGING_CBRA)
-    # the Unicast field has no bit-duration gating in Table 6.2.1.6-1: any of its 8 values is a valid message
+    # the Unicast value is limited by the Bit Duration as the Broadcast ones (CR 0009)
+    u = sched(SCHED_R2D_DATA, t_bit_tau=t, r_sfs=(top,), i_bit=48 * SCALE[t])
+    assert tuple(mac.sched_parse(mac.sched_pack(u), SCHED_R2D_DATA).shifts) == (top,)
     if top < 128:
-        u = sched(SCHED_R2D_DATA, t_bit_tau=t, r_sfs=(top * 2,), i_bit=48 * SCALE[t])
-        assert tuple(mac.sched_parse(mac.sched_pack(u), SCHED_R2D_DATA).shifts) == (top * 2,)
+        with pytest.raises(ValueError):
+            sched(SCHED_R2D_DATA, t_bit_tau=t, r_sfs=(top * 2,), i_bit=48 * SCALE[t])
+        # and so is a hand-built 19-bit field with the codepoint of top * 2
+        cp = R_SFS_VALUES.index(top * 2)
+        bits = format(BIT_DURATIONS.index(t), "03b") + format(cp, "03b") + "0" "0" "00" "0" "0" "0000001"
+        with pytest.raises(ValueError):
+            mac.sched_parse(b(bits), SCHED_R2D_DATA)
 
 
 @pytest.mark.parametrize("t", BIT_DURATIONS)
@@ -441,9 +485,19 @@ def test_pack_range_errors():
     with pytest.raises(ValueError):
         pack(mac.paging_cbra(0, cb, n_occasions_code=16))              # Number of Access Occasions is 4 bits
     with pytest.raises(ValueError):
-        pack(mac.paging_cfa([0] * 256, cf))                            # Paging ID Length is 8 bits
+        pack(mac.paging_cfa([0] * 955, cf))                            # 125 bytes hold at most 954 ID bits
     with pytest.raises(ValueError):
         pack(mac.paging_cfa([0, 2], cf))                               # a Paging ID is bits
+    with pytest.raises(ValueError):
+        mac.paging_cfa([0] * 1024, cf)                                 # Paging ID Length is 10 bits
+    with pytest.raises(ValueError):
+        mac.paging_cfa([0], cf, security_param=[0] * 127)              # a Security Parameter is 128 bits
+    with pytest.raises(ValueError):
+        mac.paging_cbra(0, cb, security_param=[0] * 127 + [2])         # of bits
+    bad = mac.paging_cfa([0], cf)
+    bad.has_security_param = 2                                         # SPPI is a flag
+    with pytest.raises(ValueError):
+        pack(bad)
     with pytest.raises(ValueError):
         pack(mac.paging_cfa([0], cb))                                  # Scheduling Info of the wrong variant
     with pytest.raises(ValueError):
@@ -463,7 +517,9 @@ def test_pack_range_errors():
         pack(mac.random_id_response([(1, None, 8)], rs))               # Frequency Index is 3 bits
     ds = sched(SCHED_R2D_DATA)
     with pytest.raises(ValueError):
-        pack(mac.r2d_data(1, ds, received=128))                        # Received Data Size is 7 bits
+        pack(mac.r2d_data(1, ds, received=126))                        # Received Data Size is 0..125
+    with pytest.raises(ValueError):
+        mac.r2d_data(1, ds, received=127)
     with pytest.raises(ValueError):
         pack(mac.r2d_data(-1, ds, received=0))                         # AS ID is 16 bits
     with pytest.raises(ValueError):
@@ -503,10 +559,12 @@ def test_parse_errors():
     ridr = mac.pack_r2d(mac.random_id_response([(1, None, None)], sched(SCHED_RANDOM_ID_RESPONSE)))   # 56 bits
     assert mac.parse_r2d(b("011 0001000") + ridr[10:] + [0] * 8) is None                              # TBS 8
     # paging whose Paging ID Length runs past the end
-    assert mac.parse_r2d(b("001 0000011 0") + b("11111111") + [0] * 5) is None
+    assert mac.parse_r2d(b("001 0000011 0 0") + b("1111111111") + [0] * 2) is None
+    # SPPI 1 whose 128 bits run past the end
+    assert mac.parse_r2d(b("001 0000011 1 0") + [0] * 12) is None
     # reserved codepoint of D2R TBS inside a message
-    cfa = mac.pack_r2d(mac.paging_cfa([1] * 12, sched(SCHED_PAGING_CFA)))          # 55 bits + 1 fill
-    cfa[48:55] = b("1111110")                                                      # D2R TBS codepoint 126
+    cfa = mac.pack_r2d(mac.paging_cfa([1] * 12, sched(SCHED_PAGING_CFA)))          # 58 bits + 6 fill
+    cfa[51:58] = b("1111110")                                                      # D2R TBS codepoint 126
     assert mac.parse_r2d(cfa) is None
     # the other parsers raise ValueError
     with pytest.raises(ValueError):
@@ -546,3 +604,69 @@ def test_paging_with_longer_tbs_keeps_fill():
     p = mac.paging_cfa([1] * 5, sched(SCHED_PAGING_CFA), r2d_tbs=20)
     bits = mac.pack_r2d(p)
     assert len(bits) == 160 and view(mac.parse_r2d(bits)) == view(p)
+
+
+# ----------------------------------------------------------------------------------------------
+# V19.4.0: Security Parameter, 10-bit Paging ID Length, Received Data Size 0..125, Fill Bits
+# ----------------------------------------------------------------------------------------------
+
+def test_security_parameter_follows_the_sppi_bit():
+    sec = [int(i % 3 == 0) for i in range(128)]
+    m = mac.paging_cbra(1, sched(SCHED_PAGING_CBRA), security_param=sec)
+    bits = mac.pack_r2d(m)
+    assert bits[10] == 1 and bits[11:139] == sec          # after type (3) and TBS (7)
+    assert mac.pack_r2d(mac.paging_cbra(1, sched(SCHED_PAGING_CBRA)))[10] == 0     # SPPI 0 carries no bits
+    for p in (m, mac.paging_cfa([1] * 7, sched(SCHED_PAGING_CFA), security_param=sec)):
+        parsed = mac.parse_r2d(mac.pack_r2d(p))
+        assert parsed.has_security_param == 1 and list(parsed.security_param) == sec
+
+
+def test_paging_id_length_has_ten_bits():
+    cf = sched(SCHED_PAGING_CFA)
+    # 125 bytes hold 3 + 7 + 1 + 1 + 10 + L + 24 <= 1000 bits: L <= 954 without a Security Parameter
+    for n in (0, 255, 256, 300, 954):
+        m = mac.paging_cfa([n % 2] * n, cf)
+        bits = mac.pack_r2d(m)
+        assert bits[12:22] == b(format(n, "010b"))
+        assert pid_of(mac.parse_r2d(bits)) == pid_of(m)
+    assert len(mac.pack_r2d(mac.paging_cfa([1] * 954, cf))) == 1000
+    with pytest.raises(ValueError):
+        mac.pack_r2d(mac.paging_cfa([1] * 955, cf))
+    sec = [1] * 128
+    assert len(mac.pack_r2d(mac.paging_cfa([1] * 826, cf, security_param=sec))) == 1000      # 174 + 826
+    with pytest.raises(ValueError):
+        mac.pack_r2d(mac.paging_cfa([1] * 827, cf, security_param=sec))
+    cb = sched(SCHED_PAGING_CBRA)
+    assert len(mac.pack_r2d(mac.paging_cbra(1, cb, paging_id=[1] * 820, security_param=sec))) == 1000
+    with pytest.raises(ValueError):
+        mac.pack_r2d(mac.paging_cbra(1, cb, paging_id=[1] * 821, security_param=sec))
+
+
+def test_paging_fill_bits_are_ignored_on_parse():
+    sec = [1] * 128
+    for p in (mac.paging_cbra(3, sched(SCHED_PAGING_CBRA), security_param=sec),
+              mac.paging_cfa([1, 0, 1], sched(SCHED_PAGING_CFA)),
+              mac.paging_cbra(3, sched(SCHED_PAGING_CBRA), paging_id=[1] * 5)):
+        p.r2d_tbs = 0
+        body = mac.r2d_body_bits(p)
+        p.r2d_tbs = (body + 7) // 8 + 2                          # two Fill Bytes besides the Fill Bits
+        bits = mac.pack_r2d(p)
+        assert set(bits[body:]) == {0}
+        ones = bits[:body] + [1] * (len(bits) - body)            # Fill Bits of any value (CR 0016)
+        parsed = mac.parse_r2d(ones)
+        assert parsed is not None and view(parsed) == view(p)
+        assert mac.pack_r2d(parsed) == bits
+
+
+def test_received_data_size_is_0_to_125():
+    ds = sched(SCHED_R2D_DATA)
+    for rds in (0, 1, 125):
+        m = mac.r2d_data(7, ds, received=rds)
+        assert mac.parse_r2d(mac.pack_r2d(m)).received_data_size == rds
+    for rds in (126, 127, 128, -1):
+        with pytest.raises(ValueError):
+            mac.r2d_data(7, ds, received=rds)
+    ci0 = "100" "0000111" "0000000000000111" + SCHED_DATA_BITS + "0" "000"
+    assert mac.parse_r2d(b(ci0 + "1111101")).received_data_size == 125
+    assert mac.parse_r2d(b(ci0 + "1111110")) is None
+    assert mac.parse_r2d(b(ci0 + "1111111")) is None

@@ -3,9 +3,10 @@
 tested as soon as the library has it: its defaults pass its own check on the default link, its
 Reader starts and sends an R2D, and its table, if it keeps one, has a header for every row.
 
-The protocols are in OAI's C MAC (openair2/LAYER2/AIOT_MAC). The Reader draws nothing at random:
-a run on one machine and the Reader container must agree, and the C protocols take no random
-numbers at all (only the devices draw, from the generator their caller gives them).
+The protocols are in OAI's C MAC (openair2/LAYER2/AIOT_MAC). The Reader draws only the Security
+Parameter of its pagings (38.391 V19.4.0 5.2), from its own fixed-seed generator: a run on one
+machine and the Reader container must agree, and the C protocols take no other random numbers
+(only the devices draw, from the generator their caller gives them).
 """
 
 import unittest
@@ -36,6 +37,26 @@ class ConformanceTest(unittest.TestCase):
                 msg, bits, earliest = r2d
                 self.assertEqual(earliest, 0)
                 self.assertEqual(mac.pack_r2d(msg), bits)
+
+    def test_protocol_pagings_carry_a_security_parameter(self):
+        """Every paging a protocol sends has SPPI 1 and 128 bits, the same on every run."""
+        def first_paging_bits(seed=None):
+            reader = protocols.load("broadcast", {}, [1, 2]).reader(link.DEFAULT_LINK)
+            if seed is not None:
+                reader.seed(seed)
+            msg, bits, _ = reader.next_r2d(0)
+            self.assertIn(msg.kind, (mac.PAGING_CBRA, mac.PAGING_CFA))
+            self.assertEqual(msg.has_security_param, 1)
+            sec = list(msg.security_param)
+            self.assertEqual(len(sec), mac.SECURITY_PARAM_BITS)
+            self.assertTrue(set(sec) <= {0, 1})
+            self.assertTrue(0 < sum(sec) < len(sec))
+            self.assertEqual(mac.parse_r2d(bits).has_security_param, 1)
+            self.assertEqual(list(mac.parse_r2d(bits).security_param), sec)
+            return sec
+        a = first_paging_bits()
+        self.assertEqual(first_paging_bits(), a)      # nothing random between runs
+        self.assertNotEqual(first_paging_bits(7), a)  # until the Reader is given a seed
 
     def test_outputs_have_a_column_for_every_value(self):
         for name in protocols.names():

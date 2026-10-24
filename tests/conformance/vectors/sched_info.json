@@ -4,7 +4,7 @@
  "schema": 1,
  "specs": {
   "38.291": "V19.3.0 (2026-04)",
-  "38.391": "V19.0.0 (2025-10)",
+  "38.391": "V19.4.0 (2026-09)",
   "38.191": "V19.4.0 (2026-09)",
   "38.194": "V19.3.0 (2026-08)"
  },
@@ -14,7 +14,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_TIME_RESOURCE"
@@ -28,7 +28,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_BIT_DURATION"
@@ -42,7 +42,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_FREQ_BROADCAST"
@@ -56,7 +56,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_FREQ_UNICAST"
@@ -70,7 +70,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_BLOCK_REPETITION"
@@ -84,7 +84,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_CHANNEL_CODING"
@@ -98,7 +98,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_INTERVAL_BITS"
@@ -112,7 +112,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_SEQUENCE_LENGTH"
@@ -126,7 +126,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_ADDITIONAL_MIDAMBLE"
@@ -140,7 +140,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BITS_D2R_TBS"
@@ -154,7 +154,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BIT_DURATION_TAU"
@@ -178,7 +178,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_RSFS_VALUES"
@@ -201,7 +201,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_BLOCK_REPETITION"
@@ -218,7 +218,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_D2R_TBS_RANGE_BYTES"
@@ -235,7 +235,7 @@
    "kind": "constant",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "name": "SCHED_INTERVAL_BITS_BASE"
@@ -254,7 +254,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -269,7 +269,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 1,
@@ -284,7 +284,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 2,
@@ -299,7 +299,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -314,7 +314,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -329,7 +329,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 5,
@@ -344,7 +344,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 6,
@@ -359,7 +359,7 @@
    "kind": "sched_scale",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -374,7 +374,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -401,7 +401,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -428,7 +428,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -455,7 +455,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -482,7 +482,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 1,
@@ -508,7 +508,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 1,
@@ -534,7 +534,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 1,
@@ -560,7 +560,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 1,
@@ -586,7 +586,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 2,
@@ -611,7 +611,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 2,
@@ -636,7 +636,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 2,
@@ -661,7 +661,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 2,
@@ -686,7 +686,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -710,7 +710,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -734,7 +734,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -758,7 +758,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -782,7 +782,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -805,7 +805,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -828,7 +828,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -851,7 +851,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -874,7 +874,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 5,
@@ -896,7 +896,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 5,
@@ -918,7 +918,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 5,
@@ -940,7 +940,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 5,
@@ -962,7 +962,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 6,
@@ -983,7 +983,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 6,
@@ -1004,7 +1004,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 6,
@@ -1025,7 +1025,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 6,
@@ -1046,7 +1046,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -1066,7 +1066,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -1086,7 +1086,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -1106,7 +1106,7 @@
    "kind": "sched_decode",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -1126,7 +1126,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -1145,7 +1145,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -1171,7 +1171,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 0,
@@ -1191,7 +1191,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 7,
@@ -1210,7 +1210,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 4,
@@ -1232,7 +1232,7 @@
    "kind": "sched_freq_bitmap",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {
     "bit_duration_cp": 3,
@@ -1255,7 +1255,7 @@
    "kind": "sched_combo_count",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1"
    ],
    "input": {},
    "expect": {
@@ -1268,7 +1268,7 @@
    "kind": "sched_tchip_set",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
    ],
    "input": {},
@@ -1292,7 +1292,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1313,7 +1313,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1334,7 +1334,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1355,7 +1355,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1376,7 +1376,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1397,7 +1397,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1418,7 +1418,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1439,7 +1439,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1460,7 +1460,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1481,7 +1481,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1502,7 +1502,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1523,7 +1523,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1544,7 +1544,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1565,7 +1565,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1586,7 +1586,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1607,7 +1607,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1628,7 +1628,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1649,7 +1649,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1670,7 +1670,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1691,7 +1691,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1712,7 +1712,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1733,7 +1733,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1754,7 +1754,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1775,7 +1775,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1796,7 +1796,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1817,7 +1817,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1838,7 +1838,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1859,7 +1859,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1880,7 +1880,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1901,7 +1901,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1922,7 +1922,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1943,7 +1943,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1964,7 +1964,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -1985,7 +1985,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -2006,7 +2006,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
@@ -2027,7 +2027,7 @@
    "kind": "d2r_chip_params",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16",
     "TS 38.191 V19.4.0 Annex E, p.30"
    ],
