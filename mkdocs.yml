@@ -63,3 +63,4 @@ nav:
       - protocols: api/protocols.md
       - radiodevices: api/radiodevices.md
       - scenario: api/scenario.md
+      - sink: api/sink.md

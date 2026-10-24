@@ -253,5 +253,32 @@ class TestAirOnly(unittest.TestCase):
                 self.assertEqual(read_files(a), read_files(b))
 
 
+# topology 1 in a 5G room: the gNB is the Reader
+GNB_READER = {"network.cell": "n28-25prb", "network.r2d": "gnb", "network.d2r": "gnb"}
+
+
+class TestCarrierNode(unittest.TestCase):
+    """The carrier node of a room whose carrier comes from a node of its own."""
+
+    def test_sends_the_carrier_until_the_run_ends(self):
+        with tempfile.TemporaryDirectory() as out:
+            node = iq.IqCarrierSession(load(5, **GNB_READER, **{"network.cw": "cw-node-ul"}), iq.AIR_BLOCK_BYTES, out)
+            carrier = np.tile(np.array([iq.TX_COUNTS, 0], dtype="<i2"), iq.AIR_SAMPLES).tobytes()
+            ends = []
+            for _ in range(5):
+                self.assertEqual(node.next_block(), carrier)
+                ends.append(node.on_block(bytes(iq.AIR_BLOCK_BYTES)))
+            self.assertEqual(ends, [False] * 4 + [True])
+            node.finish()
+            self.assertEqual(os.listdir(out), [])
+
+    def test_needs_a_carrier_node_and_air_only_blocks(self):
+        with tempfile.TemporaryDirectory() as out:
+            with self.assertRaisesRegex(ValueError, "air-only"):
+                iq.IqCarrierSession(load(5, **GNB_READER, **{"network.cw": "cw-node-ul"}), iq.BLOCK_BYTES, out)
+            with self.assertRaisesRegex(ValueError, "not a carrier node"):
+                iq.IqCarrierSession(load(5, **GNB_READER, **{"network.cw": "gnb-dl"}), iq.AIR_BLOCK_BYTES, out)
+
+
 if __name__ == "__main__":
     unittest.main()

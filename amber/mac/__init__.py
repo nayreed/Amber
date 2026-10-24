@@ -7,6 +7,9 @@ adaptive_aloha) and the device. Neither touches the air or a clock: the caller o
 the time (samples at 5.76 Msps) and drives them with what happened. aiot_mac.h documents the
 API, and how it reads 38.391 where the spec leaves room.
 
+The same library has the messages the nodes send each other over the 5G user plane
+(aiot_node_msg.h): Tag data, what a UE that reads the Tags sends to the network (amber.sink).
+
 Reader   next_r2d() -> the caller sends it; r2d_sent() -> the D2R windows to expect;
          d2r_outcome() for each window -> the protocol decides the next R2D.
 Device   on_r2d() for each R2D decoded -> the D2R to send, at T_R->D after the R2D's end.
@@ -34,8 +37,9 @@ MAX_PDU_BITS = 8 * MAX_TBS
 MAX_ANSWERS = MAX_ID_ENTRIES * MAX_SHIFTS * MAX_SIC_ROUNDS
 MAX_EXPECTS = 16
 
-# aiot_r2d_kind_t
+# aiot_r2d_kind_t, and the names the records give them
 PAGING_CBRA, PAGING_CFA, ACCESS_TRIGGER, RANDOM_ID_RESPONSE, R2D_DATA, NACK_FEEDBACK = range(6)
+R2D_NAMES = ("paging_cbra", "paging_cfa", "access_trigger", "random_id_response", "r2d_data", "nack_feedback")
 # aiot_sched_variant_t: which message carries the Scheduling Info
 SCHED_PAGING_CBRA, SCHED_PAGING_CFA, SCHED_RANDOM_ID_RESPONSE, SCHED_R2D_DATA = range(4)
 # aiot_d2r_kind_t
@@ -111,6 +115,10 @@ class Heard_(C.Structure):
                 ("answers", Answer_ * MAX_ANSWERS), ("collided", C.c_int)]
 
 
+class TagData_(C.Structure):
+    _fields_ = [("seq", C.c_uint32), ("after", C.c_int), ("answer", Answer_)]
+
+
 _MATCHED = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
 _SELECTED = C.CFUNCTYPE(None, C.c_void_p)
 _DELIVER = C.CFUNCTYPE(None, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
@@ -141,7 +149,7 @@ _STRUCTS = {"aiot_d2r_params_t": _Params, "aiot_sched_info_t": Sched, "aiot_mac_
             "aiot_mac_d2r_msg_t": D2RMsg, "aiot_link_config_t": LinkConfig_, "aiot_param_t": Param_,
             "aiot_reader_r2d_t": ReaderR2D_, "aiot_reader_answer_t": Answer_, "aiot_reader_heard_t": Heard_,
             "aiot_d2r_expect_t": _Expect, "aiot_d2r_outcome_t": _Outcome, "aiot_device_upper_t": DeviceUpper_,
-            "aiot_device_send_t": DeviceSend_, "aiot_device_state_t": DeviceState}
+            "aiot_device_send_t": DeviceSend_, "aiot_device_state_t": DeviceState, "aiot_tag_data_t": TagData_}
 
 _lib = None
 
@@ -208,6 +216,9 @@ def _L():
     lib.aiot_mac_to_d2r_params.argtypes = [C.POINTER(Sched), ip, ip, C.POINTER(_Params)]
     lib.aiot_reader_push.argtypes = [vp, C.POINTER(R2DMsg), ip]
     lib.aiot_reader_idle.argtypes = [vp]
+    lib.aiot_node_msg_type.argtypes = [u8p, ip]
+    lib.aiot_node_msg_pack_tag_data.argtypes = [C.POINTER(TagData_), u8p, ip]
+    lib.aiot_node_msg_parse_tag_data.argtypes = [u8p, ip, C.POINTER(TagData_)]
     _lib = lib
     return lib
 
@@ -411,23 +422,26 @@ def pack_r2d(m: R2DMsg) -> List[int]:
     return list(b[:n])
 
 
+def r2d_name(kind: int) -> str:
+    """The name the records give an R2D message of this aiot_r2d_kind_t."""
+    return R2D_NAMES[kind] if 0 <= kind < len(R2D_NAMES) else f"kind {kind}"
+
+
 def describe(m: R2DMsg) -> Tuple[str, str]:
     """(message name, its main fields) of an R2D message, for reader_tx.csv."""
+    name = r2d_name(m.kind)
     if m.kind == PAGING_CBRA:
         n = _L().aiot_mac_num_access_occasions(m.num_access_occasions_code)
-        return "paging_cbra", (f"tid={m.transaction_id} n={n} k={4 if m.k_bit else 1} "
-                               f"x={m.sched.x} r_sfs={m.sched.shifts}")
+        return name, f"tid={m.transaction_id} n={n} k={4 if m.k_bit else 1} x={m.sched.x} r_sfs={m.sched.shifts}"
     if m.kind == PAGING_CFA:
-        return "paging_cfa", f"paging_id={m.paging_id_len} bits r_sfs={m.sched.r_sfs[0]}"
-    if m.kind == ACCESS_TRIGGER:
-        return "access_trigger", ""
+        return name, f"paging_id={m.paging_id_len} bits r_sfs={m.sched.r_sfs[0]}"
     if m.kind == RANDOM_ID_RESPONSE:
-        return "random_id_response", f"entries={m.n_entries}"
+        return name, f"entries={m.n_entries}"
     if m.kind == R2D_DATA:
-        return "r2d_data", f"as_id={m.as_id} ci={1 if m.has_sdu else 0}"
+        return name, f"as_id={m.as_id} ci={1 if m.has_sdu else 0}"
     if m.kind == NACK_FEEDBACK:
-        return "nack_feedback", f"as_ids={list(m.as_ids[:m.n_as_ids])}"
-    return f"kind {m.kind}", ""
+        return name, f"as_ids={list(m.as_ids[:m.n_as_ids])}"
+    return name, ""
 
 
 # ----------------------------------------------------------------------------------------------
@@ -494,13 +508,21 @@ class Heard:
         return not self.answers and not self.collided
 
 
+def _answer(a: Answer_) -> Answer:
+    m = D2RMsg()
+    C.pointer(m)[0] = a.message
+    return Answer("msg1" if a.kind == 0 else "data", m, a.r_sfs, a.rssi_w, a.start, a.slot,
+                  None if a.entry < 0 else a.entry, None if a.as_id < 0 else a.as_id)
+
+
+def _answer_c(a: Answer) -> Answer_:
+    return Answer_(kind=0 if a.kind == "msg1" else 1, message=a.message, r_sfs=a.r_sfs, rssi_w=a.rssi_w,
+                   start=a.start, slot=a.slot, entry=-1 if a.entry is None else a.entry,
+                   as_id=-1 if a.as_id is None else a.as_id)
+
+
 def _heard(h: Heard_) -> Heard:
-    out = []
-    for a in h.answers[:h.n_answers]:
-        m = D2RMsg()
-        C.pointer(m)[0] = a.message
-        out.append(Answer("msg1" if a.kind == 0 else "data", m, a.r_sfs, a.rssi_w, a.start, a.slot,
-                          None if a.entry < 0 else a.entry, None if a.as_id < 0 else a.as_id))
+    out = [_answer(a) for a in h.answers[:h.n_answers]]
     sent = R2DMsg()
     C.pointer(sent)[0] = h.sent
     return Heard(sent, out, h.collided, h.r2d_start, h.r2d_end)
@@ -734,3 +756,48 @@ class Device:
         st = DeviceState()
         _L().aiot_device_state(self._d, C.byref(st))
         return st
+
+
+# ----------------------------------------------------------------------------------------------
+# Messages between nodes (aiot_node_msg.h)
+# ----------------------------------------------------------------------------------------------
+
+NODE_MSG_TAG_DATA = 1
+TAG_DATA_FIXED_BYTES = 40
+NODE_MSG_MAX_BYTES = TAG_DATA_FIXED_BYTES + MAX_TBS
+
+
+@dataclass
+class TagData:
+    """One message a Reader heard from a Tag, as the Reader sends it on: seq counts the sender's
+    Tag data messages (a lost one leaves a gap), after is the aiot_r2d_kind_t of the R2D the Tag
+    answered."""
+    seq: int
+    after: int
+    answer: Answer
+
+
+def node_msg_type(data: bytes) -> Optional[int]:
+    """The type of the message in data, or None when it is not one whole message."""
+    b = (C.c_uint8 * max(1, len(data))).from_buffer_copy(data or b"\0")
+    t = _L().aiot_node_msg_type(b, len(data))
+    return None if t < 0 else t
+
+
+def pack_tag_data(m: TagData) -> bytes:
+    """The datagram of m; ValueError for a field the layout cannot hold."""
+    c = TagData_(seq=m.seq, after=m.after, answer=_answer_c(m.answer))
+    b = (C.c_uint8 * NODE_MSG_MAX_BYTES)()
+    n = _L().aiot_node_msg_pack_tag_data(C.byref(c), b, NODE_MSG_MAX_BYTES)
+    if n < 0:
+        raise ValueError(f"Tag data seq {m.seq}: a field the message cannot hold (error {n})")
+    return bytes(b[:n])
+
+
+def parse_tag_data(data: bytes) -> TagData:
+    """The Tag data message in data; ValueError when it is not one."""
+    b = (C.c_uint8 * max(1, len(data))).from_buffer_copy(data or b"\0")
+    c = TagData_()
+    if _L().aiot_node_msg_parse_tag_data(b, len(data), C.byref(c)) != 0:
+        raise ValueError(f"{len(data)} bytes that are not one Tag data message")
+    return TagData(c.seq, c.after, _answer(c.answer))
