@@ -46,6 +46,7 @@ from . import mac, output
 from .hosts import TagHost
 from .link import LinkConfig
 from .phy import params as rparams
+from .scenario import CW_NODES
 
 AIR_SAMPLES = rparams.SAMPLES_PER_MS              # 5760
 CONTROL_SAMPLES = 128
@@ -169,6 +170,20 @@ TX_COLUMNS = ("start_ms", "end_ms", "message", "detail")
 RX_COLUMNS = ("time_ms", "after", "kind", "node_id", "value", "id", "r_sfs", "slot", "rssi_dbm")
 
 
+def answer_row(a: mac.Answer, after: str) -> Tuple:
+    """The columns of RX_COLUMNS but the power for one answer heard after the R2D named after. The
+    power's unit is the writer's: dBm here, dBFS in amber.sink."""
+    node, value, ident = -1, -1, ""
+    if a.kind == "msg1":
+        ident = a.message.random_id
+    else:
+        v = read_sdu(a.message.sdu)
+        if v is not None:
+            node, value = v
+        ident = a.as_id if a.as_id is not None else ""
+    return (a.start / AIR_SAMPLES, after, a.kind, node, value, ident, a.r_sfs, a.slot)
+
+
 class IqReaderSession:
     """The Reader: one block out and the sum of the Tags' blocks back, per millisecond."""
 
@@ -196,16 +211,7 @@ class IqReaderSession:
         name, detail = mac.describe(h.sent)
         self.record.tx.append((h.r2d_start / AIR_SAMPLES, h.r2d_end / AIR_SAMPLES, name, detail))
         for a in h.answers:
-            node, value, ident = -1, -1, ""
-            if a.kind == "msg1":
-                ident = a.message.random_id
-            else:
-                v = read_sdu(a.message.sdu)
-                if v is not None:
-                    node, value = v
-                ident = a.as_id if a.as_id is not None else ""
-            self.record.rx.append((a.start / AIR_SAMPLES, name, a.kind, node, value, ident, a.r_sfs, a.slot,
-                                   round(w_to_dbm(a.rssi_w), 2)))
+            self.record.rx.append(answer_row(a, name) + (round(w_to_dbm(a.rssi_w), 2),))
         for _ in range(h.collided):
             self.record.rx.append((h.r2d_end / AIR_SAMPLES, name, "collision", -1, -1, "", "", "", ""))
 
@@ -258,23 +264,21 @@ class IqReaderSession:
 # A carrier node
 # ----------------------------------------------------------------------------------------------
 
-# The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
-CARRIER_NODES = ("cw-node-dl", "cw-node-ul")
-
-
 class IqCarrierSession:
     """A carrier node: it sends only the carrier the Tags reflect, unmodulated, at TX_COUNTS, so a
     Tag receives it at the scenario's incident power, as it would Amber's Reader's carrier. It is for
     a scenario whose [network] cw is a carrier node, in an rfsim_hub room (air-only blocks): the hub
-    puts the carrier where the network has it. What the node hears is not used."""
+    puts the carrier where the network has it. What the node hears is not used, and it writes no
+    files: output_dir is taken only for the sessions' common signature."""
 
     def __init__(self, scenario: Any, block_bytes: int, output_dir: str):
         if check_block_bytes(block_bytes):
-            raise ValueError(f"a carrier node runs in an rfsim_hub room, with air-only blocks of {AIR_BLOCK_BYTES} bytes")
-        if scenario.network.cw not in CARRIER_NODES:
-            raise ValueError(f"the scenario's carrier is {scenario.network.cw!r}, not a carrier node {CARRIER_NODES}")
+            raise ValueError(f"a carrier node runs in an rfsim_hub room, with air-only blocks of "
+                             f"{AIR_BLOCK_BYTES} bytes")
+        if scenario.network.cw not in CW_NODES:
+            raise ValueError(f"the scenario's carrier is {scenario.network.cw!r}, "
+                             f"not a carrier node {CW_NODES}")
         self.scenario = scenario
-        self.output_dir = output_dir
         self._block = to_counts(np.ones(AIR_SAMPLES, dtype=np.complex128), TX_COUNTS).astype("<i2").tobytes()
         self._ms = 0
 
@@ -284,7 +288,7 @@ class IqCarrierSession:
     def on_block(self, block: bytes) -> bool:
         """True once the scenario's SIM_TIME_MS have been sent."""
         self._ms += 1
-        return self._ms == self.scenario.SIM_TIME_MS
+        return self._ms >= self.scenario.SIM_TIME_MS
 
     def finish(self):
         pass

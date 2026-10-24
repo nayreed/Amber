@@ -111,7 +111,11 @@ class CarrierSessionTest(unittest.TestCase):
         with shortened(os.path.join(SCENARIO_DIR, "registration.toml"), 100) as path:
             with open(path, "a") as f:
                 f.write('\n[network]\ncell = "n28-25prb"\nr2d = "gnb"\nd2r = "gnb"\ncw = "cw-node-ul"\n')
-            self.assertIsInstance(CarrierSession(path, iq.AIR_BLOCK_BYTES, "."), iq.IqCarrierSession)
+            node = CarrierSession(path, iq.AIR_BLOCK_BYTES, ".")
+            self.assertIsInstance(node, iq.IqCarrierSession)
+            self.assertEqual(node.scenario.network.cw, "cw-node-ul")
+            ends = [node.on_block(bytes(iq.AIR_BLOCK_BYTES)) for _ in range(node.scenario.SIM_TIME_MS)]
+            self.assertEqual(ends, [False] * (node.scenario.SIM_TIME_MS - 1) + [True])
 
 
 if __name__ == "__main__":

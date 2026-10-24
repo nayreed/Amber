@@ -31,4 +31,7 @@ docs = [
 Homepage = "https://github.com/mrnmir/Amber"
 
 [tool.setuptools]
-packages = ["amber", "amber.protocols"]
+packages = ["amber", "amber.mac", "amber.phy", "amber.protocols"]
+
+[tool.setuptools.package-data]
+"amber.phy" = ["lib/*.so"]

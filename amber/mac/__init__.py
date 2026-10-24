@@ -42,6 +42,9 @@ PAGING_CBRA, PAGING_CFA, ACCESS_TRIGGER, RANDOM_ID_RESPONSE, R2D_DATA, NACK_FEED
 R2D_NAMES = ("paging_cbra", "paging_cfa", "access_trigger", "random_id_response", "r2d_data", "nack_feedback")
 # aiot_sched_variant_t: which message carries the Scheduling Info
 SCHED_PAGING_CBRA, SCHED_PAGING_CFA, SCHED_RANDOM_ID_RESPONSE, SCHED_R2D_DATA = range(4)
+# aiot_answer_kind_t, and the names Answer.kind gives them
+ANSWER_MSG1, ANSWER_DATA = range(2)
+ANSWER_KINDS = ("msg1", "data")
 # aiot_d2r_kind_t
 D2R_ACCESS_RANDOM_ID, D2R_UPPER_LAYER_DATA = range(2)
 R_SFS_VALUES = (1, 2, 4, 8, 16, 32, 64, 128)
@@ -511,12 +514,14 @@ class Heard:
 def _answer(a: Answer_) -> Answer:
     m = D2RMsg()
     C.pointer(m)[0] = a.message
-    return Answer("msg1" if a.kind == 0 else "data", m, a.r_sfs, a.rssi_w, a.start, a.slot,
+    return Answer(ANSWER_KINDS[a.kind], m, a.r_sfs, a.rssi_w, a.start, a.slot,
                   None if a.entry < 0 else a.entry, None if a.as_id < 0 else a.as_id)
 
 
 def _answer_c(a: Answer) -> Answer_:
-    return Answer_(kind=0 if a.kind == "msg1" else 1, message=a.message, r_sfs=a.r_sfs, rssi_w=a.rssi_w,
+    if a.kind not in ANSWER_KINDS:
+        raise ValueError(f"an answer of kind {a.kind!r}, not one of {ANSWER_KINDS}")
+    return Answer_(kind=ANSWER_KINDS.index(a.kind), message=a.message, r_sfs=a.r_sfs, rssi_w=a.rssi_w,
                    start=a.start, slot=a.slot, entry=-1 if a.entry is None else a.entry,
                    as_id=-1 if a.as_id is None else a.as_id)
 
@@ -762,6 +767,8 @@ class Device:
 # Messages between nodes (aiot_node_msg.h)
 # ----------------------------------------------------------------------------------------------
 
+# Copies of aiot_node_msg.h's AIOT_NODE_MSG_TAG_DATA and AIOT_TAG_DATA_FIXED_BYTES (a #define is not in
+# the library); tests/test_sink.py checks them against the messages the library packs.
 NODE_MSG_TAG_DATA = 1
 TAG_DATA_FIXED_BYTES = 40
 NODE_MSG_MAX_BYTES = TAG_DATA_FIXED_BYTES + MAX_TBS
@@ -779,25 +786,23 @@ class TagData:
 
 def node_msg_type(data: bytes) -> Optional[int]:
     """The type of the message in data, or None when it is not one whole message."""
-    b = (C.c_uint8 * max(1, len(data))).from_buffer_copy(data or b"\0")
-    t = _L().aiot_node_msg_type(b, len(data))
+    t = _L().aiot_node_msg_type(_u8(data), len(data))
     return None if t < 0 else t
 
 
 def pack_tag_data(m: TagData) -> bytes:
     """The datagram of m; ValueError for a field the layout cannot hold."""
+    if not 0 <= m.seq < 1 << 32:
+        raise ValueError(f"Tag data seq {m.seq}: not a 32-bit count")
     c = TagData_(seq=m.seq, after=m.after, answer=_answer_c(m.answer))
     b = (C.c_uint8 * NODE_MSG_MAX_BYTES)()
-    n = _L().aiot_node_msg_pack_tag_data(C.byref(c), b, NODE_MSG_MAX_BYTES)
-    if n < 0:
-        raise ValueError(f"Tag data seq {m.seq}: a field the message cannot hold (error {n})")
+    n = _check(_L().aiot_node_msg_pack_tag_data(C.byref(c), b, NODE_MSG_MAX_BYTES), f"Tag data seq {m.seq} pack")
     return bytes(b[:n])
 
 
 def parse_tag_data(data: bytes) -> TagData:
     """The Tag data message in data; ValueError when it is not one."""
-    b = (C.c_uint8 * max(1, len(data))).from_buffer_copy(data or b"\0")
     c = TagData_()
-    if _L().aiot_node_msg_parse_tag_data(b, len(data), C.byref(c)) != 0:
+    if _L().aiot_node_msg_parse_tag_data(_u8(data), len(data), C.byref(c)) != 0:
         raise ValueError(f"{len(data)} bytes that are not one Tag data message")
     return TagData(c.seq, c.after, _answer(c.answer))
