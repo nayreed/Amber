@@ -1,15 +1,17 @@
-"""38.391 V19.0.0 §6 MAC PDU reference packer/parser, written from the field tables and figures.
+"""38.391 V19.4.0 §6 MAC PDU reference packer/parser, written from the field tables and figures.
 
 Bits are strings, first (most significant) bit first, fields concatenated in reading order of the
 figures (§6.1.1). Raw field values are used throughout: codepoints, not decoded meanings.
-Fill bits and padding are packed as zeros; their content is not specified ("ignored").
+Fill bits and padding are packed as zeros; their values are ignored on parse (§6.2.1.1, CR 0016).
+A paging has an SPPI bit after the TBS and, when it is 1, a 128-bit Security Parameter (§6.2.1.1,
+5.2); the Paging ID Length is 10 bits.
 """
 from fractions import Fraction as F
 from . import oracle as o
 
 R2D_TYPE = {"paging": "001", "access_trigger": "010", "random_id_response": "011",
-            "r2d_data": "100", "nack_feedback": "101"}          # Table 6.1-1
-D2R_TYPE_DATA = "00"                                             # Table 6.1-2
+            "r2d_data": "100", "nack_feedback": "101"}          # Table 6.1.2-1
+D2R_TYPE_DATA = "00"                                             # Table 6.1.2-2
 
 # child fields of D2R Scheduling Info in Table 6.2.1.6-1 row order, per carrying message
 SCHED_FIELDS = {
@@ -22,6 +24,10 @@ SCHED_FIELDS = {
                  ("interval_cp", 2), ("seq_len_cp", 1), ("add_midamble_cp", 1), ("d2r_tbs_cp", 7)],
 }
 SCHED_FIELDS["random_id_response"] = SCHED_FIELDS["paging_cfa"]
+
+
+SEC_BITS = 128           # Security Parameter: RAND_AIOT_n of TS 33.369
+PAGING_ID_LEN_BITS = 10  # Paging ID Length (V19.4.0)
 
 
 def b(v, n):
@@ -49,6 +55,13 @@ def sched_len(carrier):
     return sum(n for _, n in SCHED_FIELDS[carrier])
 
 
+def sec_pack(f):
+    """SPPI and, when it is 1, the Security Parameter (hex string of 128 bits)."""
+    if not f["sppi"]:
+        return [("sppi", "0")]
+    return [("sppi", "1"), ("security_parameter", b(int(f["security_parameter"], 16), SEC_BITS))]
+
+
 def sched_to_l1(carrier, s):
     """Decode raw codepoints to the L1 parameters of 38.291 §7.1.1 (enumeration rule of §6.2.1.6)."""
     bd = s["bit_duration_cp"]
@@ -62,6 +75,7 @@ def sched_to_l1(carrier, s):
         r["r_sfs_valid"] = all(x in o.allowed_rsfs(bd) for x in r["r_sfs_set"])
     if "freq_unicast_cp" in s:
         r["r_sfs"] = o.RSFS_ALL[s["freq_unicast_cp"]]
+        r["r_sfs_valid"] = r["r_sfs"] in o.allowed_rsfs(bd)    # Table 6.2.1.6-1 (CR 0009): as the Broadcast values
     if "d2r_tbs_cp" in s:
         r["d2r_tbs_bytes"] = s["d2r_tbs_cp"] + 1
     return r
@@ -75,19 +89,19 @@ def segs_pack(kind, f):
     """Return list of (name, bits) segments for a R2D/D2R message. r2d_tbs must be given."""
     T = lambda k: R2D_TYPE[k]
     if kind == "paging_cbra":
-        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7)), ("at", "1"),
-              ("transaction_id", b(f["transaction_id"], 6))]
+        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7))] + sec_pack(f)
+        sg += [("at", "1"), ("transaction_id", b(f["transaction_id"], 6))]
         pid = f.get("paging_id")
         sg.append(("pipi", "1" if pid is not None else "0"))
         if pid is not None:
-            sg += [("paging_id_length", b(len(pid), 8)), ("paging_id", pid)]
+            sg += [("paging_id_length", b(len(pid), PAGING_ID_LEN_BITS)), ("paging_id", pid)]
         sg += [("n_access_occasions_exp", b(f["n_access_occasions_exp"], 4)),
                ("d2r_sched_info", sched_pack("paging_cbra", f["sched"])), ("k", b(f["k_cp"], 1))]
     elif kind == "paging_cfa":
         pid = f["paging_id"]
-        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7)), ("at", "0"),
-              ("paging_id_length", b(len(pid), 8)), ("paging_id", pid),
-              ("d2r_sched_info", sched_pack("paging_cfa", f["sched"]))]
+        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7))] + sec_pack(f)
+        sg += [("at", "0"), ("paging_id_length", b(len(pid), PAGING_ID_LEN_BITS)), ("paging_id", pid),
+               ("d2r_sched_info", sched_pack("paging_cfa", f["sched"]))]
     elif kind == "access_trigger":
         return [("type", T("access_trigger"))]
     elif kind == "random_id_response":
@@ -160,21 +174,24 @@ def parse(direction, bits):
         return k, {}
     tbs = int(take(7), 2)
     if k == "paging":
+        sec = {"sppi": int(take(1))}
+        if sec["sppi"]:
+            sec["security_parameter"] = "%0*X" % (SEC_BITS // 4, int(take(SEC_BITS), 2))
         at = take(1)
         if at == "1":
             tid = int(take(6), 2)
             pid = None
             if take(1) == "1":
-                pid = take(int(take(8), 2))
+                pid = take(int(take(PAGING_ID_LEN_BITS), 2))
             n = int(take(4), 2)
             sched = sched_unpack("paging_cbra", take(18))
             kc = int(take(1))
-            return "paging_cbra", {"r2d_tbs": tbs, "transaction_id": tid, "paging_id": pid,
+            return "paging_cbra", {"r2d_tbs": tbs, **sec, "transaction_id": tid, "paging_id": pid,
                                    "n_access_occasions_exp": n, "sched": sched, "k_cp": kc,
                                    "fill_bits": len(bits) - p}
-        pid = take(int(take(8), 2))
+        pid = take(int(take(PAGING_ID_LEN_BITS), 2))
         sched = sched_unpack("paging_cfa", take(24))
-        return "paging_cfa", {"r2d_tbs": tbs, "paging_id": pid, "sched": sched, "fill_bits": len(bits) - p}
+        return "paging_cfa", {"r2d_tbs": tbs, **sec, "paging_id": pid, "sched": sched, "fill_bits": len(bits) - p}
     if k == "random_id_response":
         sched = sched_unpack("random_id_response", take(24))
         fipi = int(take(1))

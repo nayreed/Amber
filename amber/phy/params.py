@@ -1,7 +1,7 @@
 # amber/params.py
 """Constants, sequences and parameter tables of the Rel-19 Ambient IoT physical layer.
 
-Sources: 3GPP TS 38.291 V19.3.0 (PHY) and TS 38.391 V19.0.0 (MAC, Table 6.2.1.6-1, which lists the
+Sources: 3GPP TS 38.291 V19.3.0 (PHY) and TS 38.391 V19.4.0 (MAC, Table 6.2.1.6-1, which lists the
 values each D2R parameter can take). Times are counted in samples at SAMPLE_RATE_HZ, where every
 spec duration used here is a whole number of samples (see the log, decisions of 2026-10-22).
 """

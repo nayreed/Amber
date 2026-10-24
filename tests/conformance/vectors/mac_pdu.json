@@ -4,7 +4,7 @@
  "schema": 1,
  "specs": {
   "38.291": "V19.3.0 (2026-04)",
-  "38.391": "V19.0.0 (2025-10)",
+  "38.391": "V19.4.0 (2026-09)",
   "38.191": "V19.4.0 (2026-09)",
   "38.194": "V19.3.0 (2026-08)"
  },
@@ -14,11 +14,13 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, Figure 6.2.1.1-1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
    ],
    "input": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 5,
      "paging_id": null,
      "n_access_occasions_exp": 0,
@@ -33,11 +35,11 @@
       "add_midamble_cp": 0
      },
      "k_cp": 0,
-     "r2d_tbs": 6
+     "r2d_tbs": 22
     }
    },
    "expect": {
-    "bits": "001000011010001010000000000001000000001000000000",
+    "bits": "00100101101000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111000101000000000000100000000100000000",
     "segments": [
      [
       "type",
@@ -45,7 +47,15 @@
      ],
      [
       "r2d_tbs",
-      "0000110"
+      "0010110"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
      ],
      [
       "at",
@@ -73,29 +83,31 @@
      ],
      [
       "fill_bits",
-      "0000000"
+      "000000"
      ]
     ],
-    "n_bits": 48,
-    "fill_bits": 7,
-    "pdu_bytes": 6
+    "n_bits": 176,
+    "fill_bits": 6,
+    "pdu_bytes": 22
    },
-   "note": "CBRA, no Paging ID, 9A parameters (R_SFS 8 bitmap, 2 tau, 1 access occasion). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CBRA, no Paging ID, 9A parameters (R_SFS 8 bitmap, 2 tau, 1 access occasion), SPPI 1 with a Security Parameter. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-001",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, Figure 6.2.1.1-1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "001000011010001010000000000001000000001000000000"
+    "bits": "00100101101000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111000101000000000000100000000100000000"
    },
    "expect": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 5,
      "paging_id": null,
      "n_access_occasions_exp": 0,
@@ -110,22 +122,24 @@
       "add_midamble_cp": 0
      },
      "k_cp": 0,
-     "r2d_tbs": 6
+     "r2d_tbs": 22
     },
-    "fill_bits": 7
+    "fill_bits": 6
    },
-   "note": "CBRA, no Paging ID, 9A parameters (R_SFS 8 bitmap, 2 tau, 1 access occasion)"
+   "note": "CBRA, no Paging ID, 9A parameters (R_SFS 8 bitmap, 2 tau, 1 access occasion), SPPI 1 with a Security Parameter"
   },
   {
    "id": "mac_pdu-mac_pack-002",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 63,
      "paging_id": "10110011100011110000",
      "n_access_occasions_exp": 3,
@@ -140,11 +154,11 @@
       "add_midamble_cp": 0
      },
      "k_cp": 1,
-     "r2d_tbs": 9
+     "r2d_tbs": 25
     }
    },
    "expect": {
-    "bits": "001000100111111111000101001011001110001111000000111000000100000000101000",
+    "bits": "00100110011000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111111111100000101001011001110001111000000111000000100000000101",
     "segments": [
      [
       "type",
@@ -152,7 +166,15 @@
      ],
      [
       "r2d_tbs",
-      "0001001"
+      "0011001"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
      ],
      [
       "at",
@@ -168,7 +190,7 @@
      ],
      [
       "paging_id_length",
-      "00010100"
+      "0000010100"
      ],
      [
       "paging_id",
@@ -185,32 +207,30 @@
      [
       "k",
       "1"
-     ],
-     [
-      "fill_bits",
-      "000"
      ]
     ],
-    "n_bits": 72,
-    "fill_bits": 3,
-    "pdu_bytes": 9
+    "n_bits": 200,
+    "fill_bits": 0,
+    "pdu_bytes": 25
    },
-   "note": "CBRA with a 20-bit Paging ID, 8 access occasions, K=4. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CBRA with a 20-bit Paging ID, 8 access occasions, K=4, SPPI 1 with a Security Parameter. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-002",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "001000100111111111000101001011001110001111000000111000000100000000101000"
+    "bits": "00100110011000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111111111100000101001011001110001111000000111000000100000000101"
    },
    "expect": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 63,
      "paging_id": "10110011100011110000",
      "n_access_occasions_exp": 3,
@@ -225,22 +245,24 @@
       "add_midamble_cp": 0
      },
      "k_cp": 1,
-     "r2d_tbs": 9
+     "r2d_tbs": 25
     },
-    "fill_bits": 3
+    "fill_bits": 0
    },
-   "note": "CBRA with a 20-bit Paging ID, 8 access occasions, K=4"
+   "note": "CBRA with a 20-bit Paging ID, 8 access occasions, K=4, SPPI 1 with a Security Parameter"
   },
   {
    "id": "mac_pdu-mac_pack-003",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 0,
      "paging_id": "1010101011001100",
      "n_access_occasions_exp": 15,
@@ -255,11 +277,11 @@
       "add_midamble_cp": 0
      },
      "k_cp": 0,
-     "r2d_tbs": 9
+     "r2d_tbs": 25
     }
    },
    "expect": {
-    "bits": "001000100110000001000100001010101011001100111100000001000000001000000000",
+    "bits": "00100110011000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111000000100000100001010101011001100111100000001000000001000000",
     "segments": [
      [
       "type",
@@ -267,7 +289,15 @@
      ],
      [
       "r2d_tbs",
-      "0001001"
+      "0011001"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
      ],
      [
       "at",
@@ -283,7 +313,7 @@
      ],
      [
       "paging_id_length",
-      "00010000"
+      "0000010000"
      ],
      [
       "paging_id",
@@ -303,29 +333,31 @@
      ],
      [
       "fill_bits",
-      "0000000"
+      "0000"
      ]
     ],
-    "n_bits": 72,
-    "fill_bits": 7,
-    "pdu_bytes": 9
+    "n_bits": 200,
+    "fill_bits": 4,
+    "pdu_bytes": 25
    },
-   "note": "CBRA with a 16-bit Paging ID, 2^15 occasions (v=15). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CBRA with a 16-bit Paging ID, 2^15 occasions (v=15), SPPI 1 with a Security Parameter. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-003",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15-16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "001000100110000001000100001010101011001100111100000001000000001000000000"
+    "bits": "00100110011000000010010001101000101011001111000100110101011110011011110111100000000000100010010001000110011010001000101010101100110011101111000000100000100001010101011001100111100000001000000001000000"
    },
    "expect": {
     "kind": "paging_cbra",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "transaction_id": 0,
      "paging_id": "1010101011001100",
      "n_access_occasions_exp": 15,
@@ -340,22 +372,24 @@
       "add_midamble_cp": 0
      },
      "k_cp": 0,
-     "r2d_tbs": 9
+     "r2d_tbs": 25
     },
-    "fill_bits": 7
+    "fill_bits": 4
    },
-   "note": "CBRA with a 16-bit Paging ID, 2^15 occasions (v=15)"
+   "note": "CBRA with a 16-bit Paging ID, 2^15 occasions (v=15), SPPI 1 with a Security Parameter"
   },
   {
    "id": "mac_pdu-mac_pack-004",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, Figure 6.2.1.1-2, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-2"
    ],
    "input": {
     "kind": "paging_cfa",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "paging_id": "11011110101011011011111011101111",
      "sched": {
       "bit_duration_cp": 4,
@@ -367,11 +401,11 @@
       "add_midamble_cp": 1,
       "d2r_tbs_cp": 11
      },
-     "r2d_tbs": 10
+     "r2d_tbs": 26
     }
    },
    "expect": {
-    "bits": "00100010100001000001101111010101101101111101110111110000010000111101000101100000",
+    "bits": "0010011010100000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111000001000001101111010101101101111101110111110000010000111101000101100",
     "segments": [
      [
       "type",
@@ -379,7 +413,15 @@
      ],
      [
       "r2d_tbs",
-      "0001010"
+      "0011010"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
      ],
      [
       "at",
@@ -387,7 +429,7 @@
      ],
      [
       "paging_id_length",
-      "00100000"
+      "0000100000"
      ],
      [
       "paging_id",
@@ -399,29 +441,31 @@
      ],
      [
       "fill_bits",
-      "00000"
+      "00"
      ]
     ],
-    "n_bits": 80,
-    "fill_bits": 5,
-    "pdu_bytes": 10
+    "n_bits": 208,
+    "fill_bits": 2,
+    "pdu_bytes": 26
    },
-   "note": "CFA, 32-bit Paging ID, D2R TBS 12 bytes (codepoint 11). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CFA, 32-bit Paging ID, D2R TBS 12 bytes (codepoint 11), SPPI 1 with a Security Parameter. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-004",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, Figure 6.2.1.1-2, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-2"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "00100010100001000001101111010101101101111101110111110000010000111101000101100000"
+    "bits": "0010011010100000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111000001000001101111010101101101111101110111110000010000111101000101100"
    },
    "expect": {
     "kind": "paging_cfa",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "paging_id": "11011110101011011011111011101111",
      "sched": {
       "bit_duration_cp": 4,
@@ -433,22 +477,24 @@
       "add_midamble_cp": 1,
       "d2r_tbs_cp": 11
      },
-     "r2d_tbs": 10
+     "r2d_tbs": 26
     },
-    "fill_bits": 5
+    "fill_bits": 2
    },
-   "note": "CFA, 32-bit Paging ID, D2R TBS 12 bytes (codepoint 11)"
+   "note": "CFA, 32-bit Paging ID, D2R TBS 12 bytes (codepoint 11), SPPI 1 with a Security Parameter"
   },
   {
    "id": "mac_pdu-mac_pack-005",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "kind": "paging_cfa",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "paging_id": "1011001110001",
      "sched": {
       "bit_duration_cp": 4,
@@ -460,11 +506,11 @@
       "add_midamble_cp": 1,
       "d2r_tbs_cp": 0
      },
-     "r2d_tbs": 7
+     "r2d_tbs": 24
     }
    },
    "expect": {
-    "bits": "00100001110000011011011001110001100000100001111010000000",
+    "bits": "001001100010000000100100011010001010110011110001001101010111100110111101111000000000001000100100010001100110100010001010101011001100111011100000001101101100111000110000010000111101000000000000",
     "segments": [
      [
       "type",
@@ -472,7 +518,15 @@
      ],
      [
       "r2d_tbs",
-      "0000111"
+      "0011000"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
      ],
      [
       "at",
@@ -480,7 +534,7 @@
      ],
      [
       "paging_id_length",
-      "00001101"
+      "0000001101"
      ],
      [
       "paging_id",
@@ -489,28 +543,34 @@
      [
       "d2r_sched_info",
       "100000100001111010000000"
+     ],
+     [
+      "fill_bits",
+      "00000"
      ]
     ],
-    "n_bits": 56,
-    "fill_bits": 0,
-    "pdu_bytes": 7
+    "n_bits": 192,
+    "fill_bits": 5,
+    "pdu_bytes": 24
    },
-   "note": "CFA, 13-bit Paging ID (alignment fill). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CFA, 13-bit Paging ID, SPPI 1 with a Security Parameter. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-005",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "00100001110000011011011001110001100000100001111010000000"
+    "bits": "001001100010000000100100011010001010110011110001001101010111100110111101111000000000001000100100010001100110100010001010101011001100111011100000001101101100111000110000010000111101000000000000"
    },
    "expect": {
     "kind": "paging_cfa",
     "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
      "paging_id": "1011001110001",
      "sched": {
       "bit_duration_cp": 4,
@@ -522,18 +582,18 @@
       "add_midamble_cp": 1,
       "d2r_tbs_cp": 0
      },
-     "r2d_tbs": 7
+     "r2d_tbs": 24
     },
-    "fill_bits": 0
+    "fill_bits": 5
    },
-   "note": "CFA, 13-bit Paging ID (alignment fill)"
+   "note": "CFA, 13-bit Paging ID, SPPI 1 with a Security Parameter"
   },
   {
    "id": "mac_pdu-mac_pack-006",
    "kind": "mac_pack",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.2, Figure 6.2.1.2-1, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.2, Figure 6.2.1.2-1"
    ],
    "input": {
     "kind": "access_trigger",
@@ -557,7 +617,7 @@
    "kind": "mac_parse",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.2, Figure 6.2.1.2-1, p.16"
+    "TS 38.391 V19.4.0 \u00a76.2.1.2, Figure 6.2.1.2-1"
    ],
    "input": {
     "direction": "r2d",
@@ -575,7 +635,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, Figure 6.2.1.3-1, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3, Figure 6.2.1.3-1"
    ],
    "input": {
     "kind": "random_id_response",
@@ -643,7 +703,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, Figure 6.2.1.3-1, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3, Figure 6.2.1.3-1"
    ],
    "input": {
     "direction": "r2d",
@@ -680,7 +740,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "kind": "random_id_response",
@@ -757,7 +817,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "direction": "r2d",
@@ -795,7 +855,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "kind": "random_id_response",
@@ -906,7 +966,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "direction": "r2d",
@@ -954,7 +1014,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "kind": "random_id_response",
@@ -1138,7 +1198,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "direction": "r2d",
@@ -1203,7 +1263,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.4, Figure 6.2.1.4-1, p.18-19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-1"
    ],
    "input": {
     "kind": "r2d_data",
@@ -1211,7 +1271,7 @@
      "as_id": 42330,
      "sched": {
       "bit_duration_cp": 7,
-      "freq_unicast_cp": 5,
+      "freq_unicast_cp": 0,
       "block_rep_cp": 0,
       "coding_cp": 0,
       "interval_cp": 2,
@@ -1225,7 +1285,7 @@
     }
    },
    "expect": {
-    "bits": "100000100110100101010110101111010010101111100100101000011011001011000011",
+    "bits": "100000100110100101010110101110000010101111100100101000011011001011000011",
     "segments": [
      [
       "type",
@@ -1241,7 +1301,7 @@
      ],
      [
       "d2r_sched_info",
-      "1111010010101111100"
+      "1110000010101111100"
      ],
      [
       "ci",
@@ -1260,18 +1320,18 @@
     "fill_bits": 0,
     "pdu_bytes": 9
    },
-   "note": "CI=1 with a 3-byte Data SDU. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CI=1 with a 3-byte Data SDU, Unicast R_SFS 1 (the only value tau/96 allows, CR 0009). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-011",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.4, Figure 6.2.1.4-1, p.18-19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-1"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "100000100110100101010110101111010010101111100100101000011011001011000011"
+    "bits": "100000100110100101010110101110000010101111100100101000011011001011000011"
    },
    "expect": {
     "kind": "r2d_data",
@@ -1279,7 +1339,7 @@
      "as_id": 42330,
      "sched": {
       "bit_duration_cp": 7,
-      "freq_unicast_cp": 5,
+      "freq_unicast_cp": 0,
       "block_rep_cp": 0,
       "coding_cp": 0,
       "interval_cp": 2,
@@ -1293,14 +1353,14 @@
     },
     "fill_bits": 0
    },
-   "note": "CI=1 with a 3-byte Data SDU"
+   "note": "CI=1 with a 3-byte Data SDU, Unicast R_SFS 1"
   },
   {
    "id": "mac_pdu-mac_pack-012",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.4, Figure 6.2.1.4-2, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
    ],
    "input": {
     "kind": "r2d_data",
@@ -1308,7 +1368,7 @@
      "as_id": 1,
      "sched": {
       "bit_duration_cp": 7,
-      "freq_unicast_cp": 5,
+      "freq_unicast_cp": 0,
       "block_rep_cp": 0,
       "coding_cp": 0,
       "interval_cp": 2,
@@ -1322,7 +1382,7 @@
     }
    },
    "expect": {
-    "bits": "10000001110000000000000001111101001010111110000001100100",
+    "bits": "10000001110000000000000001111000001010111110000001100100",
     "segments": [
      [
       "type",
@@ -1338,7 +1398,7 @@
      ],
      [
       "d2r_sched_info",
-      "1111010010101111100"
+      "1110000010101111100"
      ],
      [
       "ci",
@@ -1357,18 +1417,18 @@
     "fill_bits": 0,
     "pdu_bytes": 7
    },
-   "note": "CI=0 with Received Data Size 100. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+   "note": "CI=0 with Received Data Size 100, Unicast R_SFS 1 (the only value tau/96 allows, CR 0009). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
   },
   {
    "id": "mac_pdu-mac_parse-012",
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.4, Figure 6.2.1.4-2, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
    ],
    "input": {
     "direction": "r2d",
-    "bits": "10000001110000000000000001111101001010111110000001100100"
+    "bits": "10000001110000000000000001111000001010111110000001100100"
    },
    "expect": {
     "kind": "r2d_data",
@@ -1376,7 +1436,7 @@
      "as_id": 1,
      "sched": {
       "bit_duration_cp": 7,
-      "freq_unicast_cp": 5,
+      "freq_unicast_cp": 0,
       "block_rep_cp": 0,
       "coding_cp": 0,
       "interval_cp": 2,
@@ -1390,14 +1450,14 @@
     },
     "fill_bits": 0
    },
-   "note": "CI=0 with Received Data Size 100"
+   "note": "CI=0 with Received Data Size 100, Unicast R_SFS 1"
   },
   {
    "id": "mac_pdu-mac_pack-013",
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.5, Figure 6.2.1.5-1, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.5, Figure 6.2.1.5-1"
    ],
    "input": {
     "kind": "nack_feedback",
@@ -1444,7 +1504,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.5, Figure 6.2.1.5-1, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.5, Figure 6.2.1.5-1"
    ],
    "input": {
     "direction": "r2d",
@@ -1468,7 +1528,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.5, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.5"
    ],
    "input": {
     "kind": "nack_feedback",
@@ -1510,7 +1570,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.5, p.19"
+    "TS 38.391 V19.4.0 \u00a76.2.1.5"
    ],
    "input": {
     "direction": "r2d",
@@ -1533,7 +1593,7 @@
    "kind": "mac_pack",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.1, Figure 6.2.2.1-1, p.24"
+    "TS 38.391 V19.4.0 \u00a76.2.2.1, Figure 6.2.2.1-1"
    ],
    "input": {
     "kind": "access_random_id",
@@ -1559,7 +1619,7 @@
    "kind": "mac_parse",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.1, Figure 6.2.2.1-1, p.24"
+    "TS 38.391 V19.4.0 \u00a76.2.2.1, Figure 6.2.2.1-1"
    ],
    "input": {
     "direction": "d2r",
@@ -1578,7 +1638,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.2, Figure 6.2.2.2-1, p.24-25"
+    "TS 38.391 V19.4.0 \u00a76.2.2.2, Figure 6.2.2.2-1"
    ],
    "input": {
     "kind": "d2r_data",
@@ -1626,7 +1686,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.2, Figure 6.2.2.2-1, p.24-25"
+    "TS 38.391 V19.4.0 \u00a76.2.2.2, Figure 6.2.2.2-1"
    ],
    "input": {
     "direction": "d2r",
@@ -1647,7 +1707,7 @@
    "kind": "mac_pack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.2, p.24-25"
+    "TS 38.391 V19.4.0 \u00a76.2.2.2"
    ],
    "input": {
     "kind": "d2r_data",
@@ -1691,7 +1751,7 @@
    "kind": "mac_parse",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.2.2, p.24-25"
+    "TS 38.391 V19.4.0 \u00a76.2.2.2"
    ],
    "input": {
     "direction": "d2r",
@@ -1708,12 +1768,655 @@
    "note": "MDI 1, 10-byte SDU, no padding, 12-byte TB"
   },
   {
+   "id": "mac_pdu-mac_pack-018",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "kind": "paging_cbra",
+    "fields": {
+     "sppi": 0,
+     "transaction_id": 9,
+     "paging_id": null,
+     "n_access_occasions_exp": 2,
+     "sched": {
+      "time_resource_cp": 0,
+      "bit_duration_cp": 0,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 0,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0
+     },
+     "k_cp": 1,
+     "r2d_tbs": 6
+    }
+   },
+   "expect": {
+    "bits": "001000011001001001000100000000100000000101000000",
+    "segments": [
+     [
+      "type",
+      "001"
+     ],
+     [
+      "r2d_tbs",
+      "0000110"
+     ],
+     [
+      "sppi",
+      "0"
+     ],
+     [
+      "at",
+      "1"
+     ],
+     [
+      "transaction_id",
+      "001001"
+     ],
+     [
+      "pipi",
+      "0"
+     ],
+     [
+      "n_access_occasions_exp",
+      "0010"
+     ],
+     [
+      "d2r_sched_info",
+      "000000010000000010"
+     ],
+     [
+      "k",
+      "1"
+     ],
+     [
+      "fill_bits",
+      "000000"
+     ]
+    ],
+    "n_bits": 48,
+    "fill_bits": 6,
+    "pdu_bytes": 6
+   },
+   "note": "CBRA, SPPI 0 (no Security Parameter), no Paging ID, 4 access occasions, K=4. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-018",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "001000011001001001000100000000100000000101000000"
+   },
+   "expect": {
+    "kind": "paging_cbra",
+    "fields": {
+     "sppi": 0,
+     "transaction_id": 9,
+     "paging_id": null,
+     "n_access_occasions_exp": 2,
+     "sched": {
+      "time_resource_cp": 0,
+      "bit_duration_cp": 0,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 0,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0
+     },
+     "k_cp": 1,
+     "r2d_tbs": 6
+    },
+    "fill_bits": 6
+   },
+   "note": "CBRA, SPPI 0 (no Security Parameter), no Paging ID, 4 access occasions, K=4"
+  },
+  {
+   "id": "mac_pdu-mac_pack-019",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 0,
+     "paging_id": "101100111000",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 8
+    }
+   },
+   "expect": {
+    "bits": "0010001000000000001100101100111000100000100001111010001011000000",
+    "segments": [
+     [
+      "type",
+      "001"
+     ],
+     [
+      "r2d_tbs",
+      "0001000"
+     ],
+     [
+      "sppi",
+      "0"
+     ],
+     [
+      "at",
+      "0"
+     ],
+     [
+      "paging_id_length",
+      "0000001100"
+     ],
+     [
+      "paging_id",
+      "101100111000"
+     ],
+     [
+      "d2r_sched_info",
+      "100000100001111010001011"
+     ],
+     [
+      "fill_bits",
+      "000000"
+     ]
+    ],
+    "n_bits": 64,
+    "fill_bits": 6,
+    "pdu_bytes": 8
+   },
+   "note": "CFA, SPPI 0 (no Security Parameter), 12-bit Paging ID. Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-019",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "0010001000000000001100101100111000100000100001111010001011000000"
+   },
+   "expect": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 0,
+     "paging_id": "101100111000",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 8
+    },
+    "fill_bits": 6
+   },
+   "note": "CFA, SPPI 0 (no Security Parameter), 12-bit Paging ID"
+  },
+  {
+   "id": "mac_pdu-mac_parse-020",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1",
+    "TS 38.391 V19.4.0 \u00a76.1.1"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "0010001000000000001100101100111000100000100001111010001011111111"
+   },
+   "expect": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 0,
+     "paging_id": "101100111000",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 8
+    },
+    "fill_bits": 6
+   },
+   "note": "CFA, SPPI 0, 12-bit Paging ID, every Fill Bit is 1: the value of Fill Bits is ignored (CR 0016), so the message parses as mac_parse-019"
+  },
+  {
+   "id": "mac_pdu-mac_pack-021",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 0,
+     "paging_id": "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 44
+    }
+   },
+   "expect": {
+    "bits": "0010101100000100101100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100000100001111010001011000000",
+    "segments": [
+     [
+      "type",
+      "001"
+     ],
+     [
+      "r2d_tbs",
+      "0101100"
+     ],
+     [
+      "sppi",
+      "0"
+     ],
+     [
+      "at",
+      "0"
+     ],
+     [
+      "paging_id_length",
+      "0100101100"
+     ],
+     [
+      "paging_id",
+      "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100"
+     ],
+     [
+      "d2r_sched_info",
+      "100000100001111010001011"
+     ],
+     [
+      "fill_bits",
+      "000000"
+     ]
+    ],
+    "n_bits": 352,
+    "fill_bits": 6,
+    "pdu_bytes": 44
+   },
+   "note": "CFA, SPPI 0, 300-bit Paging ID (Paging ID Length is 10 bits). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-021",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "0010101100000100101100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100000100001111010001011000000"
+   },
+   "expect": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 0,
+     "paging_id": "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 44
+    },
+    "fill_bits": 6
+   },
+   "note": "CFA, SPPI 0, 300-bit Paging ID (Paging ID Length is 10 bits)"
+  },
+  {
+   "id": "mac_pdu-mac_pack-022",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
+     "paging_id": "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 60
+    }
+   },
+   "expect": {
+    "bits": "001011110010000000100100011010001010110011110001001101010111100110111101111000000000001000100100010001100110100010001010101011001100111011100100101100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100000100001111010001011000000",
+    "segments": [
+     [
+      "type",
+      "001"
+     ],
+     [
+      "r2d_tbs",
+      "0111100"
+     ],
+     [
+      "sppi",
+      "1"
+     ],
+     [
+      "security_parameter",
+      "00000001001000110100010101100111100010011010101111001101111011110000000000010001001000100011001101000100010101010110011001110111"
+     ],
+     [
+      "at",
+      "0"
+     ],
+     [
+      "paging_id_length",
+      "0100101100"
+     ],
+     [
+      "paging_id",
+      "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100"
+     ],
+     [
+      "d2r_sched_info",
+      "100000100001111010001011"
+     ],
+     [
+      "fill_bits",
+      "000000"
+     ]
+    ],
+    "n_bits": 480,
+    "fill_bits": 6,
+    "pdu_bytes": 60
+   },
+   "note": "CFA, SPPI 1 with a Security Parameter, 300-bit Paging ID (Paging ID Length is 10 bits). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-022",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.1, Figure 6.2.1.1-1"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "001011110010000000100100011010001010110011110001001101010111100110111101111000000000001000100100010001100110100010001010101011001100111011100100101100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100000100001111010001011000000"
+   },
+   "expect": {
+    "kind": "paging_cfa",
+    "fields": {
+     "sppi": 1,
+     "security_parameter": "0123456789ABCDEF0011223344556677",
+     "paging_id": "100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100100",
+     "sched": {
+      "bit_duration_cp": 4,
+      "freq_bitmap": "00010000",
+      "block_rep_cp": 1,
+      "coding_cp": 1,
+      "interval_cp": 3,
+      "seq_len_cp": 0,
+      "add_midamble_cp": 1,
+      "d2r_tbs_cp": 11
+     },
+     "r2d_tbs": 60
+    },
+    "fill_bits": 6
+   },
+   "note": "CFA, SPPI 1 with a Security Parameter, 300-bit Paging ID (Paging ID Length is 10 bits)"
+  },
+  {
+   "id": "mac_pdu-mac_pack-023",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
+   ],
+   "input": {
+    "kind": "r2d_data",
+    "fields": {
+     "as_id": 65535,
+     "sched": {
+      "bit_duration_cp": 7,
+      "freq_unicast_cp": 0,
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 2,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0,
+      "d2r_tbs_cp": 124
+     },
+     "ci": 0,
+     "received_data_size": 125,
+     "r2d_tbs": 7
+    }
+   },
+   "expect": {
+    "bits": "10000001111111111111111111111000001010111110000001111101",
+    "segments": [
+     [
+      "type",
+      "100"
+     ],
+     [
+      "r2d_tbs",
+      "0000111"
+     ],
+     [
+      "as_id",
+      "1111111111111111"
+     ],
+     [
+      "d2r_sched_info",
+      "1110000010101111100"
+     ],
+     [
+      "ci",
+      "0"
+     ],
+     [
+      "r",
+      "000"
+     ],
+     [
+      "received_data_size",
+      "1111101"
+     ]
+    ],
+    "n_bits": 56,
+    "fill_bits": 0,
+    "pdu_bytes": 7
+   },
+   "note": "CI=0 with Received Data Size 125, the largest value ({0..125}). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-023",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "10000001111111111111111111111000001010111110000001111101"
+   },
+   "expect": {
+    "kind": "r2d_data",
+    "fields": {
+     "as_id": 65535,
+     "sched": {
+      "bit_duration_cp": 7,
+      "freq_unicast_cp": 0,
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 2,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0,
+      "d2r_tbs_cp": 124
+     },
+     "ci": 0,
+     "received_data_size": 125,
+     "r2d_tbs": 7
+    },
+    "fill_bits": 0
+   },
+   "note": "CI=0 with Received Data Size 125, the largest value ({0..125})"
+  },
+  {
+   "id": "mac_pdu-mac_pack-024",
+   "kind": "mac_pack",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
+   ],
+   "input": {
+    "kind": "r2d_data",
+    "fields": {
+     "as_id": 2,
+     "sched": {
+      "bit_duration_cp": 7,
+      "freq_unicast_cp": 0,
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 2,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0,
+      "d2r_tbs_cp": 124
+     },
+     "ci": 0,
+     "received_data_size": 0,
+     "r2d_tbs": 7
+    }
+   },
+   "expect": {
+    "bits": "10000001110000000000000010111000001010111110000000000000",
+    "segments": [
+     [
+      "type",
+      "100"
+     ],
+     [
+      "r2d_tbs",
+      "0000111"
+     ],
+     [
+      "as_id",
+      "0000000000000010"
+     ],
+     [
+      "d2r_sched_info",
+      "1110000010101111100"
+     ],
+     [
+      "ci",
+      "0"
+     ],
+     [
+      "r",
+      "000"
+     ],
+     [
+      "received_data_size",
+      "0000000"
+     ]
+    ],
+    "n_bits": 56,
+    "fill_bits": 0,
+    "pdu_bytes": 7
+   },
+   "note": "CI=0 with Received Data Size 0 (the device takes the AS ID, no data). Fields are raw values (codepoints). Fill bits are written as 0; the spec says the MAC entity ignores them, so only their count is compared on parse. r2d_tbs = PDU length in bytes: the spec says 'TBS of this message', and 38.291 \u00a77.2.2 uses that value as the PRDCH transport block size, so the PDU is the TB (direct value, no offset; see README)."
+  },
+  {
+   "id": "mac_pdu-mac_parse-024",
+   "kind": "mac_parse",
+   "origin": "spec-inferred",
+   "cite": [
+    "TS 38.391 V19.4.0 \u00a76.2.1.4, Figure 6.2.1.4-2"
+   ],
+   "input": {
+    "direction": "r2d",
+    "bits": "10000001110000000000000010111000001010111110000000000000"
+   },
+   "expect": {
+    "kind": "r2d_data",
+    "fields": {
+     "as_id": 2,
+     "sched": {
+      "bit_duration_cp": 7,
+      "freq_unicast_cp": 0,
+      "block_rep_cp": 0,
+      "coding_cp": 0,
+      "interval_cp": 2,
+      "seq_len_cp": 1,
+      "add_midamble_cp": 0,
+      "d2r_tbs_cp": 124
+     },
+     "ci": 0,
+     "received_data_size": 0,
+     "r2d_tbs": 7
+    },
+    "fill_bits": 0
+   },
+   "note": "CI=0 with Received Data Size 0 (the device takes the AS ID, no data)"
+  },
+  {
    "id": "mac_pdu-d2r_data_tb_relation-001",
    "kind": "d2r_data_tb_relation",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.1.1, p.14",
-    "TS 38.391 V19.0.0 \u00a76.2.2.2"
+    "TS 38.391 V19.4.0 \u00a76.1.1",
+    "TS 38.391 V19.4.0 \u00a76.2.2.2"
    ],
    "input": {
     "d2r_tbs_bytes": 12,
@@ -1730,7 +2433,7 @@
    "kind": "d2r_data_tb_relation",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.1.1, p.14"
+    "TS 38.391 V19.4.0 \u00a76.1.1"
    ],
    "input": {
     "d2r_tbs_bytes": 125,
@@ -1747,8 +2450,8 @@
    "kind": "sched_info_length",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
-    "TS 38.391 V19.0.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
+    "TS 38.391 V19.4.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
    ],
    "input": {
     "carrier": "paging_cbra"
@@ -1763,8 +2466,8 @@
    "kind": "sched_info_length",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
-    "TS 38.391 V19.0.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
+    "TS 38.391 V19.4.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
    ],
    "input": {
     "carrier": "paging_cfa"
@@ -1779,8 +2482,8 @@
    "kind": "sched_info_length",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
-    "TS 38.391 V19.0.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
+    "TS 38.391 V19.4.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
    ],
    "input": {
     "carrier": "random_id_response"
@@ -1795,8 +2498,8 @@
    "kind": "sched_info_length",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
-    "TS 38.391 V19.0.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
+    "TS 38.391 V19.4.0 \u00a76.2.1.1/\u00a76.2.1.3/\u00a76.2.1.4"
    ],
    "input": {
     "carrier": "r2d_data"
@@ -1811,7 +2514,7 @@
    "kind": "sched_info_unpack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
    ],
    "input": {
@@ -1850,7 +2553,7 @@
    "kind": "sched_info_unpack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
    ],
    "input": {
@@ -1889,7 +2592,7 @@
    "kind": "sched_info_unpack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
    ],
    "input": {
@@ -1931,17 +2634,17 @@
    "kind": "sched_info_unpack",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22-23",
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1",
     "TS 38.291 V19.3.0 \u00a77.1.1, p.16"
    ],
    "input": {
     "carrier": "r2d_data",
-    "bits": "1111010010101111100"
+    "bits": "1110000010101111100"
    },
    "expect": {
     "fields": {
      "bit_duration_cp": 7,
-     "freq_unicast_cp": 5,
+     "freq_unicast_cp": 0,
      "block_rep_cp": 0,
      "coding_cp": 0,
      "interval_cp": 2,
@@ -1956,18 +2659,19 @@
      "i_bit": 32256,
      "l_amble": 31,
      "i_add": false,
-     "r_sfs": 32,
+     "r_sfs": 1,
+     "r_sfs_valid": true,
      "d2r_tbs_bytes": 125
     }
    },
-   "note": "Child fields are packed in Table 6.2.1.6-1 row order (the spec does not state the order in words). Codepoints decode per \u00a76.2.1.6: the first codepoint is the first listed value, so D2R TBS = codepoint + 1 byte, coding 0 = FEC, sequence 0 = short (7), block repetition 0 = 1."
+   "note": "Child fields are packed in Table 6.2.1.6-1 row order (the spec does not state the order in words). Codepoints decode per \u00a76.2.1.6: the first codepoint is the first listed value, so D2R TBS = codepoint + 1 byte, coding 0 = FEC, sequence 0 = short (7), block repetition 0 = 1. Unicast R_SFS is limited by the Bit Duration as the Broadcast values (CR 0009): R_SFS 1 is the only one at tau/96."
   },
   {
    "id": "mac_pdu-cfa_bitmap_valid-001",
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -1983,7 +2687,7 @@
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -1999,7 +2703,7 @@
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -2015,7 +2719,7 @@
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -2031,7 +2735,7 @@
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -2047,7 +2751,7 @@
    "kind": "cfa_bitmap_valid",
    "origin": "spec-derived",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.2.1.6-1, p.22 (Frequency Resource Indication Broadcast)"
+    "TS 38.391 V19.4.0 Table 6.2.1.6-1 (Frequency Resource Indication Broadcast)"
    ],
    "input": {
     "carrier": "paging_cfa",
@@ -2063,7 +2767,7 @@
    "kind": "n_access_occasions",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 0
@@ -2078,7 +2782,7 @@
    "kind": "n_access_occasions",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 1
@@ -2093,7 +2797,7 @@
    "kind": "n_access_occasions",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 3
@@ -2108,7 +2812,7 @@
    "kind": "n_access_occasions",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 15
@@ -2123,7 +2827,7 @@
    "kind": "k_value",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 0
@@ -2137,7 +2841,7 @@
    "kind": "k_value",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.15"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1"
    ],
    "input": {
     "field": 1
@@ -2151,7 +2855,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "000"
@@ -2165,7 +2869,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "001"
@@ -2179,7 +2883,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "010"
@@ -2193,7 +2897,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "011"
@@ -2207,7 +2911,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "100"
@@ -2221,7 +2925,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "101"
@@ -2235,7 +2939,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "110"
@@ -2249,7 +2953,7 @@
    "kind": "r2d_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-1, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-1"
    ],
    "input": {
     "type": "111"
@@ -2263,7 +2967,7 @@
    "kind": "d2r_message_type",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 Table 6.1-2, p.14"
+    "TS 38.391 V19.4.0 Table 6.1.2-2"
    ],
    "input": {
     "type": "00"
@@ -2277,7 +2981,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "000"
@@ -2291,7 +2995,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "001"
@@ -2305,7 +3009,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "010"
@@ -2319,7 +3023,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "011"
@@ -2333,7 +3037,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "100"
@@ -2347,7 +3051,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "101"
@@ -2361,7 +3065,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "110"
@@ -2375,7 +3079,7 @@
    "kind": "frequency_index",
    "origin": "spec-literal",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.3, p.17"
+    "TS 38.391 V19.4.0 \u00a76.2.1.3"
    ],
    "input": {
     "cp": "111"
@@ -2389,8 +3093,8 @@
    "kind": "spec_inconsistency",
    "origin": "spec-inferred",
    "cite": [
-    "TS 38.391 V19.0.0 \u00a76.2.1.1, p.14-16",
-    "TS 38.391 V19.0.0 \u00a76.2.1.6, p.20-22"
+    "TS 38.391 V19.4.0 \u00a76.2.1.1",
+    "TS 38.391 V19.4.0 \u00a76.2.1.6"
    ],
    "input": {
     "item": "R2D TBS and D2R TBS encoding"

@@ -1,4 +1,4 @@
-"""The A-IoT MAC of TS 38.391 V19.0.0: OAI's C library (openair2/LAYER2/AIOT_MAC, built into
+"""The A-IoT MAC of TS 38.391 V19.4.0: OAI's C library (openair2/LAYER2/AIOT_MAC, built into
 libaiot_phy.so) through ctypes.
 
 The MAC is written once, in C, for every node that runs it: Amber, a gNB as the Reader, a UE as
@@ -15,7 +15,9 @@ Reader   next_r2d() -> the caller sends it; r2d_sent() -> the D2R windows to exp
 Device   on_r2d() for each R2D decoded -> the D2R to send, at T_R->D after the R2D's end.
 
 Random numbers come from the caller: a device draws from the rng it is given, so a run repeats
-from its seed.
+from its seed. The one exception is the Reader's: it draws only the Security Parameter of its
+pagings (38.391 5.2), from its own fixed-seed generator (Reader.seed changes the seed), so a run
+repeats with no seed passed in.
 """
 
 import ctypes as C
@@ -31,7 +33,9 @@ from ..phy.params import D2RParams
 
 MAX_TBS = 125
 MAX_ID_ENTRIES = 8
-MAX_PAGING_ID_BITS = 255
+MAX_PAGING_ID_BITS = 1023   # 10-bit Paging ID Length (V19.4.0)
+SECURITY_PARAM_BITS = 128   # Security Parameter of a paging: RAND_AIOT_n of TS 33.369
+MAX_RECEIVED_DATA_SIZE = 125   # Received Data Size {0..125} (6.2.1.4)
 MAX_NACK_IDS = 61
 MAX_PDU_BITS = 8 * MAX_TBS
 MAX_ANSWERS = MAX_ID_ENTRIES * MAX_SHIFTS * MAX_SIC_ROUNDS
@@ -74,7 +78,8 @@ class RidEntry(C.Structure):
 
 class R2DMsg(C.Structure):
     """aiot_mac_r2d_msg_t: one R2D message; the fields used depend on kind."""
-    _fields_ = [("kind", C.c_int), ("r2d_tbs", C.c_int), ("sched", Sched), ("transaction_id", C.c_int),
+    _fields_ = [("kind", C.c_int), ("r2d_tbs", C.c_int), ("sched", Sched), ("has_security_param", C.c_int),
+                ("security_param", C.c_uint8 * SECURITY_PARAM_BITS), ("transaction_id", C.c_int),
                 ("num_access_occasions_code", C.c_int), ("k_bit", C.c_int), ("has_paging_id", C.c_int),
                 ("paging_id_len", C.c_int), ("paging_id", C.c_uint8 * MAX_PAGING_ID_BITS),
                 ("n_entries", C.c_int), ("entries", RidEntry * MAX_ID_ENTRIES), ("as_id", C.c_int),
@@ -124,14 +129,16 @@ class TagData_(C.Structure):
 
 _MATCHED = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
 _SELECTED = C.CFUNCTYPE(None, C.c_void_p)
-_DELIVER = C.CFUNCTYPE(None, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
+_DELIVER = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
 _NEXT_SDU = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
 _DRAW = C.CFUNCTYPE(C.c_uint32, C.c_void_p, C.c_uint32)
+_SECURITY = C.CFUNCTYPE(None, C.c_void_p, C.POINTER(C.c_uint8), C.c_int)
 
 
 class DeviceUpper_(C.Structure):
     _fields_ = [("user", C.c_void_p), ("paging_id_matched", _MATCHED), ("selected", _SELECTED),
-                ("deliver", _DELIVER), ("next_sdu", _NEXT_SDU), ("draw", _DRAW)]
+                ("deliver", _DELIVER), ("next_sdu", _NEXT_SDU), ("draw", _DRAW),
+                ("security_param", _SECURITY)]
 
 
 class DeviceSend_(C.Structure):
@@ -185,6 +192,8 @@ def _L():
     lib.aiot_reader_new.restype = vp
     lib.aiot_reader_free.argtypes = [vp]
     lib.aiot_reader_free.restype = None
+    lib.aiot_reader_seed.argtypes = [vp, C.c_uint64]
+    lib.aiot_reader_seed.restype = None
     lib.aiot_reader_next_r2d.argtypes = [vp, i64, C.POINTER(ReaderR2D_)]
     lib.aiot_reader_r2d_sent.argtypes = [vp, i64, i64, i64, C.POINTER(_Expect), ip]
     lib.aiot_reader_d2r_outcome.argtypes = [vp, C.POINTER(_Outcome), i64]
@@ -310,17 +319,34 @@ def _bitlist(dst, bits: Optional[Sequence[int]]) -> Tuple[int, int]:
     return 1, len(bits)
 
 
+def _secparam(m: R2DMsg, bits: Optional[Sequence[int]]) -> None:
+    """SPPI and Security Parameter of a paging: None is SPPI 0, else the 128 bits (SPPI 1)."""
+    if bits is None:
+        return
+    if len(bits) != SECURITY_PARAM_BITS or any(b not in (0, 1) for b in bits):
+        raise ValueError(f"a Security Parameter is {SECURITY_PARAM_BITS} bits (0 or 1), got {len(bits)}")
+    m.has_security_param = 1
+    for i, b in enumerate(bits):
+        m.security_param[i] = b
+
+
 def paging_cbra(tid: int, s: Sched, n_occasions_code: int = 0, k_bit: int = 0,
-                paging_id: Optional[Sequence[int]] = None, r2d_tbs: int = 0) -> R2DMsg:
+                paging_id: Optional[Sequence[int]] = None, r2d_tbs: int = 0,
+                security_param: Optional[Sequence[int]] = None) -> R2DMsg:
+    """security_param: the 128 bits of a Security Parameter (SPPI 1), or None (SPPI 0)."""
     m = R2DMsg(kind=PAGING_CBRA, r2d_tbs=r2d_tbs, sched=s, transaction_id=tid,
                num_access_occasions_code=n_occasions_code, k_bit=k_bit)
     m.has_paging_id, m.paging_id_len = _bitlist(m.paging_id, paging_id)
+    _secparam(m, security_param)
     return m
 
 
-def paging_cfa(paging_id: Sequence[int], s: Sched, r2d_tbs: int = 0) -> R2DMsg:
+def paging_cfa(paging_id: Sequence[int], s: Sched, r2d_tbs: int = 0,
+               security_param: Optional[Sequence[int]] = None) -> R2DMsg:
+    """security_param: the 128 bits of a Security Parameter (SPPI 1), or None (SPPI 0)."""
     m = R2DMsg(kind=PAGING_CFA, r2d_tbs=r2d_tbs, sched=s)
     m.has_paging_id, m.paging_id_len = _bitlist(m.paging_id, paging_id)
+    _secparam(m, security_param)
     return m
 
 
@@ -349,7 +375,10 @@ def r2d_data(as_id: int, s: Sched, sdu: Optional[bytes] = None, received: Option
         m.has_sdu, m.sdu_len = 1, len(sdu)
         m.sdu[:len(sdu)] = list(sdu)
     else:
-        m.received_data_size = received or 0
+        received = received or 0
+        if not 0 <= received <= MAX_RECEIVED_DATA_SIZE:
+            raise ValueError(f"a Received Data Size is 0 to {MAX_RECEIVED_DATA_SIZE}, got {received}")
+        m.received_data_size = received
     return m
 
 
@@ -566,6 +595,11 @@ class Reader:
     def done(self) -> bool:
         return bool(_L().aiot_reader_done(self._r))
 
+    def seed(self, seed: int) -> None:
+        """Seed the generator the Security Parameter of the pagings comes from (a fixed seed until
+        this is called). Call it before the first next_r2d(), which draws for the first paging."""
+        _L().aiot_reader_seed(self._r, seed & (2 ** 64 - 1))
+
     def next_r2d(self, now: int) -> Optional[Tuple[R2DMsg, List[int], int]]:
         """(message, its bits, the earliest sample it may start at), or None while answers are
         awaited or once the protocol has ended."""
@@ -644,9 +678,18 @@ class Reader:
 # Device
 # ----------------------------------------------------------------------------------------------
 
+# What UpperLayer.next_sdu returns for upper layer data not available yet (5.4.2).
+SDU_PENDING = object()
+
+
 class UpperLayer:
     """What the device's MAC asks of the layer above it. The defaults: every Paging ID matches,
-    nothing is delivered or sent."""
+    nothing is delivered or sent.
+
+    deliver returns True for an integrity protection failure: the SDU is delivered all the same,
+    but the MAC sends no D2R for it (None or False: no failure). next_sdu may return SDU_PENDING
+    for data not available yet (MDI 1, empty SDU). security_parameter gets the 128 bits of the
+    Security Parameter of a paging with SPPI 1 (5.2)."""
 
     def paging_id_matched(self, paging_id: Sequence[int]) -> bool:
         return True
@@ -654,7 +697,10 @@ class UpperLayer:
     def selected(self) -> None:
         pass
 
-    def deliver(self, sdu: bytes) -> None:
+    def deliver(self, sdu: bytes) -> Optional[bool]:
+        return None
+
+    def security_parameter(self, bits: Sequence[int]) -> None:
         pass
 
     def next_sdu(self) -> Optional[bytes]:
@@ -698,7 +744,7 @@ class Device:
         self._error: Optional[BaseException] = None
         # the callbacks must live as long as the device
         self._cb = DeviceUpper_(None, _MATCHED(self._matched), _SELECTED(self._selected), _DELIVER(self._deliver),
-                                _NEXT_SDU(self._next_sdu), _DRAW(self._draw))
+                                _NEXT_SDU(self._next_sdu), _DRAW(self._draw), _SECURITY(self._security))
         self._d = _L().aiot_device_new(C.byref(self._cb), _MOD[modulation])
         if not self._d:
             raise MemoryError("aiot_device_new")
@@ -724,13 +770,18 @@ class Device:
         self._guard(self.upper.selected, None)
 
     def _deliver(self, _user, sdu, n):
-        self._guard(lambda: self.upper.deliver(bytes(sdu[:n])), None)
+        return self._guard(lambda: int(bool(self.upper.deliver(bytes(sdu[:n])))), 0)
+
+    def _security(self, _user, bits, n):
+        self._guard(lambda: self.upper.security_parameter([bits[i] for i in range(n)]), None)
 
     def _next_sdu(self, _user, buf, cap):
         def take():
             sdu = self.upper.next_sdu()
             if sdu is None:
                 return -1
+            if sdu is SDU_PENDING:
+                return -2
             if len(sdu) > cap:
                 raise ValueError(f"an SDU of {len(sdu)} bytes is more than the device holds ({cap})")
             C.memmove(buf, bytes(sdu), len(sdu))
