@@ -120,7 +120,9 @@ topologies of the Rel-19 A-IoT study: the 5G cell that shares the air (`cell`), 
 forwards what it reads to the gNB (`relay`). Without it, a standalone Reader does all three, with
 no 5G. `amber.scenario.Network` lists the values and maps them to topologies 1 to 4.
 `python -m amber.run` simulates the A-IoT link only; OAI's `amber-compose` builds the room the
-table describes, and says which combinations it cannot build yet.
+table describes, and says which combinations it cannot build yet. In topology 2 (`relay = true`)
+the UE sends each message it hears from a Tag to the gNB, and `python -m amber.sink` takes them
+there and writes `tag_data.csv`, in the columns of the UE's `reader_rx.csv`.
 
 ## Modules
 
@@ -133,7 +135,7 @@ table describes, and says which combinations it cannot build yet.
 | `energy` | `EnvEnergySource` — replays an external energy trace |
 | `backscatter` | Node-side backscatter transmit/receive |
 | `phy` | The Rel-19 A-IoT PHY (TS 38.291): its parameters, and OAI's C library that does the signal processing |
-| `mac` | The Rel-19 A-IoT MAC (TS 38.391): every MAC PDU, and the device's and the Reader's procedures |
+| `mac` | The Rel-19 A-IoT MAC (TS 38.391): every MAC PDU, and the device's and the Reader's procedures; Tag data, the message a Reader sends on what it heard |
 | `link` | The Reader's and the Tags' link: 38.391 messages on real waveforms, one millisecond at a time |
 | `iq` | The Reader and the Tags exchanging blocks of IQ samples, as rfsim carries them |
 | `protocols` | The Reader policies (which 38.391 messages the Reader sends), chosen by name |
@@ -142,6 +144,7 @@ table describes, and says which combinations it cannot build yet.
 | `run` | `python -m amber.run`: run a scenario on one machine |
 | `hosts`, `session` | The Reader and the Tags as separate hosts, one block of IQ samples every millisecond, as amber-reader and amber-tag run them on OAI |
 | `summary` | Sent, decoded, collided, DER and throughput from a run's files |
+| `sink` | `python -m amber.sink`: the network's end of topology 2, the Tag data a UE sends written to `tag_data.csv` |
 
 Full API reference, generated from the source docstrings, is at
 **[mrnmir.github.io/Amber](https://mrnmir.github.io/Amber/)**.
