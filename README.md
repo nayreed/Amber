@@ -122,7 +122,10 @@ no 5G. `amber.scenario.Network` lists the values and maps them to topologies 1 t
 `python -m amber.run` simulates the A-IoT link only; OAI's `amber-compose` builds the room the
 table describes, and says which combinations it cannot build yet. In topology 2 (`relay = true`)
 the UE sends each message it hears from a Tag to the gNB, and `python -m amber.sink` takes them
-there and writes `tag_data.csv`, in the columns of the UE's `reader_rx.csv`.
+there and writes `tag_data.csv`, in the columns of the UE's `reader_rx.csv`. In topology 3
+(`r2d` and `d2r` at different nodes) the gNB runs the Reader's MAC and the UE sends its R2D or
+receives its D2R, told what and when over its own user plane; Amber's Tags and CW node take part as
+in the other rooms.
 
 ## Modules
 
