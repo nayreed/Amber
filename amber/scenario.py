@@ -44,6 +44,11 @@ tables:
     cw              who sends the carrier the Tags reflect: "reader" (default), "gnb-dl",
                     "gnb-ul", "ue-ul", "cw-node-dl" or "cw-node-ul"
     relay           the UE forwards what it reads to the gNB over 5G (default false)
+    hosts           table: the machine each node of a 5G room runs on, by address, for OAI's
+                    amber-compose, which writes one compose file per machine. Keys: hub (the
+                    rfsim_hub, required with any other), gnb, ue, cw (a CW node), reader (a
+                    standalone Reader) and tags; a node not named runs with the hub. Absent: one
+                    machine. amber.run ignores it.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -93,6 +98,8 @@ _R2D_D2R = ("reader", "gnb", "ue")
 # The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
 CW_NODES = ("cw-node-dl", "cw-node-ul")
 _CW = ("reader", "gnb-dl", "gnb-ul", "ue-ul") + CW_NODES
+# The nodes of a 5G room that [network.hosts] places on a machine.
+HOST_NODES = ("hub", "gnb", "ue", "cw", "reader", "tags")
 
 
 class Network(NamedTuple):
@@ -112,6 +119,12 @@ class Network(NamedTuple):
     d2r: str = "reader"
     cw: str = "reader"
     relay: bool = False
+    hosts: Tuple[Tuple[str, str], ...] = ()  # (node, address), in HOST_NODES order; () is one machine
+
+    def host(self, node: str) -> Optional[str]:
+        """The address of the machine node (one of HOST_NODES) runs on, or None on one machine."""
+        placed = dict(self.hosts)
+        return placed.get(node, placed.get("hub"))
 
     @property
     def topology(self) -> Optional[int]:
@@ -382,6 +395,8 @@ class Scenario:
         net = Network(cell=choice("cell", _CELLS, None), r2d=choice("r2d", _R2D_D2R, "reader"),
                       d2r=choice("d2r", _R2D_D2R, "reader"), cw=choice("cw", _CW, "reader"),
                       relay=t.take("relay", "bool", False))
+        hosts_table = t.table("hosts")
+        net = net._replace(hosts=self._read_hosts(hosts_table, net))
         t.done()
         if ("reader" in (net.r2d, net.d2r)) and net.r2d != net.d2r:
             raise t.error("r2d", "a standalone Reader both sends R2D and receives D2R")
@@ -392,6 +407,35 @@ class Scenario:
         if net.relay and (net.r2d, net.d2r) != ("ue", "ue"):
             raise t.error("relay", 'only a UE that reads the Tags (r2d = d2r = "ue") relays')
         return net
+
+    @staticmethod
+    def _read_hosts(t: _Table, net: Network) -> Tuple[Tuple[str, str], ...]:
+        """[network.hosts]: (node, address) of each node it names, which must be in the room."""
+        hosts = []
+        for node in HOST_NODES:
+            address = t.take(node, "str", None)
+            if address is None:
+                continue
+            if not address or any(c.isspace() for c in address):
+                raise t.error(node, f"must be a host name or an address, got {address!r}")
+            hosts.append((node, address))
+        t.done()
+        if not hosts:
+            return ()
+        nodes = dict(hosts)
+        if net.cell is None:
+            raise t.error(hosts[0][0], "only a 5G room (network.cell) runs on several machines")
+        if "hub" not in nodes:
+            raise t.error("hub", "is required: every other node connects to the rfsim_hub")
+        in_room = {"hub", "gnb", "ue", "tags"}
+        if net.cw in CW_NODES:
+            in_room.add("cw")
+        if net.r2d == "reader":
+            in_room.add("reader")
+        for node in nodes:
+            if node not in in_room:
+                raise t.error(node, f"this room has no {node} node")
+        return tuple(hosts)
 
     def _array(self, top: _Table, key: str) -> List[Dict[str, Any]]:
         """An array of tables, which a scenario must have at least one of."""

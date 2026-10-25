@@ -312,5 +312,51 @@ class NetworkTest(unittest.TestCase):
                 self.network(**values)
 
 
+class HostsTest(unittest.TestCase):
+    """[network.hosts] places the nodes of a 5G room on machines; a node it does not name runs with
+    the hub, and it may name only nodes the room has."""
+
+    T1 = dict(cell="n28-25prb", r2d="gnb", d2r="gnb", cw="gnb-dl")
+
+    def network(self, hosts, **values):
+        data = base_data()
+        data["network"] = dict(values or self.T1, hosts=hosts)
+        return scenario.Scenario(BASE, data).network
+
+    def test_one_machine_without_it(self):
+        data = base_data()
+        data["network"] = dict(self.T1)
+        net = scenario.Scenario(BASE, data).network
+        self.assertEqual(net.hosts, ())
+        self.assertIsNone(net.host("gnb"))
+        self.assertEqual(self.network({}).hosts, ())
+
+    def test_nodes_not_named_run_with_the_hub(self):
+        net = self.network({"tags": "10.0.0.2", "hub": "10.0.0.3", "gnb": "gnb-host"})
+        self.assertEqual(net.hosts, (("hub", "10.0.0.3"), ("gnb", "gnb-host"), ("tags", "10.0.0.2")))
+        self.assertEqual([net.host(n) for n in ("hub", "gnb", "ue", "tags")],
+                         ["10.0.0.3", "gnb-host", "10.0.0.3", "10.0.0.2"])
+
+    def test_each_node_of_each_room(self):
+        cw_node = dict(cell="n28-25prb", r2d="ue", d2r="ue", cw="cw-node-ul")
+        self.assertEqual(self.network({"hub": "a", "cw": "b"}, **cw_node).host("cw"), "b")
+        self.assertEqual(self.network({"hub": "a", "reader": "b"}, cell="n28-25prb").host("reader"), "b")
+
+    def test_refused(self):
+        cases = [
+            ({"gnb": "10.0.0.1"}, None, r"network\.hosts\.hub: is required"),
+            ({"hub": ""}, None, r"network\.hosts\.hub: must be a host name or an address, got ''"),
+            ({"hub": "10.0.0.1 "}, None, r"network\.hosts\.hub: must be a host name or an address"),
+            ({"hub": 3}, None, r"network\.hosts\.hub: must be a string"),
+            ({"hub": "a", "sink": "b"}, None, r"network\.hosts has no key sink"),
+            ({"hub": "a", "cw": "b"}, None, r"network\.hosts\.cw: this room has no cw node"),
+            ({"hub": "a", "reader": "b"}, None, r"network\.hosts\.reader: this room has no reader node"),
+            ({"hub": "a"}, dict(r2d="reader"), r"network\.hosts\.hub: only a 5G room"),
+        ]
+        for hosts, values, message in cases:
+            with self.subTest(hosts=hosts), self.assertRaisesRegex(ValueError, message):
+                self.network(hosts, **(values or {}))
+
+
 if __name__ == "__main__":
     unittest.main()
