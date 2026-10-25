@@ -49,6 +49,12 @@ tables:
                     rfsim_hub, required with any other), gnb, ue, cw (a CW node), reader (a
                     standalone Reader) and tags; a node not named runs with the hub. Absent: one
                     machine. amber.run ignores it.
+    gnb, ue         tables: where the 5G cell's gNB and UE are, for the gains between the cell and
+                    the A-IoT link (amber.coexist, TR 38.769 Table 6.6.2.1-1): x and y (m, in the
+                    plane of the Tags and the base station; required), height (m), power_dbm,
+                    antenna_gain_dbi, and for the UE indoor (default false). The other defaults
+                    are TR 38.769's: gNB 25 m, 46 dBm, 15 dBi; UE 1.5 m, 23 dBm, 0 dBi. Both or
+                    neither; without them the room keeps its fixed gains. amber.run ignores them.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -83,7 +89,7 @@ try:
 except ModuleNotFoundError:  # Python < 3.11
     import tomli as tomllib
 
-from . import backscatter, capacitor, controller, energy, propagation, protocols, radiodevices
+from . import backscatter, capacitor, coexist, controller, energy, propagation, protocols, radiodevices
 from .link import LinkConfig
 
 _ABSENT = object()
@@ -120,6 +126,8 @@ class Network(NamedTuple):
     cw: str = "reader"
     relay: bool = False
     hosts: Tuple[Tuple[str, str], ...] = ()  # (node, address), in HOST_NODES order; () is one machine
+    gnb: Optional[coexist.Site] = None  # where the gNB is, for the gains between the cell and the A-IoT link
+    ue: Optional[coexist.Site] = None
 
     def host(self, node: str) -> Optional[str]:
         """The address of the machine node (one of HOST_NODES) runs on, or None on one machine."""
@@ -397,7 +405,13 @@ class Scenario:
                       relay=t.take("relay", "bool", False))
         hosts_table = t.table("hosts")
         net = net._replace(hosts=self._read_hosts(hosts_table, net))
+        sites = {node: self._read_site(t.table(node), node) if t.has(node) else None for node in ("gnb", "ue")}
         t.done()
+        if (sites["gnb"] is None) != (sites["ue"] is None):
+            raise t.error("gnb" if sites["gnb"] is None else "ue", "the gains need both the gNB and the UE placed")
+        if sites["gnb"] is not None and net.cell is None:
+            raise t.error("gnb", "only a 5G room (network.cell) has a gNB and a UE")
+        net = net._replace(**sites)
         if ("reader" in (net.r2d, net.d2r)) and net.r2d != net.d2r:
             raise t.error("r2d", "a standalone Reader both sends R2D and receives D2R")
         if (net.cw == "reader") != (net.r2d == "reader"):
@@ -407,6 +421,19 @@ class Scenario:
         if net.relay and (net.r2d, net.d2r) != ("ue", "ue"):
             raise t.error("relay", 'only a UE that reads the Tags (r2d = d2r = "ue") relays')
         return net
+
+    @staticmethod
+    def _read_site(t: _Table, node: str) -> coexist.Site:
+        """[network.gnb] or [network.ue]: a coexist.Site, with TR 38.769's defaults."""
+        defaults = coexist.GNB_SITE if node == "gnb" else coexist.UE_SITE
+        site = {key: float(t.take(key, "number", required=True)) for key in ("x", "y")}
+        site.update({key: float(t.take(key, "number", default)) for key, default in defaults.items()})
+        if node == "ue":
+            site["indoor"] = t.take("indoor", "bool", False)
+        t.done()
+        if site["height"] <= 0:
+            raise t.error("height", f"must be above 0, got {site['height']}")
+        return coexist.Site(**site)
 
     @staticmethod
     def _read_hosts(t: _Table, net: Network) -> Tuple[Tuple[str, str], ...]:
@@ -597,6 +624,37 @@ class Scenario:
                 sector = int(best[1].split("_S")[1]) if heard else -1
                 out[node.id] = (sector, int(getattr(node, "subcarrier_shift", 0) or 0), float(best[0]))
         return out
+
+    def reader_base_station(self) -> radiodevices.BaseStation:
+        """The base station of the scenario's Reader (IQ mode has exactly one)."""
+        return self._make_base_station(self._base_stations[0])
+
+    def tag_radio(self) -> Dict[int, Tuple[radiodevices.Node, float, float, float]]:
+        """{node id: (its Node, the carrier power it gets in W, the power it reflects in dBm, the
+        power the Reader's best sector gets from it in dBm)}, as amber.iq has them."""
+        bss = [self._make_base_station(bs) for bs in self._base_stations]
+        links = self.iq_links()
+        out = {}
+        for group in self._groups:
+            nodes = [radiodevices.Node(id=t.node_id, x=t.x, y=t.y, **group.node_args) for t in group.tags]
+            cov = propagation.CoverageMap(base_stations=bss, nodes=nodes, node_energy_mode=group.energy_mode,
+                                          node_ext_power_fn=None, **self._radio)
+            dl = cov.compute_bs_to_point(nodes)
+            cov.calculate_node_power(nodes, dl)
+            for node in nodes:
+                out[node.id] = (node, float(dl.get("best_pw_w", {}).get(node.id, 0.0)),
+                                float(node.backscatter_power_dbm), links[node.id][2])
+        return out
+
+    @property
+    def freq_hz(self) -> float:
+        """The carrier frequency of the A-IoT link ([radio] freq_hz)."""
+        return float(self._radio.get("freq_hz", propagation.CoverageMap.freq_hz))
+
+    @property
+    def los(self) -> bool:
+        """Whether the path loss models take line of sight ([radio] los)."""
+        return bool(self._radio.get("los", propagation.CoverageMap.los))
 
     @property
     def reader_noise_figure_db(self) -> float:
