@@ -20,13 +20,13 @@ with one end indoors, and a minimum coupling loss of 70 dB to the base station. 
 - LOS or NLOS is one choice for every pair ([radio] los of the scenario), not drawn per pair;
 - the pair device - Reader stays with the scenario's own model ([radio]), which amber.iq applies.
 
-room_powers() gives what each receiver of a 5G room gets from each sender, in dBm; OAI's
-amber-compose turns them into the gains of the rfsim_hub links.
+Room gives what each node of a 5G room gets from each other, in dBm, in every topology; OAI's
+amber-compose turns that into the gains of the rfsim_hub links.
 """
 
 import math
 from dataclasses import dataclass
-from typing import Any, Dict, NamedTuple, Optional, Tuple
+from typing import Any, Tuple
 
 from . import propagation, radiodevices
 
@@ -134,25 +134,6 @@ def pair_loss_db(a: str, site_a: Tuple[float, float, float], b: str, site_b: Tup
     raise ValueError(f"no path loss model for the pair {a} - {b}")
 
 
-class TagPowers(NamedTuple):
-    """What one Tag gets and sends, in dBm: the carrier from the Reader (Amber's own model), the
-    gNB's DL, its reflection at the Reader (as amber.iq has it) and at the gNB."""
-    carrier: float
-    gnb: float
-    at_reader: float
-    at_gnb: float
-
-
-class RoomPowers(NamedTuple):
-    """What each receiver of a 5G room with a standalone Reader gets from each sender, in dBm."""
-    gnb_at_ue: float
-    ue_at_gnb: float
-    reader_at_ue: float
-    reader_at_gnb: float
-    ue_at_reader: float
-    tags: Dict[int, TagPowers]
-
-
 def _reader_to(bs: radiodevices.BaseStation, x: float, y: float, power: bool) -> Tuple[float, float]:
     """(dBm the Reader's best sector sends toward (x, y) plus its gain there, or that gain alone
     without power; that sector's height)."""
@@ -167,43 +148,76 @@ def _reader_to(bs: radiodevices.BaseStation, x: float, y: float, power: bool) ->
     return best
 
 
-def room_powers(scenario: Any) -> Optional[RoomPowers]:
-    """The powers of a scenario's 5G room with a standalone Reader whose [network] places the gNB
-    and the UE; None when it does not."""
-    net = scenario.network
-    if net.gnb is None or net.ue is None:
-        return None
-    fc = scenario.freq_hz
-    los = scenario.los
-    gnb, ue = net.gnb, net.ue
-    g_site, u_site = (gnb.x, gnb.y, gnb.height), (ue.x, ue.y, ue.height)
+# Where a node of the room is and what it sends and hears toward another: (pair model kind, (x, y,
+# height), EIRP dBm, receive antenna gain dBi).
+_End = Tuple[str, Tuple[float, float, float], float, float]
 
-    def loss(a, sa, b, sb):
-        return pair_loss_db(a, sa, b, sb, fc, los, ue.indoor)
 
-    pl_gu = loss("gnb", g_site, "ue", u_site)
-    gnb_at_ue = gnb.power_dbm + gnb.antenna_gain_dbi + ue.antenna_gain_dbi - pl_gu
-    ue_at_gnb = ue.power_dbm + ue.antenna_gain_dbi + gnb.antenna_gain_dbi - pl_gu
+class Room:
+    """The nodes of a 5G room where the scenario places them, and the power each gets from each
+    other, in dBm: the gNB ("gnb"), the UE ("ue"), the base station ("bs": Amber's Reader, or the
+    gNB or the UE that is the Reader, and the CW node, all at the scenario's [[base_station]]) and
+    the Tags (their node ids).
 
-    bs = scenario.reader_base_station()
-    eirp_ue, h_ue_side = _reader_to(bs, ue.x, ue.y, True)
-    g_ue_side, _ = _reader_to(bs, ue.x, ue.y, False)
-    eirp_gnb, h_gnb_side = _reader_to(bs, gnb.x, gnb.y, True)
-    r_ue, r_gnb = (bs.x, bs.y, h_ue_side), (bs.x, bs.y, h_gnb_side)
-    reader_at_ue = eirp_ue + ue.antenna_gain_dbi - loss("reader", r_ue, "ue", u_site)
-    reader_at_gnb = eirp_gnb + gnb.antenna_gain_dbi - loss("reader", r_gnb, "gnb", g_site)
-    ue_at_reader = ue.power_dbm + ue.antenna_gain_dbi + g_ue_side - loss("ue", u_site, "reader", r_ue)
+    Between the base station and a Tag, the powers are amber.iq's own (the scenario's [radio]
+    model): the carrier a Tag gets, and what the base station gets of its reflection. Every other
+    pair has the model of TR 38.769 Table 6.6.2.1-1 (pair_loss_db). The 5G node that is the Reader
+    takes the base station's place, its best sector toward the other end, and is indoors, as the
+    study's Reader is; a placed UE is indoors as its table says. A CW node at the base station is
+    of the same kind as the node that stands there, so it reaches the other 5G node through the
+    same path as that node does."""
 
-    tags = {}
-    for node_id, (node, carrier_w, backscatter_dbm, at_reader_dbm) in scenario.tag_radio().items():
-        t_site = (node.x, node.y, float(node.height))
-        aerr = propagation.angular_error_deg(propagation.compass_to_math(float(node.azimuth_deg or 0.0)),
-                                             propagation.bearing_deg(node.x, node.y, gnb.x, gnb.y))
-        g_tag = 10 * math.log10(float(propagation.antenna_from_node(node).gain_linear(aerr)))
-        pl = loss("gnb", g_site, "tag", t_site)
-        tags[node_id] = TagPowers(
-            carrier=float(propagation.watts_to_dbm(carrier_w)) if carrier_w > 0 else -999.0,
-            gnb=gnb.power_dbm + gnb.antenna_gain_dbi + g_tag - pl,
-            at_reader=at_reader_dbm,
-            at_gnb=backscatter_dbm + g_tag + gnb.antenna_gain_dbi - pl)
-    return RoomPowers(gnb_at_ue, ue_at_gnb, reader_at_ue, reader_at_gnb, ue_at_reader, tags)
+    def __init__(self, scenario: Any):
+        net = scenario.network
+        self.fc_hz = scenario.freq_hz
+        self.los = scenario.los
+        self.bs = scenario.reader_base_station()
+        self.reader_node = net.reader_node
+        self.sites = {"gnb": net.gnb, "ue": net.ue}
+        for node, site in self.sites.items():
+            if site is None and node != self.reader_node:
+                raise ValueError(f"{scenario.path}: network.{node}: x and y are required in this room: "
+                                 "the gains between the 5G cell and the A-IoT link come from where its nodes are")
+        self.ue_indoor = net.ue.indoor if net.ue is not None else True
+        self.tags = scenario.tag_radio()
+
+    def at_base_station(self, node: Any) -> bool:
+        return node == "bs" or node == self.reader_node
+
+    def _end(self, node: Any, toward: Tuple[float, float]) -> _End:
+        if isinstance(node, int):
+            tag, _, reflected_dbm, _ = self.tags[node]
+            aerr = propagation.angular_error_deg(propagation.compass_to_math(float(tag.azimuth_deg or 0.0)),
+                                                 propagation.bearing_deg(tag.x, tag.y, *toward))
+            g_tag = 10 * math.log10(float(propagation.antenna_from_node(tag).gain_linear(aerr)))
+            return "tag", (tag.x, tag.y, float(tag.height)), reflected_dbm + g_tag, g_tag
+        if self.at_base_station(node):
+            eirp, height = _reader_to(self.bs, *toward, True)
+            gain, _ = _reader_to(self.bs, *toward, False)
+            # the base station is the Reader node's place, and a CW node there has its kind
+            kind = (self.reader_node or "reader") if node == "bs" else node
+            return kind, (self.bs.x, self.bs.y, height), eirp, gain
+        site = self.sites[node]
+        return node, (site.x, site.y, site.height), site.power_dbm + site.antenna_gain_dbi, site.antenna_gain_dbi
+
+    def _xy(self, node: Any) -> Tuple[float, float]:
+        if isinstance(node, int):
+            tag = self.tags[node][0]
+            return tag.x, tag.y
+        if self.at_base_station(node):
+            return self.bs.x, self.bs.y
+        return self.sites[node].x, self.sites[node].y
+
+    def power(self, tx: Any, rx: Any) -> float:
+        """What rx gets from tx, in dBm: tx's EIRP toward rx, rx's antenna gain toward tx, and the
+        pair's path loss. Two nodes at the base station are one place, which has no path loss."""
+        if self.at_base_station(tx) and self.at_base_station(rx):
+            raise ValueError(f"{tx} and {rx} both stand at the base station")
+        if self.at_base_station(tx) and isinstance(rx, int):
+            carrier_w = self.tags[rx][1]
+            return float(propagation.watts_to_dbm(carrier_w)) if carrier_w > 0 else -999.0
+        if isinstance(tx, int) and self.at_base_station(rx):
+            return self.tags[tx][3]
+        kind_tx, site_tx, eirp, _ = self._end(tx, self._xy(rx))
+        kind_rx, site_rx, _, gain = self._end(rx, self._xy(tx))
+        return eirp + gain - pair_loss_db(kind_tx, site_tx, kind_rx, site_rx, self.fc_hz, self.los, self.ue_indoor)

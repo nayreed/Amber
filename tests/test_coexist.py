@@ -1,7 +1,7 @@
 # tests/test_coexist.py
 """Checks amber.coexist: the TR 38.901 path loss models against hand-worked values of their formulas,
 the model TR 38.769 Table 6.6.2.1-1 gives each pair, and the powers of a 5G room from where
-[network] places the gNB and the UE."""
+[network] places the gNB and the UE, in each topology."""
 
 import math
 import os
@@ -99,8 +99,13 @@ class RoomTest(unittest.TestCase):
             overrides["network.ue"] = [overrides["network.ue"]]
         return scenario.load(BASE, {"network.cell": "n8-25prb", **overrides})
 
-    def test_no_powers_without_both_sites(self):
-        self.assertIsNone(coexist.room_powers(self.load()))
+    def test_places_required_but_the_readers(self):
+        with self.assertRaisesRegex(ValueError, r"network\.gnb: x and y are required in this room"):
+            coexist.Room(self.load())
+        t1 = {"network.r2d": "gnb", "network.d2r": "gnb", "network.cw": "gnb-dl"}
+        with self.assertRaisesRegex(ValueError, r"network\.ue: x and y are required in this room"):
+            coexist.Room(self.load(**t1))
+        coexist.Room(self.load(**t1, **{"network.ue": {"x": 0, "y": 5}}))
 
     def test_sites_take_tr_38_769_defaults(self):
         net = self.load(**{"network.gnb": {"x": 300, "y": 0}, "network.ue": {"x": 50, "y": 5, "indoor": True}}).network
@@ -137,27 +142,54 @@ class RoomTest(unittest.TestCase):
 
     def test_powers(self):
         s = self.load(**{"network.gnb": {"x": 300, "y": 0}, "network.ue": {"x": 50, "y": 80}})
-        p = coexist.room_powers(s)
+        room = coexist.Room(s)
         gnb, ue = s.network.gnb, s.network.ue
         pl = coexist.pair_loss_db("gnb", (300, 0, 25), "ue", (50, 80, 1.5), s.freq_hz, s.los, False)
-        self.assertAlmostEqual(p.gnb_at_ue, gnb.power_dbm + gnb.antenna_gain_dbi - pl)
+        self.assertAlmostEqual(room.power("gnb", "ue"), gnb.power_dbm + gnb.antenna_gain_dbi - pl)
         # the link is reciprocal: only the powers and the gains differ
-        self.assertAlmostEqual(p.gnb_at_ue - p.ue_at_gnb, 46 - 23)
-        self.assertEqual(set(p.tags), set(s.NODE_IDS))
+        self.assertAlmostEqual(room.power("gnb", "ue") - room.power("ue", "gnb"), 46 - 23)
         links = s.iq_links()
-        for node_id, t in p.tags.items():
-            self.assertEqual(t.at_reader, links[node_id][2])
-            self.assertLess(t.at_gnb, t.at_reader)  # 300 m and a wall away, against a few metres
-            self.assertLess(t.gnb, t.carrier)
-        # the Tag's reflection at the gNB is what it reflects, over the same pair loss as the gNB's DL to it
-        node_id, t = next(iter(p.tags.items()))
-        node, _, reflected_dbm, _ = s.tag_radio()[node_id]
-        self.assertAlmostEqual(t.gnb - t.at_gnb, gnb.power_dbm - reflected_dbm)
+        for node_id in s.NODE_IDS:
+            node, carrier_w, reflected_dbm, at_reader = s.tag_radio()[node_id]
+            # with the base station, amber.iq's own powers
+            self.assertEqual(room.power(node_id, "bs"), links[node_id][2])
+            self.assertAlmostEqual(room.power("bs", node_id), 10 * math.log10(carrier_w * 1e3))
+            self.assertLess(room.power(node_id, "gnb"), room.power(node_id, "bs"))  # 300 m and a wall away
+            self.assertLess(room.power("gnb", node_id), room.power("bs", node_id))
+            # the Tag's reflection at the gNB is what it reflects, over the same pair loss as the gNB's DL to it
+            self.assertAlmostEqual(room.power("gnb", node_id) - room.power(node_id, "gnb"), gnb.power_dbm - reflected_dbm)
         # the further the gNB, the less of it everywhere
-        far = coexist.room_powers(self.load(**{"network.gnb": {"x": 900, "y": 0}, "network.ue": {"x": 50, "y": 80}}))
-        self.assertLess(far.gnb_at_ue, p.gnb_at_ue)
-        self.assertLess(far.reader_at_gnb, p.reader_at_gnb)
-        self.assertLess(far.tags[node_id].gnb, t.gnb)
+        far = coexist.Room(self.load(**{"network.gnb": {"x": 900, "y": 0}, "network.ue": {"x": 50, "y": 80}}))
+        self.assertLess(far.power("gnb", "ue"), room.power("gnb", "ue"))
+        self.assertLess(far.power("bs", "gnb"), room.power("bs", "gnb"))
+        self.assertLess(far.power("gnb", node_id), room.power("gnb", node_id))
+        with self.assertRaisesRegex(ValueError, "both stand at the base station"):
+            room.power("bs", "bs")
+
+    def test_the_reader_node_at_the_base_station(self):
+        """Worked by hand: a UE outdoors 5 m north of the base station, on the boresight of its first
+        sector (15 dBi, 25 m up), is under the 70 dB minimum coupling loss of UMa (about 57 dB)."""
+        t1 = {"network.r2d": "gnb", "network.d2r": "gnb", "network.cw": "gnb-dl"}
+        room = coexist.Room(self.load(**t1, **{"network.ue": {"x": 0, "y": 5}}))
+        self.assertAlmostEqual(room.power("ue", "gnb"), 23 + 0 + 15 - 70, places=6)
+        self.assertAlmostEqual(room.power("gnb", "ue"), 46 + 15 + 0 - 70, places=6)
+        # the gNB is the Reader: with the Tags, amber.iq's powers, as the base station's
+        node_id = next(iter(room.tags))
+        self.assertEqual(room.power(node_id, "gnb"), room.power(node_id, "bs"))
+        with self.assertRaisesRegex(ValueError, "both stand at the base station"):
+            room.power("bs", "gnb")
+        # a CW node there reaches the UE as the gNB does
+        self.assertEqual(room.power("bs", "ue"), room.power("gnb", "ue"))
+        # topology 4: the UE is the Reader, and indoors with the Tags, so the gNB reaches it through a wall
+        t4 = {"network.r2d": "ue", "network.d2r": "ue", "network.cw": "cw-node-ul"}
+        s = self.load(**t4, **{"network.gnb": {"x": 0, "y": 300}})
+        room = coexist.Room(s)
+        indoor = coexist.pair_loss_db("gnb", (0, 300, 25), "ue", (0, 0, 25), s.freq_hz, s.los, True)
+        outdoor = coexist.pair_loss_db("gnb", (0, 300, 25), "ue", (0, 0, 25), s.freq_hz, s.los, False)
+        self.assertAlmostEqual(indoor - outdoor, coexist.o2i_high_db(s.freq_hz))
+        self.assertAlmostEqual(room.power("gnb", "ue"), 46 + 15 + 15 - indoor, places=6)  # the sector facing it
+        self.assertEqual(room.power(node_id, "ue"), room.power(node_id, "bs"))
+        self.assertEqual(room.power("bs", "gnb"), room.power("ue", "gnb"))  # a CW node there, as the UE
 
 
 if __name__ == "__main__":
