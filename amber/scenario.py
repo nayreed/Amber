@@ -38,7 +38,8 @@ tables:
                     exactly one base station.
 [network]           the network the A-IoT link runs in, in the terms of the four topologies of
                     the Rel-19 A-IoT study (see Network); without it, a standalone Reader:
-    cell            the 5G cell that shares the air, by name ("n28-25prb"); absent: no 5G
+    cell            the 5G cell that shares the air, by name ("n8-25prb"): OAI's amber-compose
+                    has the cells and refuses a name it does not have; absent: no 5G
     r2d             who sends R2D: "reader" (default), "gnb" or "ue"
     d2r             who receives D2R: "reader" (default), "gnb" or "ue"
     cw              who sends the carrier the Tags reflect: "reader" (default), "gnb-dl",
@@ -99,7 +100,6 @@ _READER_OPTIONS = {"enable_sic": "bool", "noise_figure_db": "number", "cw_leak_d
                    "phase_noise_floor_dbc_hz": "number", "phase_noise_corner_hz": "number"}
 _ENERGY_MODES = ("wpt", "external", "hybrid")
 _TOP_TABLES = ("run", "reader", "base_station", "radio", "energy", "phy", "network", "tag_defaults", "tag_group")
-_CELLS = ("n28-25prb",)
 _R2D_D2R = ("reader", "gnb", "ue")
 # The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
 CW_NODES = ("cw-node-dl", "cw-node-ul")
@@ -400,7 +400,10 @@ class Scenario:
                 raise t.error(key, f"must be one of {', '.join(map(repr, allowed))}, got {value!r}")
             return value
 
-        net = Network(cell=choice("cell", _CELLS, None), r2d=choice("r2d", _R2D_D2R, "reader"),
+        cell = t.take("cell", "str", None)
+        if cell is not None and not cell.strip():
+            raise t.error("cell", "must name a 5G cell, or be left out")
+        net = Network(cell=cell, r2d=choice("r2d", _R2D_D2R, "reader"),
                       d2r=choice("d2r", _R2D_D2R, "reader"), cw=choice("cw", _CW, "reader"),
                       relay=t.take("relay", "bool", False))
         hosts_table = t.table("hosts")

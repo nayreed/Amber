@@ -299,7 +299,8 @@ class NetworkTest(unittest.TestCase):
 
     def test_refused(self):
         cases = [
-            (dict(cell="n78"), r"network\.cell: must be one of 'n28-25prb'"),
+            (dict(cell=""), r"network\.cell: must name a 5G cell"),
+            (dict(cell=28), r"network\.cell: must be a string"),
             (dict(r2d="gnb"), r"network\.r2d: a standalone Reader both sends R2D and receives D2R"),
             (dict(cell="n28-25prb", r2d="gnb", d2r="gnb"), r"network\.cw: \"reader\" is the standalone Reader's own carrier"),
             (dict(r2d="gnb", d2r="gnb", cw="gnb-dl"), r"network\.cell: a gNB or a UE in the A-IoT link needs"),
