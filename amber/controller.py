@@ -1,7 +1,7 @@
 # amber/controller.py
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional
 import random
 import simpy
 
@@ -56,7 +56,8 @@ class Controller:
       - capacitor_ctrl: has .action, .current (A), .voltage_source (V), .voltage (V),
                         .internal_time (s), and responds to interrupts:
                         'capacitor_discharge', 'capacitor_charging', 'capacitor_full'
-      - backscatter: has .state, .controller_tx_ready(sensor_data), .do_transmit(tx_info)
+      - backscatter: the Tag (amber.backscatter.AiotTag), or None; it moves the FSM from wait_slot
+        to transmitting when the Tag starts a D2R
       - rng: the node's own random.Random for the startup delay and sensed values, or None
              for Python's global generator (see BackscatterModule)
     """
@@ -92,12 +93,10 @@ class Controller:
         # data path
         self.sensed_value = 0
         self.processed_data = 0
-        self.data_history: List[Tuple[float, int]] = []
 
         # counters
         self.counter = 0  # generic step counter for states
         self.last_current = 0.0
-        self.pending_tx_info = None  # stored tx info from backscatter
 
         # state start times (ms)
         self.listening_start_ms = 0.0
@@ -132,12 +131,6 @@ class Controller:
         self.capacitor_ctrl.current = i_amps
         self.capacitor_ctrl.action.interrupt("capacitor_charge_and_discharge")
 
-    def _is_registered(self) -> bool:
-        """Check if node is registered with BS (can send data)."""
-        if self.backscatter is None:
-            return True  # No backscatter = always ready
-        return self.backscatter.state == "registered"
-
     def working_mode(self):
         """
         Working mode FSM: called when voltage above high threshold and active.
@@ -156,16 +149,12 @@ class Controller:
                 self.acc_current_listening.append(c.listening)
             self._enter_charge_and_discharge(c.listening)
             if self.counter >= d.listening:
-                # If registered: sense data. If not: wait for slot to send ID
-                if self._is_registered():
-                    self.state_name = "sensing"
-                else:
-                    self.state_name = "wait_slot"
+                self.state_name = "sensing"
                 self.last_current = c.listening
                 self.counter = 0
 
         elif self.state_name == "sensing":
-            # Sense data from the environment (only when registered).
+            # Sense data from the environment.
             if self.counter == 0:
                 self.sensing_start_ms = float(self.env.now)
 
@@ -183,7 +172,7 @@ class Controller:
                 self.counter = 0
 
         elif self.state_name == "processing":
-            # Process sensed data (only when registered).
+            # Process sensed data.
             if self.counter == 0:
                 self.processing_start_ms = float(self.env.now)
 
@@ -203,34 +192,16 @@ class Controller:
             # Waiting for backscatter slot - charge while waiting
             self.capacitor_ctrl.action.interrupt("capacitor_charging")
 
-            # Just registered but no data yet — go sense/process first
-            if self._is_registered() and self.processed_data == 0:
+            # No data yet: sense and process first. With data, the Tag waits here until it
+            # answers the Reader: AiotTag.started_d2r() moves it on to transmitting.
+            if self.processed_data == 0:
                 self.state_name = "sensing"
                 self.counter = 0
                 return
 
-            # Check if backscatter says we can transmit now
-            if self.backscatter is not None:
-                tx_info = self.backscatter.controller_tx_ready(self.processed_data)
-                if tx_info is not None:
-                    # Deliver at the exact validated in-slot instant (no 1-tick slip).
-                    # controller_tx_ready() just confirmed `now` is inside the
-                    # advertised RX slot, so the BS is listening right now. The
-                    # `transmitting` state below only models the transmit energy
-                    # draw over d.transmitting ms; the reception has already happened.
-                    if self._is_registered() and self.keep_logs:
-                        self.data_history.append(
-                            (self.capacitor_ctrl.internal_time, self.processed_data)
-                        )
-                    self.backscatter.do_transmit(tx_info)
-                    self.pending_tx_info = None
-                    self.state_name = "transmitting"
-                    self.counter = 0
-
         elif self.state_name == "transmitting":
-            # Energy-draw phase only. The backscatter was already delivered at the
-            # validated in-slot instant in wait_slot; here we just model the
-            # transmit current over d.transmitting ms.
+            # Energy-draw phase only: the D2R itself is the waveform amber.iq sends; here
+            # the transmit current is drawn over d.transmitting ms.
             if self.counter == 0:
                 self.transmitting_start_ms = float(self.env.now)
 
