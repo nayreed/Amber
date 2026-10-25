@@ -1,7 +1,9 @@
 """38.391 V19.4.0 §6 MAC PDU reference packer/parser, written from the field tables and figures.
 
 Bits are strings, first (most significant) bit first, fields concatenated in reading order of the
-figures (§6.1.1). Raw field values are used throughout: codepoints, not decoded meanings.
+figures (§6.1.1). Raw field values are used throughout: codepoints, not decoded meanings, except
+r2d_tbs, which is the TBS in bytes; its field holds codepoint = bytes - 1 (§6.1.1, the first codepoint
+is the first value), as the D2R TBS does.
 Fill bits and padding are packed as zeros; their values are ignored on parse (§6.2.1.1, CR 0016).
 A paging has an SPPI bit after the TBS and, when it is 1, a 128-bit Security Parameter (§6.2.1.1,
 5.2); the Paging ID Length is 10 bits.
@@ -89,7 +91,7 @@ def segs_pack(kind, f):
     """Return list of (name, bits) segments for a R2D/D2R message. r2d_tbs must be given."""
     T = lambda k: R2D_TYPE[k]
     if kind == "paging_cbra":
-        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7))] + sec_pack(f)
+        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"] - 1, 7))] + sec_pack(f)
         sg += [("at", "1"), ("transaction_id", b(f["transaction_id"], 6))]
         pid = f.get("paging_id")
         sg.append(("pipi", "1" if pid is not None else "0"))
@@ -99,14 +101,14 @@ def segs_pack(kind, f):
                ("d2r_sched_info", sched_pack("paging_cbra", f["sched"])), ("k", b(f["k_cp"], 1))]
     elif kind == "paging_cfa":
         pid = f["paging_id"]
-        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"], 7))] + sec_pack(f)
+        sg = [("type", T("paging")), ("r2d_tbs", b(f["r2d_tbs"] - 1, 7))] + sec_pack(f)
         sg += [("at", "0"), ("paging_id_length", b(len(pid), PAGING_ID_LEN_BITS)), ("paging_id", pid),
                ("d2r_sched_info", sched_pack("paging_cfa", f["sched"]))]
     elif kind == "access_trigger":
         return [("type", T("access_trigger"))]
     elif kind == "random_id_response":
         fipi = f["fipi"]
-        sg = [("type", T("random_id_response")), ("r2d_tbs", b(f["r2d_tbs"], 7)),
+        sg = [("type", T("random_id_response")), ("r2d_tbs", b(f["r2d_tbs"] - 1, 7)),
               ("d2r_sched_info", sched_pack("random_id_response", f["sched"])), ("fipi", str(fipi))]
         for i, e in enumerate(f["entries"], 1):
             if fipi:
@@ -116,14 +118,14 @@ def segs_pack(kind, f):
             if e.get("assigned_as_id") is not None:
                 sg.append((f"assigned_as_id_{i}", b(e["assigned_as_id"], 16)))
     elif kind == "r2d_data":
-        sg = [("type", T("r2d_data")), ("r2d_tbs", b(f["r2d_tbs"], 7)), ("as_id", b(f["as_id"], 16)),
+        sg = [("type", T("r2d_data")), ("r2d_tbs", b(f["r2d_tbs"] - 1, 7)), ("as_id", b(f["as_id"], 16)),
               ("d2r_sched_info", sched_pack("r2d_data", f["sched"]))]
         if f["ci"] == 1:
             sg += [("ci", "1"), ("r", "00"), ("data_sdu", "".join(b(x, 8) for x in bytes.fromhex(f["data_sdu_hex"])))]
         else:
             sg += [("ci", "0"), ("r", "000"), ("received_data_size", b(f["received_data_size"], 7))]
     elif kind == "nack_feedback":
-        sg = [("type", T("nack_feedback")), ("r2d_tbs", b(f["r2d_tbs"], 7)), ("r", "000000")]
+        sg = [("type", T("nack_feedback")), ("r2d_tbs", b(f["r2d_tbs"] - 1, 7)), ("r", "000000")]
         sg += [(f"as_id_{i}", b(a, 16)) for i, a in enumerate(f["as_ids"], 1)]
     elif kind == "access_random_id":
         return [("random_id", b(f["random_id"], 16))]
@@ -172,7 +174,7 @@ def parse(direction, bits):
     k = inv[t]
     if k == "access_trigger":
         return k, {}
-    tbs = int(take(7), 2)
+    tbs = int(take(7), 2) + 1                                    # R2D TBS: codepoint + 1 bytes
     if k == "paging":
         sec = {"sppi": int(take(1))}
         if sec["sppi"]:

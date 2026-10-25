@@ -65,7 +65,7 @@ Adapter: `mac_pack(kind, fields) -> bitstring`, `mac_parse(direction, bits) -> (
 kinds: paging_cbra, paging_cfa, access_trigger, random_id_response, r2d_data, nack_feedback, access_random_id, d2r_data. Each pack vector has
 `segments` (field name, bits) to diff against. Bit strings are first-bit-first, fields in figure reading order.
 
-11. **R2D TBS encoding is ambiguous.** The scheduling-info text says the first codepoint is the first value, so D2R TBS bytes = codepoint + 1. The R2D TBS field of the message header only says "the value can be {1..125}". Vectors use the direct binary value = PDU length in bytes (also used as N_TBS^R2D by 38.291 §7.2.2). If it is offset by one, only the 7 TBS bits change. Recorded as a NOTE.
+11. **R2D TBS is codepoint + 1 bytes.** The R2D TBS field of the message header gives only the range {1..125}; the general rule of §6.1.1 (the first codepoint is the first value) then makes 1 byte codepoint 0, as for the D2R TBS. The bytes are the PDU length, also N_TBS^R2D of 38.291 §7.2.2. Vectors before this reading used the direct binary value; only the 7 TBS bits of each R2D vector changed. `spec_inconsistency-001` records it as a NOTE.
 12. **Child-field order inside D2R Scheduling Info** is taken from the row order of Table 6.2.1.6-1; the widths then add up to the stated 18 (CBRA paging), 24 (CFA paging, Msg2) and 19 (R2D data) bits, which supports it.
 13. **Fill bits and padding** content is unspecified ("ignored"); vectors write zeros and the runner ignores the fill bits when comparing a packed PDU. Parse compares only the fill count.
 14. **Access Trigger** is 3 bits (`010`), not byte aligned, no TBS field.

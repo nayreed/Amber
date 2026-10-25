@@ -8,7 +8,7 @@
 # Needs git, cmake, a C compiler and SIMDe (Ubuntu: libsimde-dev), which OAI's coders use.
 set -euo pipefail
 OAI_REPO=${OAI_REPO:-https://github.com/nayreed/openairinterface5g.git}
-OAI_REF=${OAI_REF:-ambient-iot}
+OAI_REF=${OAI_REF:-aiot-rfsim}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$HERE/amber/phy/lib
 WORK=$(mktemp -d)

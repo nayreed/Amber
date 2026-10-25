@@ -278,8 +278,10 @@ def test_sched_hand_bits():
     assert sv(c) == (Fraction(1, 4), (1, 2, 16), 2, 1, False, 48 * 8, 7, False, None)
 
 
+# The R2D TBS field holds the TBS in bytes minus one (38.391 6.1.1: the first codepoint is the first
+# value, 1 byte), as the D2R TBS field does.
 def test_hand_paging_cbra():
-    s = ("001" "0000110" "0" "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000")
+    s = ("001" "0000101" "0" "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000")
     # type 001, TBS 6, SPPI 0, AT 1, TID 37, PIPI 0, 2^5 access occasions, sched, K = 4, 6 fill bits
     assert len(s) == 48
     m = mac.parse_r2d(b(s))
@@ -289,13 +291,13 @@ def test_hand_paging_cbra():
     assert mac.pack_r2d(m) == b(s)
     # with a Paging ID: PIPI 1, length 20 '0000010100' (10 bits), 20 ID bits; 42 + 30 = 72 bits, TBS 9, no fill
     pid = "10110011100011110000"
-    s = "001" "0001001" "0" "1" "100101" "1" "0000010100" + pid + "0101" + SCHED_CBRA_BITS + "1"
+    s = "001" "0001000" "0" "1" "100101" "1" "0000010100" + pid + "0101" + SCHED_CBRA_BITS + "1"
     assert len(s) == 72
     m = mac.parse_r2d(b(s))
     assert pid_of(m) == tuple(b(pid)) and sec_of(m) is None and mac.pack_r2d(m) == b(s)
     # SPPI 1: the 128-bit Security Parameter follows the SPPI bit; 170 bits, TBS 22, 6 fill bits
     sec = "".join("1" if i % 3 == 0 else "0" for i in range(128))
-    s = "001" "0010110" "1" + sec + "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000"
+    s = "001" "0010101" "1" + sec + "1" "100101" "0" "0101" + SCHED_CBRA_BITS + "1" + "000000"
     assert len(s) == 176
     m = mac.parse_r2d(b(s))
     assert view(m) == (PAGING_CBRA, 22, sch, 37, 5, 1, None, tuple(b(sec)))
@@ -305,7 +307,7 @@ def test_hand_paging_cbra():
 def test_hand_paging_cfa():
     pid = "101100111000"
     # type, TBS 8, SPPI 0, AT 0, length 12 on 10 bits, ID, sched: 58 bits + 6 fill
-    s = "001" "0001000" "0" "0" "0000001100" + pid + SCHED_CFA_BITS + "000000"
+    s = "001" "0000111" "0" "0" "0000001100" + pid + SCHED_CFA_BITS + "000000"
     assert len(s) == 64
     m = mac.parse_r2d(b(s))
     assert pid_of(m) == tuple(b(pid)) and tuple(m.sched.shifts) == (128,) and m.sched.d2r_tbs == 125
@@ -314,7 +316,7 @@ def test_hand_paging_cfa():
     # SPPI 1 with a 16-bit ID: 190 bits, TBS 24, 2 fill bits
     pid = "1011001110001111"
     sec = "".join("0" if i % 2 else "1" for i in range(128))
-    s = "001" "0011000" "1" + sec + "0" "0000010000" + pid + SCHED_CFA_BITS + "00"
+    s = "001" "0010111" "1" + sec + "0" "0000010000" + pid + SCHED_CFA_BITS + "00"
     assert len(s) == 192
     m = mac.parse_r2d(b(s))
     assert pid_of(m) == tuple(b(pid)) and sec_of(m) == tuple(b(sec)) and mac.pack_r2d(m) == b(s)
@@ -325,7 +327,7 @@ def test_hand_access_trigger():
 
 
 def test_hand_random_id_response():
-    s = ("011" "0001001" + SCHED_RIDR_BITS + "1"
+    s = ("011" "0001000" + SCHED_RIDR_BITS + "1"
          "101" "1010101111001101" "1" "0001001000110100"      # FI 5 (R_SFS 32), echoed 0xABCD, AIPI, AS ID 0x1234
          "0")                                                  # fill bit
     assert len(s) == 72
@@ -333,7 +335,7 @@ def test_hand_random_id_response():
     assert view(m)[3] == ((0xABCD, 0x1234, 5),) and mac.freq_index_r_sfs(5) == 32
     assert mac.pack_r2d(m) == b(s)
     # two entries, FIPI 0: first without AS ID (17 bits), second with (33 bits): 35 + 17 + 33 = 85 bits -> 88, TBS 11
-    s = ("011" "0001011" + SCHED_RIDR_BITS + "0" "0000000000000001" "0" "0000000000000010" "1" "0000000000000011" + "000")
+    s = ("011" "0001010" + SCHED_RIDR_BITS + "0" "0000000000000001" "0" "0000000000000010" "1" "0000000000000011" + "000")
     assert len(s) == 88
     m = mac.parse_r2d(b(s))
     assert view(m)[3] == ((1, None, None), (2, 3, None))     # no Frequency Index in any entry: FIPI 0
@@ -341,19 +343,19 @@ def test_hand_random_id_response():
 
 
 def test_hand_r2d_upper_layer_data():
-    s = "100" "0001000" "1011111011101111" + SCHED_DATA_BITS + "1" "00" "1010010100001111"
+    s = "100" "0000111" "1011111011101111" + SCHED_DATA_BITS + "1" "00" "1010010100001111"
     assert len(s) == 64
     m = mac.parse_r2d(b(s))
     assert m.as_id == 0xBEEF and bytes(m.sdu[:m.sdu_len]) == b"\xa5\x0f" and m.has_sdu == 1 and m.sched.d2r_tbs == 20
     assert mac.pack_r2d(m) == b(s)
-    s = "100" "0000111" "0000000000000001" + SCHED_DATA_BITS + "0" "000" "1100100"
+    s = "100" "0000110" "0000000000000001" + SCHED_DATA_BITS + "0" "000" "1100100"
     assert len(s) == 56
     m = mac.parse_r2d(b(s))
     assert m.as_id == 1 and m.received_data_size == 100 and m.has_sdu == 0 and mac.pack_r2d(m) == b(s)
 
 
 def test_hand_nack():
-    s = "101" "0000110" "000000" "0000000011111111" "1000000000000001"
+    s = "101" "0000101" "000000" "0000000011111111" "1000000000000001"
     m = mac.parse_r2d(b(s))
     assert view(m) == (NACK_FEEDBACK, 6, (0x00FF, 0x8001))
     assert mac.pack_r2d(m) == b(s)
@@ -666,7 +668,7 @@ def test_received_data_size_is_0_to_125():
     for rds in (126, 127, 128, -1):
         with pytest.raises(ValueError):
             mac.r2d_data(7, ds, received=rds)
-    ci0 = "100" "0000111" "0000000000000111" + SCHED_DATA_BITS + "0" "000"
+    ci0 = "100" "0000110" "0000000000000111" + SCHED_DATA_BITS + "0" "000"
     assert mac.parse_r2d(b(ci0 + "1111101")).received_data_size == 125
     assert mac.parse_r2d(b(ci0 + "1111110")) is None
     assert mac.parse_r2d(b(ci0 + "1111111")) is None
