@@ -45,17 +45,19 @@ tables:
     cw              who sends the carrier the Tags reflect: "reader" (default), "gnb-dl",
                     "gnb-ul", "ue-ul", "cw-node-dl" or "cw-node-ul"
     relay           the UE forwards what it reads to the gNB over 5G (default false)
-    hosts           table: the machine each node of a 5G room runs on, by address, for OAI's
-                    amber-compose, which writes one compose file per machine. Keys: hub (the
-                    rfsim_hub, required with any other), gnb, ue, cw (a CW node), reader (a
-                    standalone Reader) and tags; a node not named runs with the hub. Absent: one
-                    machine. amber.run ignores it.
-    gnb, ue         tables: where the 5G cell's gNB and UE are, for the gains between the cell and
-                    the A-IoT link (amber.coexist, TR 38.769 Table 6.6.2.1-1): x and y (m, in the
-                    plane of the Tags and the base station; required), height (m), power_dbm,
+    hub, gnb,       tables, one per node of a 5G room: the rfsim_hub, the gNB, a CW node, a
+    cw_node,        standalone Reader and the Tags; [[network.ue]], one for now: the UE. Each may
+    reader, tags    say the machine it runs on (host: a name or an address), for OAI's
+                    amber-compose, which writes one compose file per machine; a node without one
+                    runs with the hub, and with no host at all the room is one machine. The gNB
+                    and the UE also say where they are, for the gains between the cell and the
+                    A-IoT link (amber.coexist, TR 38.769 Table 6.6.2.1-1): x and y (m, in the
+                    plane of the Tags and the base station; together), height (m), power_dbm,
                     antenna_gain_dbi, and for the UE indoor (default false). The other defaults
-                    are TR 38.769's: gNB 25 m, 46 dBm, 15 dBi; UE 1.5 m, 23 dBm, 0 dBi. Both or
-                    neither; without them the room keeps its fixed gains. amber.run ignores them.
+                    are TR 38.769's: gNB 25 m, 46 dBm, 15 dBi; UE 1.5 m, 23 dBm, 0 dBi. The node
+                    that is the A-IoT Reader (the gNB in topologies 1 and 3, the UE in 2 and 4)
+                    stands at the [[base_station]] and has no position of its own. amber.run
+                    ignores these tables.
 [tag_defaults]      what every Tag group starts from: any key of a group but its placement
 [[tag_group]]       one or more groups of Tags that share their settings:
     energy_mode     "wpt", "external" or "hybrid" (required)
@@ -104,8 +106,12 @@ _R2D_D2R = ("reader", "gnb", "ue")
 # The [network] carriers that come from a node of their own, outside the Reader (TR 38.769 6.8.1).
 CW_NODES = ("cw-node-dl", "cw-node-ul")
 _CW = ("reader", "gnb-dl", "gnb-ul", "ue-ul") + CW_NODES
-# The nodes of a 5G room that [network.hosts] places on a machine.
+# The nodes of a 5G room, each a table of [network] that can say the machine the node runs on; the
+# CW node's is cw_node, as cw names the carrier.
 HOST_NODES = ("hub", "gnb", "ue", "cw", "reader", "tags")
+_NODE_TABLE = {"cw": "cw_node"}
+# The keys of a node's place: x and y, then what the defaults of coexist give.
+_PLACE_KEYS = ("x", "y", "height", "power_dbm", "antenna_gain_dbi", "indoor")
 
 
 class Network(NamedTuple):
@@ -133,6 +139,12 @@ class Network(NamedTuple):
         """The address of the machine node (one of HOST_NODES) runs on, or None on one machine."""
         placed = dict(self.hosts)
         return placed.get(node, placed.get("hub"))
+
+    @property
+    def reader_node(self) -> Optional[str]:
+        """The 5G node that is the A-IoT Reader and stands at the base station: "gnb" in topologies 1
+        and 3 (in 3 its MAC), "ue" in 2 and 4; None with a standalone Reader."""
+        return {1: "gnb", 3: "gnb", 2: "ue", 4: "ue"}.get(self.topology)
 
     @property
     def topology(self) -> Optional[int]:
@@ -406,15 +418,8 @@ class Scenario:
         net = Network(cell=cell, r2d=choice("r2d", _R2D_D2R, "reader"),
                       d2r=choice("d2r", _R2D_D2R, "reader"), cw=choice("cw", _CW, "reader"),
                       relay=t.take("relay", "bool", False))
-        hosts_table = t.table("hosts")
-        net = net._replace(hosts=self._read_hosts(hosts_table, net))
-        sites = {node: self._read_site(t.table(node), node) if t.has(node) else None for node in ("gnb", "ue")}
+        nodes = self._node_tables(t)
         t.done()
-        if (sites["gnb"] is None) != (sites["ue"] is None):
-            raise t.error("gnb" if sites["gnb"] is None else "ue", "the gains need both the gNB and the UE placed")
-        if sites["gnb"] is not None and net.cell is None:
-            raise t.error("gnb", "only a 5G room (network.cell) has a gNB and a UE")
-        net = net._replace(**sites)
         if ("reader" in (net.r2d, net.d2r)) and net.r2d != net.d2r:
             raise t.error("r2d", "a standalone Reader both sends R2D and receives D2R")
         if (net.cw == "reader") != (net.r2d == "reader"):
@@ -423,49 +428,74 @@ class Scenario:
             raise t.error("cell", "a gNB or a UE in the A-IoT link needs the 5G cell it belongs to")
         if net.relay and (net.r2d, net.d2r) != ("ue", "ue"):
             raise t.error("relay", 'only a UE that reads the Tags (r2d = d2r = "ue") relays')
-        return net
+        return self._read_nodes(t, nodes, net)
 
     @staticmethod
-    def _read_site(t: _Table, node: str) -> coexist.Site:
-        """[network.gnb] or [network.ue]: a coexist.Site, with TR 38.769's defaults."""
-        defaults = coexist.GNB_SITE if node == "gnb" else coexist.UE_SITE
-        site = {key: float(t.take(key, "number", required=True)) for key in ("x", "y")}
-        site.update({key: float(t.take(key, "number", default)) for key, default in defaults.items()})
-        if node == "ue":
-            site["indoor"] = t.take("indoor", "bool", False)
-        t.done()
-        if site["height"] <= 0:
-            raise t.error("height", f"must be above 0, got {site['height']}")
-        return coexist.Site(**site)
-
-    @staticmethod
-    def _read_hosts(t: _Table, net: Network) -> Tuple[Tuple[str, str], ...]:
-        """[network.hosts]: (node, address) of each node it names, which must be in the room."""
-        hosts = []
+    def _node_tables(t: _Table) -> Dict[str, _Table]:
+        """The node tables [network] has: {node: its table}, in HOST_NODES order."""
+        nodes = {}
         for node in HOST_NODES:
-            address = t.take(node, "str", None)
-            if address is None:
+            key = _NODE_TABLE.get(node, node)
+            if not t.has(key):
                 continue
-            if not address or any(c.isspace() for c in address):
-                raise t.error(node, f"must be a host name or an address, got {address!r}")
-            hosts.append((node, address))
-        t.done()
-        if not hosts:
-            return ()
-        nodes = dict(hosts)
-        if net.cell is None:
-            raise t.error(hosts[0][0], "only a 5G room (network.cell) runs on several machines")
-        if "hub" not in nodes:
-            raise t.error("hub", "is required: every other node connects to the rfsim_hub")
+            if node != "ue":
+                nodes[node] = t.table(key)
+                continue
+            try:
+                ues = t.take("ue", "list")
+            except ValueError:
+                ues = None
+            if not ues or not all(isinstance(u, dict) for u in ues):
+                raise t.error("ue", "must be one or more [[network.ue]] tables")
+            if len(ues) > 1:
+                raise t.error("ue", f"a room has one UE yet, the scenario has {len(ues)}")
+            nodes["ue"] = _Table(ues[0], t.name("ue"), t.path)
+        return nodes
+
+    def _read_nodes(self, t: _Table, nodes: Dict[str, _Table], net: Network) -> Network:
+        """The machines and places of the node tables, which must be nodes of the room."""
+        if nodes and net.cell is None:
+            raise t.error(_NODE_TABLE.get(next(iter(nodes)), next(iter(nodes))),
+                          "only a 5G room (network.cell) has nodes of its own")
         in_room = {"hub", "gnb", "ue", "tags"}
         if net.cw in CW_NODES:
             in_room.add("cw")
         if net.r2d == "reader":
             in_room.add("reader")
-        for node in nodes:
+        hosts, sites = [], {}
+        for node, nt in nodes.items():
             if node not in in_room:
-                raise t.error(node, f"this room has no {node} node")
-        return tuple(hosts)
+                raise t.error(_NODE_TABLE.get(node, node), f"this room has no {node} node")
+            host = nt.take("host", "str", None)
+            if host is not None:
+                if not host or any(c.isspace() for c in host):
+                    raise nt.error("host", f"must be a host name or an address, got {host!r}")
+                hosts.append((node, host))
+            if node in ("gnb", "ue"):
+                sites[node] = self._read_site(nt, node, at_base_station=node == net.reader_node)
+            nt.done()
+        if hosts and "hub" not in dict(hosts):
+            raise t.error("hub", "needs a host when any node has one: every other node connects to the rfsim_hub")
+        return net._replace(hosts=tuple(hosts), **sites)
+
+    @staticmethod
+    def _read_site(t: _Table, node: str, at_base_station: bool) -> Optional[coexist.Site]:
+        """The place of [network.gnb] or [[network.ue]]: a coexist.Site, with TR 38.769's defaults, or
+        None when the table gives none. The node that is the A-IoT Reader stands at the base station."""
+        given = [key for key in _PLACE_KEYS if t.has(key)]
+        if not given:
+            return None
+        if at_base_station:
+            name = "gNB" if node == "gnb" else "UE"
+            raise t.error(given[0], f"the {name} is the A-IoT Reader here: it stands at the [[base_station]]")
+        defaults = coexist.GNB_SITE if node == "gnb" else coexist.UE_SITE
+        site = {key: float(t.take(key, "number", required=True)) for key in ("x", "y")}
+        site.update({key: float(t.take(key, "number", default)) for key, default in defaults.items()})
+        if node == "ue":
+            site["indoor"] = t.take("indoor", "bool", False)
+        if site["height"] <= 0:
+            raise t.error("height", f"must be above 0, got {site['height']}")
+        return coexist.Site(**site)
 
     def _array(self, top: _Table, key: str) -> List[Dict[str, Any]]:
         """An array of tables, which a scenario must have at least one of."""

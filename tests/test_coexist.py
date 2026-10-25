@@ -92,10 +92,12 @@ class PairsTest(unittest.TestCase):
 
 
 class RoomTest(unittest.TestCase):
-    """[network.gnb] and [network.ue], and the powers they give."""
+    """[network.gnb] and [[network.ue]], and the powers they give."""
 
     def load(self, **overrides):
-        return scenario.load(BASE, {"network.cell": "n28-25prb", **overrides})
+        if "network.ue" in overrides:
+            overrides["network.ue"] = [overrides["network.ue"]]
+        return scenario.load(BASE, {"network.cell": "n8-25prb", **overrides})
 
     def test_no_powers_without_both_sites(self):
         self.assertIsNone(coexist.room_powers(self.load()))
@@ -107,8 +109,8 @@ class RoomTest(unittest.TestCase):
 
     def test_refused(self):
         cases = [
-            ({"network.gnb": {"x": 1, "y": 0}}, r"network\.ue: the gains need both"),
             ({"network.gnb": {"x": 1}, "network.ue": {"x": 1, "y": 1}}, r"network\.gnb\.y is required"),
+            ({"network.gnb": {"height": 30}}, r"network\.gnb\.x is required"),
             ({"network.gnb": {"x": 1, "y": 0, "height": 0}, "network.ue": {"x": 1, "y": 1}},
              r"network\.gnb\.height: must be above 0"),
             ({"network.gnb": {"x": 1, "y": 0, "indoor": True}, "network.ue": {"x": 1, "y": 1}},
@@ -118,7 +120,20 @@ class RoomTest(unittest.TestCase):
             with self.subTest(overrides=overrides), self.assertRaisesRegex(ValueError, message):
                 self.load(**overrides)
         with self.assertRaisesRegex(ValueError, r"network\.gnb: only a 5G room"):
-            scenario.load(BASE, {"network.gnb": {"x": 1, "y": 0}, "network.ue": {"x": 1, "y": 1}})
+            scenario.load(BASE, {"network.gnb": {"x": 1, "y": 0}, "network.ue": [{"x": 1, "y": 1}]})
+        t1 = {"network.r2d": "gnb", "network.d2r": "gnb", "network.cw": "gnb-dl"}
+        with self.assertRaisesRegex(ValueError, r"network\.gnb\.x: the gNB is the A-IoT Reader here"):
+            self.load(**t1, **{"network.gnb": {"x": 1, "y": 0}})
+        t4 = {"network.r2d": "ue", "network.d2r": "ue", "network.cw": "cw-node-ul"}
+        with self.assertRaisesRegex(ValueError, r"network\.ue\.indoor: the UE is the A-IoT Reader here"):
+            self.load(**t4, **{"network.ue": {"indoor": True}})
+
+    def test_the_reader_node_takes_no_place(self):
+        t1 = {"network.r2d": "gnb", "network.d2r": "gnb", "network.cw": "gnb-dl"}
+        net = self.load(**t1, **{"network.gnb": {"host": "a"}, "network.hub": {"host": "a"},
+                                 "network.ue": {"x": 50, "y": 80}}).network
+        self.assertIsNone(net.gnb)
+        self.assertEqual(net.ue, coexist.Site(50.0, 80.0, 1.5, 23.0, 0.0))
 
     def test_powers(self):
         s = self.load(**{"network.gnb": {"x": 300, "y": 0}, "network.ue": {"x": 50, "y": 80}})
