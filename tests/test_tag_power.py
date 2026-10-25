@@ -24,10 +24,9 @@ def tag():
 
 
 class PoweredTest(unittest.TestCase):
-    def test_a_tag_without_a_controller_senses_nothing_and_is_registered(self):
+    def test_a_tag_without_a_controller_senses_nothing(self):
         bsm = tag()
-        self.assertEqual((bsm.sensed_value(), bsm.state, bsm.powered), (0, "registered", True))
-        self.assertIsNone(bsm.controller_tx_ready(100))
+        self.assertEqual((bsm.sensed_value(), bsm.powered), (0, True))
 
     def test_the_tag_records_what_it_hears(self):
         bsm = tag()

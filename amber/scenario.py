@@ -676,10 +676,10 @@ class Scenario:
     def build_tag(self, env, shared: Dict[int, _TagParts], node_id: int):
         """One Tag's Capacitor, AiotTag and Controller, drawing from the Tag's own random generator;
         returns the AiotTag."""
-        node, dl, ul, cov, group = shared[node_id]
+        node, dl, _ul, cov, group = shared[node_id]
         rng = random.Random(f"{self.SEED}/{node_id}")
         cap = capacitor.Capacitor(env=env, id=node.id, params=group.cap_params, **group.cap_args)
-        bsm = backscatter.AiotTag(env=env, node=node, uplink_results=ul, downlink_results=dl)
+        bsm = backscatter.AiotTag(env=env, node=node, downlink_results=dl)
         bsm.controller = controller.Controller(env=env, capacitor_ctrl=cap, node=node, params=group.controller_params,
                                                backscatter=bsm, coverage_map=cov, downlink_results=dl, rng=rng)
         return bsm
